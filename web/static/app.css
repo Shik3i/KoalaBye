@@ -127,6 +127,16 @@ th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-s
 .checklist-status { color: var(--muted); font-weight: 900; }
 .checklist-status.done { color: var(--green); }
 
+.public-body.accent-purple { --green: #8b5cf6; --green-dark: #6d28d9; --green-soft: #ede9fe; }
+.public-body.accent-blue { --green: #3b82f6; --green-dark: #1d4ed8; --green-soft: #dbeafe; }
+.public-body.accent-green { --green: #10b981; --green-dark: #047857; --green-soft: #d1fae5; }
+.public-body.accent-orange { --green: #f97316; --green-dark: #c2410c; --green-soft: #ffedd5; }
+.public-body.accent-gray { --green: #6b7280; --green-dark: #374151; --green-soft: #f3f4f6; }
+
+.theme-light { --paper: #fdfdfd; --panel: #fff; --line: #ececec; --ink: #111; --muted: #666; color-scheme: light; }
+.theme-dark { --paper: #1a1a1a; --panel: #222; --line: #333; --ink: #ededed; --muted: #a0a0a0; color-scheme: dark; }
+.theme-soft { --paper: #f0f4f8; --panel: #fff; --line: #d9e2ec; --ink: #2c3e50; --muted: #627d98; color-scheme: light; }
+
 @media (max-width: 720px) {
   .grid.two, .grid.three { grid-template-columns: 1fr; }
   .hero { padding-top: 42px; }

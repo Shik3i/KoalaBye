@@ -2,6 +2,7 @@ package instance
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -140,7 +141,20 @@ func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	values := map[string]string{"registration_enabled": boolString(r.FormValue("registration_enabled") == "on"), "invite_only": boolString(r.FormValue("invite_only") == "on"), "invite_registration_enabled": boolString(r.FormValue("invite_registration_enabled") == "on"), "instance_name": r.FormValue("instance_name")}
+	values := map[string]string{
+		"registration_enabled": boolString(r.FormValue("registration_enabled") == "on"),
+		"invite_only": boolString(r.FormValue("invite_only") == "on"),
+		"invite_registration_enabled": boolString(r.FormValue("invite_registration_enabled") == "on"),
+		"instance_name": strings.TrimSpace(r.FormValue("instance_name")),
+		"instance_operator_name": strings.TrimSpace(r.FormValue("instance_operator_name")),
+		"instance_operator_url": safeURL(r.FormValue("instance_operator_url")),
+		"instance_legal_notice_url": safeURL(r.FormValue("instance_legal_notice_url")),
+		"instance_privacy_policy_url": safeURL(r.FormValue("instance_privacy_policy_url")),
+		"instance_source_url": safeURL(r.FormValue("instance_source_url")),
+		"instance_contact_url": safeURL(r.FormValue("instance_contact_url")),
+		"instance_support_url": safeURL(r.FormValue("instance_support_url")),
+		"instance_legal_pages_are_placeholders": boolString(r.FormValue("instance_legal_pages_are_placeholders") == "on"),
+	}
 	for _, k := range []string{"default_max_organizations_per_user", "default_max_campaigns_per_org", "default_max_members_per_org", "default_max_active_invites_per_org", "default_max_monthly_visits_per_org", "default_max_monthly_submissions_per_org"} {
 		v, err := strconv.Atoi(r.FormValue(k))
 		minimum := 0
@@ -185,6 +199,24 @@ func boolString(v bool) string {
 		return "true"
 	}
 	return "false"
+}
+
+func safeURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	if parsed.Scheme == "https" {
+		return raw
+	}
+	if parsed.Scheme == "http" && (parsed.Hostname() == "localhost" || parsed.Hostname() == "127.0.0.1") {
+		return raw
+	}
+	return ""
 }
 
 func New(cfg config.Config, queries *db.Querier, permissionService *permissions.Service) *Handler {

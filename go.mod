@@ -5,7 +5,7 @@ go 1.26
 toolchain go1.26.4
 
 require (
-	github.com/a-h/templ v0.3.960
+	github.com/a-h/templ v0.3.1020
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/pressly/goose/v3 v3.26.0
 	golang.org/x/crypto v0.40.0
@@ -23,7 +23,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect

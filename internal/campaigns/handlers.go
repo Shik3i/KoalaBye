@@ -78,7 +78,7 @@ func (h *Handler) public(w http.ResponseWriter, r *http.Request, resolve func() 
 		h.publicUnavailable(w, r, http.StatusServiceUnavailable, false, publicCampaign.Settings.PublicLanguageDefault)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.PublicCampaignPage(h.cfg.InstanceName, publicCampaign.Campaign, publicCampaign.Settings, fields, publicID, ""))
+	web.Render(w, r, http.StatusOK, templates.PublicCampaignPage(h.cfg.InstanceName, publicCampaign.Campaign, publicCampaign.Settings, publicCampaign.Branding, fields, publicID, ""))
 }
 
 func (h *Handler) publicUnavailable(w http.ResponseWriter, r *http.Request, status int, quota bool, defaultLocale string) {
@@ -278,6 +278,40 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 	web.Render(w, r, http.StatusOK, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, ""))
 }
 
+func (h *Handler) Branding(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	branding, _ := h.q.GetCampaignBranding(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusOK, templates.CampaignBrandingForm(h.cfg.InstanceName, user, campaign, branding, ""))
+}
+
+func (h *Handler) BrandingPost(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	branding := db.CampaignBranding{
+		BrandName:            nullableString(strings.TrimSpace(r.FormValue("brand_name"))),
+		BrandURL:             nullableString(safeURL(r.FormValue("brand_url"))),
+		PrivacyPolicyURL:     nullableString(safeURL(r.FormValue("privacy_policy_url"))),
+		LegalNoticeURL:       nullableString(safeURL(r.FormValue("legal_notice_url"))),
+		SupportURL:           nullableString(safeURL(r.FormValue("support_url"))),
+		ContactURL:           nullableString(safeURL(r.FormValue("contact_url"))),
+		AccentPreset:         strings.TrimSpace(r.FormValue("accent_preset")),
+		BackgroundStyle:      strings.TrimSpace(r.FormValue("background_style")),
+		ShowKoalabyeBranding: r.FormValue("show_koalabye_branding") == "on",
+	}
+	if err := h.q.UpdateCampaignBranding(r.Context(), campaign, branding, user.ID); err != nil {
+		http.Error(w, "branding update failed", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/branding", http.StatusSeeOther)
+}
+
 func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
 	user, campaign, _, ok := h.campaign(r, permissionEdit)
 	if !ok {
@@ -462,6 +496,24 @@ func validLanguage(value string) string {
 
 func nullableString(value string) sql.NullString {
 	return sql.NullString{String: value, Valid: value != ""}
+}
+
+func safeURL(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	if parsed.Scheme == "https" {
+		return raw
+	}
+	if parsed.Scheme == "http" && (parsed.Hostname() == "localhost" || parsed.Hostname() == "127.0.0.1") {
+		return raw
+	}
+	return ""
 }
 
 func campaignAccessError(err error) string {

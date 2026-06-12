@@ -107,11 +107,13 @@ func Routes(
 	r.With(auth.RequireUser(csrf), auth.ValidatePosts(csrf)).Post("/join/{inviteCode}", organizationsHandler.JoinPost)
 	r.Get("/legal/privacy", func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(i18n.LegalContext(r.Context()))
-		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "privacy"))
+		settings, _ := queries.Settings(r.Context())
+		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "privacy", settings))
 	})
 	r.Get("/legal/imprint", func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(i18n.LegalContext(r.Context()))
-		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "imprint"))
+		settings, _ := queries.Settings(r.Context())
+		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "imprint", settings))
 	})
 
 	r.Group(func(protected chi.Router) {
@@ -156,6 +158,8 @@ func Routes(
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}", campaignsHandler.Detail)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/settings", campaignsHandler.Settings)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/settings", campaignsHandler.SettingsPost)
+		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/branding", campaignsHandler.Branding)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/branding", campaignsHandler.BrandingPost)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/privacy", campaignsHandler.Privacy)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/privacy", campaignsHandler.PrivacyPost)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/access", campaignsHandler.Access)

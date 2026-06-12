@@ -231,7 +231,7 @@ func (h *Handler) publicSubmit(w http.ResponseWriter, r *http.Request, resolve f
 	}
 	r = r.WithContext(i18n.PublicCampaignContext(r.Context(), r, publicCampaign.Settings.PublicLanguageDefault))
 	if r.FormValue("website") != "" {
-		web.Render(w, r, http.StatusOK, templates.PublicCampaignThankYou(h.cfg.InstanceName))
+		web.Render(w, r, http.StatusOK, templates.PublicCampaignThankYou(h.cfg.InstanceName, &publicCampaign.Branding))
 		return
 	}
 	fields, err := h.q.ListFormFields(r.Context(), publicCampaign.Campaign.ID, false)
@@ -241,7 +241,7 @@ func (h *Handler) publicSubmit(w http.ResponseWriter, r *http.Request, resolve f
 	}
 	answers, validationKey := validateSubmission(fields, r)
 	if validationKey != "" {
-		web.Render(w, r, http.StatusUnprocessableEntity, templates.PublicCampaignPage(h.cfg.InstanceName, publicCampaign.Campaign, publicCampaign.Settings, fields, r.FormValue("visit_public_id"), validationKey))
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.PublicCampaignPage(h.cfg.InstanceName, publicCampaign.Campaign, publicCampaign.Settings, publicCampaign.Branding, fields, r.FormValue("visit_public_id"), validationKey))
 		return
 	}
 	publicID, _ := ids.New("submission")
@@ -251,14 +251,14 @@ func (h *Handler) publicSubmit(w http.ResponseWriter, r *http.Request, resolve f
 		SubmittedAt: time.Now().UTC(), Answers: answers,
 	})
 	if errors.Is(err, db.ErrSubmissionLimitReached) {
-		web.Render(w, r, http.StatusServiceUnavailable, templates.PublicSubmissionLimit(h.cfg.InstanceName))
+		web.Render(w, r, http.StatusServiceUnavailable, templates.PublicSubmissionLimit(h.cfg.InstanceName, &publicCampaign.Branding))
 		return
 	}
 	if err != nil {
 		h.publicUnavailable(w, r, http.StatusServiceUnavailable, false, publicCampaign.Settings.PublicLanguageDefault)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.PublicCampaignThankYou(h.cfg.InstanceName))
+	web.Render(w, r, http.StatusOK, templates.PublicCampaignThankYou(h.cfg.InstanceName, &publicCampaign.Branding))
 }
 
 func validateSubmission(fields []db.FormField, r *http.Request) ([]db.SubmissionAnswerInput, string) {

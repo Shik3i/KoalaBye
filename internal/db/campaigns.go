@@ -1,4 +1,4 @@
-package db
+﻿package db
 
 import (
 	"context"
@@ -49,6 +49,18 @@ type CampaignSettings struct {
 	RetentionDays          sql.NullInt64
 	UpdatedAt              string
 	UpdatedByUserID        sql.NullInt64
+}
+
+type CampaignBranding struct {
+	BrandName            sql.NullString
+	BrandURL             sql.NullString
+	PrivacyPolicyURL     sql.NullString
+	LegalNoticeURL       sql.NullString
+	SupportURL           sql.NullString
+	ContactURL           sql.NullString
+	AccentPreset         string
+	BackgroundStyle      string
+	ShowKoalabyeBranding bool
 }
 
 type CampaignMember struct {
@@ -189,6 +201,16 @@ func (q *Querier) GetCampaignSettings(ctx context.Context, campaignID int64) (Ca
 	return s, err
 }
 
+func (q *Querier) GetCampaignBranding(ctx context.Context, campaignID int64) (CampaignBranding, error) {
+	var b CampaignBranding
+	err := q.db.QueryRowContext(ctx, `SELECT brand_name,brand_url,privacy_policy_url,legal_notice_url,support_url,contact_url,accent_preset,background_style,show_koalabye_branding FROM campaign_branding WHERE campaign_id=?`, campaignID).
+		Scan(&b.BrandName, &b.BrandURL, &b.PrivacyPolicyURL, &b.LegalNoticeURL, &b.SupportURL, &b.ContactURL, &b.AccentPreset, &b.BackgroundStyle, &b.ShowKoalabyeBranding)
+	if err == sql.ErrNoRows {
+		return CampaignBranding{AccentPreset: "default", BackgroundStyle: "theme-default", ShowKoalabyeBranding: true}, nil
+	}
+	return b, err
+}
+
 func (q *Querier) UpdateCampaign(ctx context.Context, campaign Campaign, actorID int64) error {
 	if campaign.Status == "archived" {
 		return ErrCampaignArchived
@@ -218,6 +240,32 @@ func (q *Querier) UpdateCampaignPrivacy(ctx context.Context, campaign Campaign, 
 		return err
 	}
 	return q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign_privacy_updated", "campaign", campaign.PublicID, nil, nil)
+}
+
+func (q *Querier) UpdateCampaignBranding(ctx context.Context, campaign Campaign, b CampaignBranding, actorID int64) error {
+	if campaign.Status == "archived" {
+		return ErrCampaignArchived
+	}
+	validPresets := map[string]bool{"default": true, "purple": true, "blue": true, "green": true, "orange": true, "gray": true}
+	if !validPresets[b.AccentPreset] {
+		b.AccentPreset = "default"
+	}
+	validStyles := map[string]bool{"theme-default": true, "theme-light": true, "theme-dark": true, "theme-soft": true}
+	if !validStyles[b.BackgroundStyle] {
+		b.BackgroundStyle = "theme-default"
+	}
+	_, err := q.db.ExecContext(ctx, `INSERT INTO campaign_branding (campaign_id, brand_name, brand_url, privacy_policy_url, legal_notice_url, support_url, contact_url, accent_preset, background_style, show_koalabye_branding, updated_at, updated_by_user_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(campaign_id) DO UPDATE SET
+		brand_name=excluded.brand_name, brand_url=excluded.brand_url, privacy_policy_url=excluded.privacy_policy_url,
+		legal_notice_url=excluded.legal_notice_url, support_url=excluded.support_url, contact_url=excluded.contact_url,
+		accent_preset=excluded.accent_preset, background_style=excluded.background_style, show_koalabye_branding=excluded.show_koalabye_branding,
+		updated_at=excluded.updated_at, updated_by_user_id=excluded.updated_by_user_id`,
+		campaign.ID, b.BrandName, b.BrandURL, b.PrivacyPolicyURL, b.LegalNoticeURL, b.SupportURL, b.ContactURL, b.AccentPreset, b.BackgroundStyle, b.ShowKoalabyeBranding, Now(), actorID)
+	if err != nil {
+		return err
+	}
+	return q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign_branding_updated", "campaign", campaign.PublicID, nil, nil)
 }
 
 func (q *Querier) ChangeCampaignStatus(ctx context.Context, campaign Campaign, next string, actorID int64) error {

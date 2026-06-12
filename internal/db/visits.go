@@ -12,6 +12,7 @@ var ErrVisitLimitReached = errors.New("monthly visit safety limit reached")
 type PublicCampaign struct {
 	Campaign             Campaign
 	Settings             CampaignSettings
+	Branding             CampaignBranding
 	OrganizationDisabled bool
 }
 
@@ -49,11 +50,13 @@ func (q *Querier) scanPublicCampaign(ctx context.Context, predicate string, args
 	query := `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,NULL,
 		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner'),
 		o.disabled_at,
-		cs.collect_install_token,cs.hash_install_token,cs.count_raw_visits,cs.count_unique_token_visits,cs.collect_referrer_domain,cs.collect_coarse_browser,cs.collect_coarse_os,cs.public_language_default,cs.show_privacy_notice,cs.retention_enabled,cs.retention_days,cs.updated_at,cs.updated_by_user_id
+		cs.collect_install_token,cs.hash_install_token,cs.count_raw_visits,cs.count_unique_token_visits,cs.collect_referrer_domain,cs.collect_coarse_browser,cs.collect_coarse_os,cs.public_language_default,cs.show_privacy_notice,cs.retention_enabled,cs.retention_days,cs.updated_at,cs.updated_by_user_id,
+		cb.brand_name,cb.brand_url,cb.privacy_policy_url,cb.legal_notice_url,cb.support_url,cb.contact_url,COALESCE(cb.accent_preset, 'default'),COALESCE(cb.background_style, 'theme-default'),COALESCE(cb.show_koalabye_branding, 1)
 		FROM campaigns c
 		JOIN organizations o ON o.id=c.organization_id
 		JOIN users u ON u.id=c.created_by_user_id
 		JOIN campaign_settings cs ON cs.campaign_id=c.id
+		LEFT JOIN campaign_branding cb ON cb.campaign_id=c.id
 		WHERE ` + predicate
 	var orgDisabled sql.NullString
 	err := q.db.QueryRowContext(ctx, query, args...).Scan(
@@ -70,6 +73,9 @@ func (q *Querier) scanPublicCampaign(ctx context.Context, predicate string, args
 		&result.Settings.PublicLanguageDefault, &result.Settings.ShowPrivacyNotice,
 		&result.Settings.RetentionEnabled, &result.Settings.RetentionDays,
 		&result.Settings.UpdatedAt, &result.Settings.UpdatedByUserID,
+		&result.Branding.BrandName, &result.Branding.BrandURL, &result.Branding.PrivacyPolicyURL,
+		&result.Branding.LegalNoticeURL, &result.Branding.SupportURL, &result.Branding.ContactURL,
+		&result.Branding.AccentPreset, &result.Branding.BackgroundStyle, &result.Branding.ShowKoalabyeBranding,
 	)
 	result.OrganizationDisabled = orgDisabled.Valid
 	return result, err

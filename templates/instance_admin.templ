@@ -112,6 +112,16 @@ templ InstanceSettings(instanceName string, user db.User, settings map[string]st
 				@settingInput(settings, "default_max_active_invites_per_org", "limits.invites")
 				@settingInput(settings, "default_max_monthly_visits_per_org", "limits.visits")
 				@settingInput(settings, "default_max_monthly_submissions_per_org", "limits.submissions")
+				<hr/>
+				<h2>{ tr(ctx, "instance.legal.title") }</h2>
+				<label>{ tr(ctx, "instance.legal.operator") }<input name="instance_operator_name" value={ settings["instance_operator_name"] }/></label>
+				<label>{ tr(ctx, "instance.legal.operator_url") }<input type="url" name="instance_operator_url" value={ settings["instance_operator_url"] }/></label>
+				<label>{ tr(ctx, "instance.legal.privacy_url") }<input type="url" name="instance_privacy_policy_url" value={ settings["instance_privacy_policy_url"] }/></label>
+				<label>{ tr(ctx, "instance.legal.imprint_url") }<input type="url" name="instance_legal_notice_url" value={ settings["instance_legal_notice_url"] }/></label>
+				<label>{ tr(ctx, "instance.legal.contact_url") }<input type="url" name="instance_contact_url" value={ settings["instance_contact_url"] }/></label>
+				<label>{ tr(ctx, "instance.legal.support_url") }<input type="url" name="instance_support_url" value={ settings["instance_support_url"] }/></label>
+				<label>{ tr(ctx, "instance.legal.source_url") }<input type="url" name="instance_source_url" value={ settings["instance_source_url"] }/></label>
+				@checkInput("instance_legal_pages_are_placeholders", "instance.legal.placeholders", settings["instance_legal_pages_are_placeholders"] == "true" || settings["instance_legal_pages_are_placeholders"] == "")
 				<button>{ tr(ctx, "common.save") }</button>
 			</form>
 		</section>

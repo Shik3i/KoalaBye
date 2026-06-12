@@ -1,4 +1,4 @@
-package templates
+﻿package templates
 
 import (
 	"context"
@@ -10,6 +10,7 @@ templ CampaignNav(campaign db.Campaign) {
 	<nav class="subnav">
 		<a href={ templ.SafeURL(campaignPath(campaign)) }>{ tr(ctx, "campaign.overview") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/settings") }>{ tr(ctx, "campaign.settings") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/branding") }>{ tr(ctx, "campaign.branding.title") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/privacy") }>{ tr(ctx, "campaign.privacy.title") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a>
@@ -131,7 +132,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 		<section class="grid three">
 			<article class="panel"><h2>{ tr(ctx, "submissions.total") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.Total) }</strong></article>
 			<article class="panel"><h2>{ tr(ctx, "submissions.current_month") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.CurrentMonth) }</strong></article>
-			<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(submissionStats.LatestAt) }</p><p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a> · <a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a></p></article>
+			<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(submissionStats.LatestAt) }</p><p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a> Â· <a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a></p></article>
 		</section>
 		<section class="panel" id="extension-integration">
 			<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
@@ -176,6 +177,47 @@ templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, 
 				<label>{ tr(ctx, "campaign.slug") }<input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
 				<label>{ tr(ctx, "campaign.description") }<textarea name="description" maxlength="1000">{ campaign.Description.String }</textarea></label>
 				<label class="check"><input type="checkbox" name="public_link_enabled" checked?={ campaign.PublicLinkEnabled }/>{ tr(ctx, "campaign.public_link.enable") }</label>
+				<button type="submit">{ tr(ctx, "common.save") }</button>
+			</form>
+		</section>
+	}
+}
+
+templ CampaignBrandingForm(instanceName string, user db.User, campaign db.Campaign, branding db.CampaignBranding, errorKey string) {
+	@Layout(tr(ctx, "campaign.branding.title"), instanceName, &user) {
+		@CampaignNav(campaign)
+		<section class="auth-shell wide">
+			<h1>{ tr(ctx, "campaign.branding.title") }</h1>
+			if errorKey != "" {
+				<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
+			}
+			<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/branding") } class="panel form-stack">
+				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+				<label>{ tr(ctx, "campaign.branding.brand_name") }<input name="brand_name" value={ branding.BrandName.String }/></label>
+				<label>{ tr(ctx, "campaign.branding.brand_url") }<input type="url" name="brand_url" value={ branding.BrandURL.String }/></label>
+				<label>{ tr(ctx, "campaign.branding.privacy_policy_url") }<input type="url" name="privacy_policy_url" value={ branding.PrivacyPolicyURL.String }/></label>
+				<label>{ tr(ctx, "campaign.branding.legal_notice_url") }<input type="url" name="legal_notice_url" value={ branding.LegalNoticeURL.String }/></label>
+				<label>{ tr(ctx, "campaign.branding.contact_url") }<input type="url" name="contact_url" value={ branding.ContactURL.String }/></label>
+				<label>{ tr(ctx, "campaign.branding.support_url") }<input type="url" name="support_url" value={ branding.SupportURL.String }/></label>
+
+				<label>{ tr(ctx, "campaign.branding.accent") }
+					<select name="accent_preset">
+						for _, preset := range []string{"default", "purple", "blue", "green", "orange", "gray"} {
+							<option value={ preset } selected?={ branding.AccentPreset == preset }>{ tr(ctx, "campaign.branding.accent." + preset) }</option>
+						}
+					</select>
+				</label>
+
+				<label>{ tr(ctx, "campaign.branding.theme") }
+					<select name="background_style">
+						for _, theme := range []string{"theme-default", "theme-light", "theme-dark", "theme-soft"} {
+							<option value={ theme } selected?={ branding.BackgroundStyle == theme }>{ tr(ctx, "campaign.branding.theme." + theme) }</option>
+						}
+					</select>
+				</label>
+
+				@campaignCheck("show_koalabye_branding", "campaign.branding.show_platform", branding.ShowKoalabyeBranding)
+
 				<button type="submit">{ tr(ctx, "common.save") }</button>
 			</form>
 		</section>
@@ -271,9 +313,9 @@ templ checklistItem(done bool, key, href string) {
 	<li>
 		<span class={ templ.KV("checklist-status", true), templ.KV("done", done) } aria-hidden="true">
 			if done {
-				✓
+				âœ“
 			} else {
-				○
+				â—‹
 			}
 		</span>
 		<a href={ templ.SafeURL(href) }>{ tr(ctx, key) }</a>

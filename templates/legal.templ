@@ -1,14 +1,31 @@
 package templates
 
-templ Legal(instanceName, page string) {
+templ Legal(instanceName, page string, settings map[string]string) {
 	@Layout(tr(ctx, "legal."+page+".page_title"), instanceName, nil) {
 		<section class="auth-shell legal-page">
-			<div class="eyebrow">{ tr(ctx, "legal.placeholder") }</div>
+			if settings["instance_legal_pages_are_placeholders"] == "true" || settings["instance_legal_pages_are_placeholders"] == "" {
+				<div class="eyebrow notice warning">{ tr(ctx, "legal.placeholder_warning") }</div>
+			}
 			<h1>{ tr(ctx, "legal." + page + ".title") }</h1>
 			if localeFromContext(ctx).LegalFallbackUsed {
 				<div class="notice" role="note">{ tr(ctx, "legal.language_notice") }</div>
 			}
 			<div class="panel">
+				if settings["instance_operator_name"] != "" {
+					<p><strong>{ tr(ctx, "instance.legal.operator") }</strong>: { settings["instance_operator_name"] }</p>
+				}
+				if settings["instance_operator_url"] != "" {
+					<p><strong>{ tr(ctx, "instance.legal.website") }</strong>: <a href={ templ.SafeURL(settings["instance_operator_url"]) }>{ settings["instance_operator_url"] }</a></p>
+				}
+				if settings["instance_contact_url"] != "" {
+					<p><strong>{ tr(ctx, "instance.legal.contact") }</strong>: <a href={ templ.SafeURL(settings["instance_contact_url"]) }>{ settings["instance_contact_url"] }</a></p>
+				}
+				if settings["instance_source_url"] != "" {
+					<p><strong>{ tr(ctx, "instance.legal.source") }</strong>: <a href={ templ.SafeURL(settings["instance_source_url"]) }>{ settings["instance_source_url"] }</a></p>
+				}
+				if settings["instance_operator_name"] != "" || settings["instance_operator_url"] != "" || settings["instance_contact_url"] != "" || settings["instance_source_url"] != "" {
+					<hr/>
+				}
 				<p>{ tr(ctx, "legal." + page + ".text") }</p>
 			</div>
 		</section>

@@ -6,9 +6,9 @@ import (
 	"github.com/koalastuff/koalabye/internal/i18n"
 )
 
-templ PublicLayout(title, instanceName string) {
+templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 	<!DOCTYPE html>
-	<html lang={ string(localeFromContext(ctx).Locale) }>
+	<html lang={ string(localeFromContext(ctx).Locale) } class={ themeClass(branding) }>
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -16,10 +16,20 @@ templ PublicLayout(title, instanceName string) {
 			<title>{ title } · { instanceName }</title>
 			<link rel="stylesheet" href="/assets/app.css"/>
 		</head>
-		<body class="public-body">
+		<body class={ bodyClass(branding) }>
 			<a class="skip-link" href="#main-content">{ tr(ctx, "common.skip") }</a>
 			<header class="public-header">
-				<a class="brand" href="/">{ instanceName }</a>
+				if branding == nil || branding.ShowKoalabyeBranding {
+					<a class="brand" href="/">{ instanceName }</a>
+				} else if branding.BrandName.Valid && branding.BrandName.String != "" {
+					if branding.BrandURL.Valid && branding.BrandURL.String != "" {
+						<a class="brand campaign-brand" href={ templ.SafeURL(branding.BrandURL.String) }>{ branding.BrandName.String }</a>
+					} else {
+						<span class="brand campaign-brand">{ branding.BrandName.String }</span>
+					}
+				} else {
+					<span></span>
+				}
 				<nav class="language-switcher" aria-label={ tr(ctx, "language.label") }>
 					for _, language := range i18n.Supported {
 						<a href={ localeFromContext(ctx).SwitchURLs[language] } lang={ string(language) } aria-current={ languageCurrent(ctx, language) }>{ tr(ctx, "language." + string(language)) }</a>
@@ -30,15 +40,33 @@ templ PublicLayout(title, instanceName string) {
 				{ children... }
 			</main>
 			<footer class="site-footer">
-				<p>{ tr(ctx, "public.footer") }</p>
-				<nav aria-label={ tr(ctx, "nav.aria") }><a href="/legal/privacy">{ tr(ctx, "legal.privacy.link") }</a><a href="/legal/imprint">{ tr(ctx, "legal.imprint.link") }</a></nav>
+				if branding != nil && (branding.PrivacyPolicyURL.Valid || branding.LegalNoticeURL.Valid || branding.ContactURL.Valid || branding.SupportURL.Valid) {
+					<nav aria-label={ tr(ctx, "nav.aria") }>
+						if branding.PrivacyPolicyURL.Valid && branding.PrivacyPolicyURL.String != "" {
+							<a href={ templ.SafeURL(branding.PrivacyPolicyURL.String) }>{ tr(ctx, "legal.privacy.link") }</a>
+						}
+						if branding.LegalNoticeURL.Valid && branding.LegalNoticeURL.String != "" {
+							<a href={ templ.SafeURL(branding.LegalNoticeURL.String) }>{ tr(ctx, "legal.imprint.link") }</a>
+						}
+						if branding.ContactURL.Valid && branding.ContactURL.String != "" {
+							<a href={ templ.SafeURL(branding.ContactURL.String) }>{ tr(ctx, "instance.legal.contact") }</a>
+						}
+						if branding.SupportURL.Valid && branding.SupportURL.String != "" {
+							<a href={ templ.SafeURL(branding.SupportURL.String) }>{ tr(ctx, "nav.support") }</a>
+						}
+					</nav>
+				}
+				if branding == nil || branding.ShowKoalabyeBranding {
+					<p>{ tr(ctx, "public.footer") }</p>
+					<nav aria-label={ tr(ctx, "nav.aria") }><a href="/legal/privacy">{ tr(ctx, "legal.privacy.link") }</a><a href="/legal/imprint">{ tr(ctx, "legal.imprint.link") }</a></nav>
+				}
 			</footer>
 		</body>
 	</html>
 }
 
-templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.CampaignSettings, fields []db.FormField, visitPublicID, errorKey string) {
-	@PublicLayout(campaign.Name, instanceName) {
+templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.CampaignSettings, branding db.CampaignBranding, fields []db.FormField, visitPublicID, errorKey string) {
+	@PublicLayout(campaign.Name, instanceName, &branding) {
 		<section class="public-hero">
 			<div class="eyebrow">{ campaign.Name }</div>
 			<h1>{ tr(ctx, "public.heading") }</h1>
@@ -73,8 +101,8 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 	}
 }
 
-templ PublicCampaignThankYou(instanceName string) {
-	@PublicLayout(tr(ctx, "public.thanks.title"), instanceName) {
+templ PublicCampaignThankYou(instanceName string, branding *db.CampaignBranding) {
+	@PublicLayout(tr(ctx, "public.thanks.title"), instanceName, branding) {
 		<section class="public-hero">
 			<h1>{ tr(ctx, "public.thanks.title") }</h1>
 			<p class="lede">{ tr(ctx, "public.thanks.text") }</p>
@@ -82,8 +110,8 @@ templ PublicCampaignThankYou(instanceName string) {
 	}
 }
 
-templ PublicSubmissionLimit(instanceName string) {
-	@PublicLayout(tr(ctx, "public.limit.title"), instanceName) {
+templ PublicSubmissionLimit(instanceName string, branding *db.CampaignBranding) {
+	@PublicLayout(tr(ctx, "public.limit.title"), instanceName, branding) {
 		<section class="public-hero">
 			<h1>{ tr(ctx, "public.limit.title") }</h1>
 			<p class="lede">{ tr(ctx, "public.limit.text") }</p>
@@ -92,7 +120,7 @@ templ PublicSubmissionLimit(instanceName string) {
 }
 
 templ PublicCampaignUnavailable(instanceName string, quota bool) {
-	@PublicLayout(tr(ctx, "public.unavailable.title"), instanceName) {
+	@PublicLayout(tr(ctx, "public.unavailable.title"), instanceName, nil) {
 		<section class="public-hero">
 			<h1>{ tr(ctx, "public.unavailable.title") }</h1>
 			if quota {
@@ -109,4 +137,18 @@ func publicCollectionSummary(ctx context.Context, settings db.CampaignSettings) 
 		return tr(ctx, "public.privacy.balanced")
 	}
 	return tr(ctx, "public.privacy.strict")
+}
+
+func themeClass(branding *db.CampaignBranding) string {
+	if branding == nil {
+		return "theme-default"
+	}
+	return branding.BackgroundStyle
+}
+
+func bodyClass(branding *db.CampaignBranding) string {
+	if branding == nil {
+		return "public-body default"
+	}
+	return "public-body accent-" + branding.AccentPreset
 }
