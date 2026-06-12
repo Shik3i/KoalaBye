@@ -37,14 +37,14 @@ func main() {
 	for _, ep := range endpoints {
 		target := baseURL + ep.Path
 		fmt.Printf("Pinging %s... ", target)
-		
+
 		resp, err := client.Get(target)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			failed = true
 			continue
 		}
-		
+
 		if resp.StatusCode != ep.ExpectedStatus {
 			fmt.Printf("Failed: Expected %d, got %d %s\n", ep.ExpectedStatus, resp.StatusCode, resp.Status)
 			failed = true
