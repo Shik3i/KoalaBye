@@ -27,6 +27,12 @@ jobs:
       - name: Run tests
         run: go test ./...
 
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Scan Go dependencies
+        run: govulncheck ./...
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
