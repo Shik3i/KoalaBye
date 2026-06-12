@@ -1,0 +1,45 @@
+﻿services:
+  koalabye:
+    image: ghcr.io/shik3i/koalabye:latest
+    container_name: koalabye
+    restart: always
+    environment:
+      # URL der Instanz (für Redirects/E-Mails wichtig)
+      - KOALABYE_BASE_URL=https://bye.koalastuff.net
+      
+      # Interner Port (entspricht dem Port im Container)
+      - KOALABYE_LISTEN_ADDR=:8080
+      
+      # SQLite-Datenbankpfad im Container (gemappt auf Host-Volume)
+      - KOALABYE_DATABASE_PATH=/data/koalabye.db
+      
+      # WICHTIG: Mit einem sicheren (z. B. 64 Zeichen) Zufallswert ersetzen! (z.B. openssl rand -hex 32)
+      - KOALABYE_SECRET=change-me-to-a-very-long-and-secure-random-string
+      
+      # Modus (selfhost oder cloud)
+      - KOALABYE_MODE=selfhost
+      
+      # Anmeldung und Registrierung
+      - KOALABYE_REGISTRATION_ENABLED=false
+      - KOALABYE_INVITE_ONLY=true
+      - KOALABYE_INVITE_REGISTRATION_ENABLED=true
+      
+      # Cookies sicher über HTTPS übertragen
+      - KOALABYE_SECURE_COOKIES=true
+      
+      # Name der Instanz (sichtbar für Benutzer)
+      - KOALABYE_INSTANCE_NAME=KoalaBye
+      
+      # Optional: Erstmaligen Admin-Benutzer beim Start erstellen (wird nur angelegt, wenn noch keine User existieren)
+      # - KOALABYE_BOOTSTRAP_ADMIN_USERNAME=admin@example.com
+      # - KOALABYE_BOOTSTRAP_ADMIN_PASSWORD=dein-sicheres-passwort
+      # - KOALABYE_BOOTSTRAP_ADMIN_DISPLAY_NAME=Administrator
+    volumes:
+      - /home/koala/docker/koalabye/data:/data
+    networks:
+      - caddy_net
+
+networks:
+  caddy_net:
+    external: true
+
