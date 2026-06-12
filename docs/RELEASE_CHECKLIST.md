@@ -2,13 +2,17 @@
 
 ## Code and Tests
 
+- [ ] Confirm `go version` reports Go 1.26.4.
 - [ ] Run `go fmt ./...`.
 - [ ] Run `go test ./...`.
 - [ ] Run `go vet ./...`.
 - [ ] Run `go run golang.org/x/vuln/cmd/govulncheck@latest ./...`.
 - [ ] Run `make check`.
+- [ ] If GNU Make is unavailable, run `go run ./cmd/devcheck`.
 - [ ] Run `git diff --check`.
 - [ ] Build the Docker image.
+- [ ] Confirm Docker Desktop or another Docker daemon is running before a local build.
+- [ ] If Docker is unavailable locally, confirm the CI Docker job passes before tagging.
 - [ ] Verify `/version` matches the intended version, commit, and build date.
 - [ ] Confirm the working tree contains only intended changes.
 

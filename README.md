@@ -53,7 +53,7 @@ For HTTPS, place Caddy on the `koalabye` Docker network and adapt `Caddyfile.exa
 
 ## Local Development
 
-Requirements: Go 1.24+ and Docker only if testing the image.
+Requirements: Go 1.26.4 and Docker only if testing the image.
 
 ```bash
 cp .env.example .env
@@ -63,7 +63,7 @@ export KOALABYE_SECRET=change-me-long-random-secret
 make dev
 ```
 
-The insecure example secret is accepted only for a local HTTP URL. Run `make check` before submitting changes. It checks Go and templ formatting, generated templ/sqlc code, tests, and vet. `make sqlc` regenerates typed queries.
+The insecure example secret is accepted only for a local HTTP URL. Run `make check` before submitting changes. On systems without GNU Make, run `go run ./cmd/devcheck`. The cross-platform command checks Go formatting, tests, vet, and whitespace errors; CI also verifies templ formatting and generated templ/sqlc code. `make sqlc` regenerates typed queries.
 
 ## Configuration
 

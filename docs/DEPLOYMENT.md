@@ -6,6 +6,8 @@ KoalaBye is a single Go service backed by SQLite. It does not require email, Red
 
 Use `docker-compose.staging.example.yml` for a source-built staging deployment and `docker-compose.production.example.yml` for a pinned release image. Both include Caddy, HTTPS-oriented cookie settings, persistent `/data`, restart policies, and healthchecks.
 
+Local image builds require Docker Desktop or another Docker daemon to be installed and running. A stopped or unavailable daemon is an environment failure rather than a source-code failure, but do not tag a release until the image has built successfully either locally or in CI.
+
 1. Copy the example configuration:
 
    ```bash

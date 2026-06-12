@@ -4,7 +4,7 @@ KoalaBye welcomes focused contributions that preserve its privacy-first, self-ho
 
 ## Development
 
-Install Go 1.24+, then:
+Install Go 1.26.4, then:
 
 ```bash
 cp .env.example .env

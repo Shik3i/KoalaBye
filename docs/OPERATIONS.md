@@ -2,6 +2,8 @@
 
 KoalaBye is one Go service with one SQLite database. It does not require email, a queue, object storage, an external database, or analytics services.
 
+Source builds use Go 1.26.4. Run `make check` before deployment, or use `go run ./cmd/devcheck` on Windows and other systems without GNU Make.
+
 ## First Deployment
 
 1. Copy `.env.example` to a protected environment file.
@@ -35,6 +37,8 @@ Use `scripts/restore-sqlite.sh BACKUP_PATH RESTORE_PATH` only while KoalaBye is 
 5. Verify `/healthz`, `/version`, login, a private campaign, and a public submission.
 
 Never edit a migration that has shipped. Add a new forward migration for every schema change.
+
+Docker image builds require Docker Desktop or another running Docker daemon. If no local daemon is available, use the CI Docker job as the image-build gate. A release tag must wait for a successful Docker build somewhere.
 
 ## Secret Rotation
 
