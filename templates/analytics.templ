@@ -42,6 +42,7 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 				@trendSVG(analytics.Trend)
 				<div class="table-wrap">
 					<table>
+						<caption>{ tr(ctx, "analytics.trend_caption", campaign.Name) }</caption>
 						<thead><tr><th>{ tr(ctx, "analytics.day") }</th><th>{ tr(ctx, "visits.raw_total") }</th><th>{ tr(ctx, "visits.unique_total") }</th><th>{ tr(ctx, "submissions.total") }</th></tr></thead>
 						<tbody>
 							for _, point := range analytics.Trend {
@@ -86,14 +87,17 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 					if field.FieldType == "textarea" {
 						<p>{ tr(ctx, "analytics.text_count", field.Answered) } <a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "analytics.view_responses") }</a></p>
 					} else {
-						<table>
-							<thead><tr><th>{ tr(ctx, "analytics.value") }</th><th>{ tr(ctx, "analytics.count") }</th><th>{ tr(ctx, "analytics.percentage") }</th></tr></thead>
-							<tbody>
-								for _, value := range field.Values {
-									<tr><td>{ value.Label }</td><td>{ fmt.Sprint(value.Count) }</td><td>{ fmt.Sprintf("%.1f%%", value.Percentage) }</td></tr>
-								}
-							</tbody>
-						</table>
+						<div class="table-wrap">
+							<table>
+								<caption>{ tr(ctx, "analytics.field_caption", field.Label) }</caption>
+								<thead><tr><th>{ tr(ctx, "analytics.value") }</th><th>{ tr(ctx, "analytics.count") }</th><th>{ tr(ctx, "analytics.percentage") }</th></tr></thead>
+								<tbody>
+									for _, value := range field.Values {
+										<tr><td>{ value.Label }</td><td>{ fmt.Sprint(value.Count) }</td><td>{ fmt.Sprintf("%.1f%%", value.Percentage) }</td></tr>
+									}
+								</tbody>
+							</table>
+						</div>
 						if field.FieldType == "checkbox_group" {
 							<p>{ tr(ctx, "analytics.total_selections", field.TotalSelections) }</p>
 						}
@@ -146,6 +150,7 @@ templ metadataList(key string, items []db.MetadataCount) {
 
 templ trendSVG(points []db.DailyTrend) {
 	<svg class="trend-chart" viewBox={ fmt.Sprintf("0 0 %d 180", maxInt(420, len(points)*34+50)) } role="img" aria-label={ tr(ctx, "analytics.trend") }>
+		<title>{ tr(ctx, "analytics.trend") }</title>
 		<line x1="35" y1="150" x2={ fmt.Sprint(maxInt(400, len(points)*34+30)) } y2="150" class="chart-axis"></line>
 		for index, point := range points {
 			<rect x={ fmt.Sprint(45 + index*34) } y={ fmt.Sprint(150 - barHeight(point.RawVisits, points)) } width="8" height={ fmt.Sprint(barHeight(point.RawVisits, points)) } class="bar raw"><title>{ point.Day } { tr(ctx, "visits.raw_total") }: { fmt.Sprint(point.RawVisits) }</title></rect>
@@ -162,7 +167,7 @@ templ dangerForm(action, key string, confirmation bool) {
 		if confirmation {
 			<label>{ tr(ctx, "deletion.confirmation") }<input name="confirmation" required/></label>
 		}
-		<button type="submit">{ tr(ctx, key) }</button>
+		<button class="destructive" type="submit">{ tr(ctx, key) }</button>
 	</form>
 }
 

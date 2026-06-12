@@ -208,6 +208,7 @@ templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign,
 		<section class="page-heading"><div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "responses.title") }</h1></div></section>
 		<section class="panel table-wrap">
 			<table>
+				<caption>{ tr(ctx, "responses.table_caption", campaign.Name) }</caption>
 				<thead><tr><th>{ tr(ctx, "responses.submitted_at") }</th><th>{ tr(ctx, "responses.summary") }</th><th>{ tr(ctx, "responses.visit") }</th><th>{ tr(ctx, "responses.token") }</th></tr></thead>
 				<tbody>
 					for _, submission := range submissions {

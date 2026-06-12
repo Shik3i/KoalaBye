@@ -38,7 +38,18 @@ templ CampaignList(instanceName string, user db.User, org db.Organization, campa
 				</a>
 			}
 			if len(campaigns) == 0 {
-				<div class="panel"><p>{ tr(ctx, "campaign.empty") }</p></div>
+				<div class="panel empty-state">
+					<h2>{ tr(ctx, "campaign.empty_title") }</h2>
+					<p>{ tr(ctx, "campaign.empty_explanation") }</p>
+					<ul>
+						<li>{ tr(ctx, "campaign.example.chrome") }</li>
+						<li>{ tr(ctx, "campaign.example.firefox") }</li>
+						<li>{ tr(ctx, "campaign.example.cancellation") }</li>
+					</ul>
+					if canCreate {
+						<a class="button" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/new") }>{ tr(ctx, "campaign.create") }</a>
+					}
+				</div>
 			}
 		</div>
 		<p class="muted">{ tr(ctx, "campaign.limit.usage", count, limits.MaxCampaigns) }</p>
@@ -69,7 +80,7 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 	}
 }
 
-templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, stats db.CampaignVisitStats, submissionStats db.SubmissionStats, role, baseURL string) {
+templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, stats db.CampaignVisitStats, submissionStats db.SubmissionStats, fieldCount int, role, baseURL string) {
 	@Layout(campaign.Name, instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
@@ -82,6 +93,17 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 		if campaign.Status == "archived" {
 			<div class="notice">{ tr(ctx, "campaign.archived.read_only") }</div>
 		}
+		<section class="panel checklist">
+			<h2>{ tr(ctx, "campaign.checklist.title") }</h2>
+			<ul class="checklist-list">
+				@checklistItem(true, "campaign.checklist.privacy", campaignPath(campaign)+"/privacy")
+				@checklistItem(fieldCount > 0, "campaign.checklist.form", campaignPath(campaign)+"/form")
+				@checklistItem(campaign.PublicLinkEnabled, "campaign.checklist.public_link", campaignPath(campaign)+"/settings")
+				@checklistItem(campaign.PublicLinkEnabled, "campaign.checklist.uninstall_url", "#extension-integration")
+				@checklistItem(campaign.Status == "active" && campaign.PublicLinkEnabled && fieldCount > 0, "campaign.checklist.test", baseURL+"/c/"+campaign.PublicID)
+			</ul>
+			<p class="muted">{ tr(ctx, "campaign.checklist.derived") }</p>
+		</section>
 		<section class="grid two">
 			<article class="panel">
 				<h2>{ tr(ctx, "campaign.public_link") }</h2>
@@ -111,12 +133,16 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<article class="panel"><h2>{ tr(ctx, "submissions.current_month") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.CurrentMonth) }</strong></article>
 			<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(submissionStats.LatestAt) }</p><p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a> · <a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a></p></article>
 		</section>
-		<section class="panel">
+		<section class="panel" id="extension-integration">
 			<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
 			<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
-			<pre><code>{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
+			<h3>{ tr(ctx, "campaign.snippet.chrome") }</h3>
+			<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.chrome") }><code>{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
 			<p class="muted">{ tr(ctx, "campaign.snippet.firefox") }</p>
-			<pre><code>{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
+			<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.firefox") }><code>{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
+			<h3>{ tr(ctx, "campaign.snippet.no_token.title") }</h3>
+			<p>{ tr(ctx, "campaign.snippet.no_token.text") }</p>
+			<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.no_token.title") }><code>{ chromeNoTokenSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
 		</section>
 		<section class="panel"><h2>{ tr(ctx, "analytics.title") }</h2><p>{ tr(ctx, "analytics.description") }</p><a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.open") }</a></section>
 		if campaign.Status != "archived" && role == "owner" {
@@ -241,6 +267,26 @@ templ campaignCheck(name, key string, checked bool) {
 	<label class="check"><input type="checkbox" name={ name } checked?={ checked }/>{ tr(ctx, key) }</label>
 }
 
+templ checklistItem(done bool, key, href string) {
+	<li>
+		<span class={ templ.KV("checklist-status", true), templ.KV("done", done) } aria-hidden="true">
+			if done {
+				✓
+			} else {
+				○
+			}
+		</span>
+		<a href={ templ.SafeURL(href) }>{ tr(ctx, key) }</a>
+		<span class="visually-hidden">
+			if done {
+				{ tr(ctx, "campaign.checklist.complete") }
+			} else {
+				{ tr(ctx, "campaign.checklist.incomplete") }
+			}
+		</span>
+	</li>
+}
+
 templ languageSelect(selected string) {
 	<select name="public_language_default"><option value="en" selected?={ selected == "en" }>{ tr(ctx, "language.en") }</option><option value="de" selected?={ selected == "de" }>{ tr(ctx, "language.de") }</option><option value="es" selected?={ selected == "es" }>{ tr(ctx, "language.es") }</option></select>
 }
@@ -278,4 +324,8 @@ func firefoxSnippet(publicURL string) string {
     );
   }
 });`
+}
+
+func chromeNoTokenSnippet(publicURL string) string {
+	return `chrome.runtime.setUninstallURL("` + publicURL + `");`
 }

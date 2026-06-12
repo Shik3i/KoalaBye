@@ -17,6 +17,7 @@ templ PublicLayout(title, instanceName string) {
 			<link rel="stylesheet" href="/assets/app.css"/>
 		</head>
 		<body class="public-body">
+			<a class="skip-link" href="#main-content">{ tr(ctx, "common.skip") }</a>
 			<header class="public-header">
 				<a class="brand" href="/">{ instanceName }</a>
 				<nav class="language-switcher" aria-label={ tr(ctx, "language.label") }>
@@ -25,7 +26,7 @@ templ PublicLayout(title, instanceName string) {
 					}
 				</nav>
 			</header>
-			<main class="public-page">
+			<main class="public-page" id="main-content">
 				{ children... }
 			</main>
 			<footer class="site-footer">

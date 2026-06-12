@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -997,6 +998,57 @@ func TestPublicVisitQuotaCanBeRaisedAndDashboardShowsCounters(t *testing.T) {
 	application.Handler.ServeHTTP(response, request)
 	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Raw visits") || !strings.Contains(response.Body.String(), ">2<") {
 		t.Fatalf("dashboard counters missing: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestCampaignReadinessGuidanceRendersInSupportedLocales(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, org, campaign := seedActivePublicCampaign(t, application, "camp_readiness", "readiness", "en")
+	ownerLogin := login(t, application, owner.Username, "a sufficiently long password")
+	base := "/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID
+
+	for _, tc := range []struct {
+		locale, checklist, chrome string
+	}{
+		{"en", "Campaign setup checklist", "Chrome / Chromium MV3 example"},
+		{"de", "Checkliste zur Kampagneneinrichtung", "Beispiel für Chrome / Chromium MV3"},
+		{"es", "Lista de configuración de campaña", "Ejemplo para Chrome / Chromium MV3"},
+	} {
+		request := httptest.NewRequest(http.MethodGet, base+"?lang="+tc.locale, nil)
+		request.AddCookie(ownerLogin.session)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		body := response.Body.String()
+		if response.Code != http.StatusOK || !strings.Contains(body, tc.checklist) || !strings.Contains(body, tc.chrome) {
+			t.Fatalf("campaign readiness locale %s failed: %d %s", tc.locale, response.Code, body)
+		}
+		if strings.Contains(body, "test-token-123") || !strings.Contains(body, "chrome.runtime.setUninstallURL") {
+			t.Fatalf("campaign integration example unsafe or missing for %s", tc.locale)
+		}
+	}
+}
+
+func TestReleaseReadinessDocumentsExistAndAreLinked(t *testing.T) {
+	t.Parallel()
+	for _, path := range []string{
+		"../../docs/DEPLOYMENT.md",
+		"../../docs/BACKUP_RESTORE.md",
+		"../../docs/RELEASE_CHECKLIST.md",
+	} {
+		content, err := os.ReadFile(path)
+		if err != nil || len(content) < 200 {
+			t.Fatalf("release document %s missing or empty: %v", path, err)
+		}
+	}
+	readme, err := os.ReadFile("../../README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, link := range []string{"docs/DEPLOYMENT.md", "docs/BACKUP_RESTORE.md", "docs/RELEASE_CHECKLIST.md"} {
+		if !strings.Contains(string(readme), link) {
+			t.Fatalf("README does not link %s", link)
+		}
 	}
 }
 

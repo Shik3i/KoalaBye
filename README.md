@@ -17,7 +17,7 @@ KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform fo
 - English, German, and Spanish application UI with accessible server-rendered interfaces.
 - Single-binary and non-root Docker deployment backed only by SQLite.
 
-Remaining planned work is limited to operational hardening such as automated retention scheduling, richer aggregate views, dependency scanning, release procedures, and documented backup/restore verification.
+Remaining planned work is limited to operational hardening such as automated retention scheduling, richer aggregate views, dependency scanning, and repeated deployment/restore verification.
 
 ## Principles
 
@@ -133,4 +133,4 @@ The optional bootstrap admin variables may create the first owner only when no o
 
 Future work may add retention scheduling and richer aggregate views. Conditional forms, multi-page forms, uploads, custom JavaScript, email notifications, and AI analysis remain out of scope. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
-See [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).
+See [Deployment](docs/DEPLOYMENT.md), [Backup and Restore](docs/BACKUP_RESTORE.md), [Release Checklist](docs/RELEASE_CHECKLIST.md), [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).

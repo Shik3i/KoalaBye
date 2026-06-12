@@ -20,7 +20,13 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 			<article class="panel">
 				<h2>{ tr(ctx, "dashboard.organizations") }</h2>
 				if len(organizations) == 0 {
-					<p class="muted">{ tr(ctx, "dashboard.no_organizations") }</p>
+					<div class="empty-state">
+						<p>{ tr(ctx, "dashboard.no_organizations") }</p>
+						<p class="muted">{ tr(ctx, "dashboard.organization_explanation") }</p>
+						if canCreate {
+							<a class="button" href="/app/orgs/new">{ tr(ctx, "org.create") }</a>
+						}
+					</div>
 				} else {
 					<ul class="clean-list">
 						for _, organization := range organizations {
@@ -32,7 +38,7 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 			<article class="panel">
 				<h2>{ tr(ctx, "dashboard.campaigns") }</h2>
 				<p>{ tr(ctx, "dashboard.campaigns_text") }</p>
-				<span class="badge quiet">{ tr(ctx, "dashboard.foundation_ready") }</span>
+				<p class="muted">{ tr(ctx, "dashboard.selfhost_text") }</p>
 			</article>
 		</section>
 	}

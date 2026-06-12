@@ -261,7 +261,12 @@ func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "load campaign submissions", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, stats, submissionStats, role, strings.TrimRight(h.cfg.BaseURL, "/")))
+	fields, err := h.q.ListFormFields(r.Context(), campaign.ID, false)
+	if err != nil {
+		http.Error(w, "load campaign form", http.StatusInternalServerError)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, stats, submissionStats, len(fields), role, strings.TrimRight(h.cfg.BaseURL, "/")))
 }
 
 func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {

@@ -14,6 +14,18 @@ templ Instance(instanceName string, user db.User, registrationEnabled string, ev
 			<article class="panel"><h2>{ tr(ctx, "instance.registration") }</h2><p>{ tr(ctx, "instance.registration_status", translatedBoolean(ctx, registrationEnabled)) }</p><a href="/instance/settings">{ tr(ctx, "instance.settings") }</a></article>
 			<article class="panel"><h2>{ tr(ctx, "instance.administration") }</h2><p>{ tr(ctx, "instance.administration_text") }</p><a href="/instance/users">{ tr(ctx, "instance.users") }</a></article>
 		</section>
+		<section class="panel checklist">
+			<h2>{ tr(ctx, "instance.checklist.title") }</h2>
+			<p>{ tr(ctx, "instance.checklist.text") }</p>
+			<ul class="checklist-list">
+				<li><span class="checklist-status done" aria-hidden="true">✓</span><span>{ tr(ctx, "instance.checklist.owner") }</span></li>
+				<li><span class="checklist-status" aria-hidden="true">○</span><a href="/instance/settings">{ tr(ctx, "instance.checklist.settings") }</a></li>
+				<li><span class="checklist-status" aria-hidden="true">○</span><a href="/app/orgs">{ tr(ctx, "instance.checklist.organization") }</a></li>
+				<li><span class="checklist-status" aria-hidden="true">○</span><a href="/instance/campaigns">{ tr(ctx, "instance.checklist.campaign") }</a></li>
+				<li><span class="checklist-status" aria-hidden="true">○</span><span>{ tr(ctx, "instance.checklist.https") }</span></li>
+				<li><span class="checklist-status" aria-hidden="true">○</span><span>{ tr(ctx, "instance.checklist.backup") }</span></li>
+			</ul>
+		</section>
 		<section class="panel">
 			<h2>{ tr(ctx, "instance.audit") }</h2>
 			if len(events) == 0 {

@@ -18,7 +18,14 @@ templ Organizations(instanceName string, user db.User, organizations []db.Organi
 				<a class="panel card-link" href={ templ.SafeURL("/app/orgs/" + org.PublicID) }><h2>{ org.Name }</h2><p>{ tr(ctx, "org.role", tr(ctx, "role." + org.Role)) }</p></a>
 			}
 			if len(organizations) == 0 {
-				<div class="panel"><p>{ tr(ctx, "org.empty") }</p></div>
+				<div class="panel empty-state">
+					<h2>{ tr(ctx, "org.empty_title") }</h2>
+					<p>{ tr(ctx, "org.empty") }</p>
+					<p class="muted">{ tr(ctx, "dashboard.organization_explanation") }</p>
+					if canCreate {
+						<a class="button" href="/app/orgs/new">{ tr(ctx, "org.create") }</a>
+					}
+				</div>
 			}
 		</div>
 	}
@@ -41,7 +48,7 @@ templ OrganizationNew(instanceName string, user db.User, errorKey string) {
 	}
 }
 
-templ OrganizationDetail(instanceName string, user db.User, org db.Organization, role string, members []db.OrganizationMember, limits db.OrganizationLimits, canManage bool) {
+templ OrganizationDetail(instanceName string, user db.User, org db.Organization, role string, members []db.OrganizationMember, limits db.OrganizationLimits, campaignCount int64, canManage bool) {
 	@Layout(org.Name, instanceName, &user) {
 		<section class="page-heading">
 			<div><div class="eyebrow">{ tr(ctx, "org.role", tr(ctx, "role." + role)) }</div><h1>{ org.Name }</h1><p class="muted">{ org.Slug }</p></div>
@@ -50,13 +57,30 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 			}
 		</section>
 		<section class="grid two">
-			<a class="panel card-link" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") }><h2>{ tr(ctx, "campaign.title") }</h2><p>{ tr(ctx, "campaign.list.description") }</p></a>
+			<article class="panel">
+				<h2>{ tr(ctx, "campaign.title") }</h2>
+				if campaignCount == 0 {
+					<p>{ tr(ctx, "campaign.empty_explanation") }</p>
+					<ul>
+						<li>{ tr(ctx, "campaign.example.chrome") }</li>
+						<li>{ tr(ctx, "campaign.example.firefox") }</li>
+						<li>{ tr(ctx, "campaign.example.cancellation") }</li>
+					</ul>
+					if canManage && campaignCount < limits.MaxCampaigns {
+						<a class="button" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/new") }>{ tr(ctx, "campaign.create") }</a>
+					}
+				} else {
+					<p>{ tr(ctx, "campaign.list.description") }</p>
+					<a href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") }>{ tr(ctx, "campaign.open_all") }</a>
+				}
+			</article>
 			<article class="panel"><h2>{ tr(ctx, "limits.title") }</h2><p>{ tr(ctx, "limits.explanation") }</p><dl class="stats"><dt>{ tr(ctx, "limits.members") }</dt><dd>{ fmt.Sprint(limits.MaxMembers) }</dd><dt>{ tr(ctx, "limits.invites") }</dt><dd>{ fmt.Sprint(limits.MaxActiveInvites) }</dd><dt>{ tr(ctx, "limits.campaigns") }</dt><dd>{ fmt.Sprint(limits.MaxCampaigns) }</dd></dl></article>
 		</section>
 		<section class="panel">
 			<h2>{ tr(ctx, "members.title") }</h2>
 			<div class="table-wrap">
 				<table>
+					<caption>{ tr(ctx, "members.table_caption", org.Name) }</caption>
 					<thead><tr><th>{ tr(ctx, "auth.login.username") }</th><th>{ tr(ctx, "setup.display_name") }</th><th>{ tr(ctx, "members.role") }</th><th></th></tr></thead>
 					<tbody>
 						for _, member := range members {

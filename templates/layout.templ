@@ -18,6 +18,7 @@ templ Layout(title string, instanceName string, user *db.User) {
 			<script src="/assets/app.js" defer></script>
 		</head>
 		<body>
+			<a class="skip-link" href="#main-content">{ tr(ctx, "common.skip") }</a>
 			<header class="site-header">
 				<a class="brand" href="/">{ instanceName }</a>
 				<div class="header-actions">
@@ -38,7 +39,7 @@ templ Layout(title string, instanceName string, user *db.User) {
 					</nav>
 				</div>
 			</header>
-			<main class="page">
+			<main class="page" id="main-content">
 				{ children... }
 			</main>
 			<footer class="site-footer">
