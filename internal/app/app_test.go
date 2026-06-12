@@ -1021,3 +1021,246 @@ func TestPublicPageLanguageOverrideDoesNotSetCookie(t *testing.T) {
 		}
 	}
 }
+
+func TestPhase6FormSubmissionPrivacyQuotaAndInboxPermissions(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, org, campaign := seedActivePublicCampaign(t, application, "camp_phase6", "phase6", "en")
+	q := db.NewQuerier(application.Database)
+	if err := q.CreateFormField(context.Background(), db.SaveFormFieldInput{
+		PublicID: "field_feedback", CampaignID: campaign.ID, FieldType: "textarea",
+		Label: "What happened?", Required: true, ConfigJSON: `{"max_length":100}`,
+	}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.CreateFormField(context.Background(), db.SaveFormFieldInput{
+		PublicID: "field_rating", CampaignID: campaign.ID, FieldType: "rating_1_5", Label: "Rating",
+	}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	rawToken := "phase6-raw-token"
+	get := httptest.NewRecorder()
+	application.Handler.ServeHTTP(get, httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID+"?t="+rawToken, nil))
+	body := get.Body.String()
+	if get.Code != http.StatusOK || !strings.Contains(body, `name="field_field_feedback"`) || strings.Contains(body, rawToken) || len(get.Result().Cookies()) != 0 {
+		t.Fatalf("public form privacy/rendering failed: %d %s", get.Code, body)
+	}
+	visitMatch := regexp.MustCompile(`name="visit_public_id" value="([^"]+)"`).FindStringSubmatch(body)
+	if len(visitMatch) != 2 {
+		t.Fatal("public form did not include a visit public ID")
+	}
+
+	submit := func(values url.Values) *httptest.ResponseRecorder {
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPost, "/c/"+campaign.PublicID+"/submit?lang=en", strings.NewReader(values.Encode()))
+		request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		request.Header.Set("User-Agent", "raw-agent-must-not-be-stored")
+		application.Handler.ServeHTTP(response, request)
+		return response
+	}
+	invalid := submit(url.Values{"visit_public_id": {visitMatch[1]}, "field_field_rating": {"9"}})
+	if invalid.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid submission accepted: %d", invalid.Code)
+	}
+	honeypot := submit(url.Values{"website": {"spam"}, "field_field_feedback": {"spam"}})
+	if honeypot.Code != http.StatusOK {
+		t.Fatalf("honeypot did not return generic success: %d", honeypot.Code)
+	}
+	var count int
+	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM campaign_submissions WHERE campaign_id=?`, campaign.ID).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("honeypot stored a submission: %d %v", count, err)
+	}
+	oversized := submit(url.Values{"field_field_feedback": {strings.Repeat("x", (128<<10)+1)}})
+	if oversized.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversized submission status=%d", oversized.Code)
+	}
+	freeText := `<script>alert("private")</script>`
+	valid := submit(url.Values{
+		"visit_public_id": {visitMatch[1]}, "field_field_feedback": {freeText},
+		"field_field_rating": {"5"}, "unknown_field": {"ignored"},
+	})
+	if valid.Code != http.StatusOK || !strings.Contains(valid.Body.String(), "Thank you") || len(valid.Result().Cookies()) != 0 {
+		t.Fatalf("valid submission failed: %d %s", valid.Code, valid.Body.String())
+	}
+	var visitID any
+	var storedHash string
+	if err := application.Database.QueryRow(`SELECT visit_id,install_token_hash FROM campaign_submissions WHERE campaign_id=?`, campaign.ID).Scan(&visitID, &storedHash); err != nil || visitID == nil || storedHash == rawToken || storedHash == "" {
+		t.Fatalf("submission privacy/linkage failed: visit=%v hash=%q err=%v", visitID, storedHash, err)
+	}
+	for _, forbiddenColumn := range []string{"ip", "user_agent"} {
+		rows, err := application.Database.Query(`SELECT name FROM pragma_table_info('campaign_submissions') WHERE lower(name) LIKE ?`, "%"+forbiddenColumn+"%")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rows.Next() {
+			rows.Close()
+			t.Fatalf("submission schema contains privacy-forbidden column %q", forbiddenColumn)
+		}
+		rows.Close()
+	}
+
+	analyst := seedNonOwner(t, application, "phase6analyst", "phase6 analyst password")
+	viewer := seedNonOwner(t, application, "phase6viewer", "phase6 viewer password")
+	for _, member := range []struct {
+		user db.User
+		role string
+	}{{analyst, "analyst"}, {viewer, "viewer"}} {
+		if _, err := application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, member.user.ID, db.Now(), owner.ID); err != nil {
+			t.Fatal(err)
+		}
+		if err := q.SetCampaignMember(context.Background(), campaign, member.user.PublicID, member.role, owner.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	base := "/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID
+	for _, tc := range []struct {
+		user     db.User
+		password string
+		status   int
+	}{{owner, "a sufficiently long password", http.StatusOK}, {analyst, "phase6 analyst password", http.StatusOK}, {viewer, "phase6 viewer password", http.StatusForbidden}} {
+		session := login(t, application, tc.user.Username, tc.password)
+		request := httptest.NewRequest(http.MethodGet, base+"/responses", nil)
+		request.AddCookie(session.session)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != tc.status {
+			t.Fatalf("%s inbox status=%d want=%d", tc.user.Username, response.Code, tc.status)
+		}
+		if tc.status == http.StatusOK && strings.Contains(response.Body.String(), storedHash) {
+			t.Fatal("response inbox exposed install token hash")
+		}
+	}
+
+	ownerLogin := login(t, application, owner.Username, "a sufficiently long password")
+	var submissionPublicID string
+	if err := application.Database.QueryRow(`SELECT public_id FROM campaign_submissions WHERE campaign_id=?`, campaign.ID).Scan(&submissionPublicID); err != nil {
+		t.Fatal(err)
+	}
+	detailRequest := httptest.NewRequest(http.MethodGet, base+"/responses/"+submissionPublicID, nil)
+	detailRequest.AddCookie(ownerLogin.session)
+	detail := httptest.NewRecorder()
+	application.Handler.ServeHTTP(detail, detailRequest)
+	if detail.Code != http.StatusOK || strings.Contains(detail.Body.String(), freeText) || !strings.Contains(detail.Body.String(), "&lt;script&gt;") {
+		t.Fatalf("response free text was not escaped: %d %s", detail.Code, detail.Body.String())
+	}
+
+	if _, err := application.Database.Exec(`UPDATE organization_limits SET max_monthly_submissions=1 WHERE organization_id=?`, org.ID); err != nil {
+		t.Fatal(err)
+	}
+	limited := submit(url.Values{"field_field_feedback": {"second"}})
+	lower := strings.ToLower(limited.Body.String())
+	if limited.Code != http.StatusServiceUnavailable || !strings.Contains(lower, "safety limit") || strings.Contains(lower, "paid") || strings.Contains(lower, "upgrade") {
+		t.Fatalf("submission quota response invalid: %d %s", limited.Code, limited.Body.String())
+	}
+	if _, err := application.Database.Exec(`UPDATE organization_limits SET max_monthly_submissions=2 WHERE organization_id=?`, org.ID); err != nil {
+		t.Fatal(err)
+	}
+	if raised := submit(url.Values{"field_field_feedback": {"second"}}); raised.Code != http.StatusOK {
+		t.Fatalf("raised submission quota did not allow submission: %d", raised.Code)
+	}
+
+	privateOwner := seedNonOwner(t, application, "privateowner", "private owner password")
+	privateOrg, err := q.CreateOrganization(context.Background(), db.CreateOrganizationInput{
+		PublicID: "org_private", Slug: "private", Name: "Private", UserID: privateOwner.ID,
+		Limits: db.DefaultLimits{
+			MaxOrganizationsPerUser: 2, MaxCampaignsPerOrg: 3, MaxMembersPerOrg: 5,
+			MaxActiveInvitesPerOrg: 10, MaxMonthlyVisitsPerOrg: 100, MaxMonthlySubmissionsPerOrg: 100,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateCampaign, err := q.CreateCampaign(context.Background(), db.CreateCampaignInput{
+		PublicID: "camp_private_responses", OrganizationID: privateOrg.ID, CreatedBy: privateOwner.ID,
+		Name: "Private responses", Slug: "private-responses", Language: "en", PrivacyPreset: "strict",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := q.CreateSubmission(context.Background(), db.CreateSubmissionInput{
+		PublicID: "submission_private", CampaignID: privateCampaign.ID, OrgID: privateOrg.ID, SubmittedAt: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	instanceOwnerRequest := httptest.NewRequest(http.MethodGet, "/app/orgs/"+privateOrg.PublicID+"/campaigns/"+privateCampaign.PublicID+"/responses", nil)
+	instanceOwnerRequest.AddCookie(ownerLogin.session)
+	instanceOwnerResponse := httptest.NewRecorder()
+	application.Handler.ServeHTTP(instanceOwnerResponse, instanceOwnerRequest)
+	if instanceOwnerResponse.Code != http.StatusForbidden {
+		t.Fatalf("instance owner browsed private responses without membership: %d", instanceOwnerResponse.Code)
+	}
+}
+
+func TestPhase6FormBuilderPermissionsAndArchivedReadOnly(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	orgs, _ := q.ListOrganizationsForUser(context.Background(), owner.ID)
+	org := orgs[0]
+	campaign, err := q.CreateCampaign(context.Background(), db.CreateCampaignInput{
+		PublicID: "camp_builder", OrganizationID: org.ID, CreatedBy: owner.ID,
+		Name: "Builder", Slug: "builder", Language: "en", PrivacyPreset: "strict",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	campaign, _ = q.GetCampaignByPublicID(context.Background(), org.PublicID, campaign.PublicID)
+	base := "/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID + "/form"
+
+	users := []struct {
+		name, password, role string
+		canEdit              bool
+	}{
+		{"formeditor", "form editor password", "editor", true},
+		{"formanalyst", "form analyst password", "analyst", false},
+		{"formviewer", "form viewer password", "viewer", false},
+	}
+	for _, tc := range users {
+		user := seedNonOwner(t, application, tc.name, tc.password)
+		if _, err := application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, user.ID, db.Now(), owner.ID); err != nil {
+			t.Fatal(err)
+		}
+		if err := q.SetCampaignMember(context.Background(), campaign, user.PublicID, tc.role, owner.ID); err != nil {
+			t.Fatal(err)
+		}
+		session := login(t, application, user.Username, tc.password)
+		csrfCookie, token, _ := csrfPage(t, application, base, session.session)
+		response := formPost(application, base+"/fields", url.Values{
+			"csrf_token": {token}, "field_type": {"textarea"}, "label": {"From " + tc.role}, "max_length": {"1000"},
+		}, session.session, csrfCookie)
+		expected := http.StatusForbidden
+		if tc.canEdit {
+			expected = http.StatusSeeOther
+		}
+		if response.Code != expected {
+			t.Fatalf("%s add field=%d want=%d", tc.role, response.Code, expected)
+		}
+	}
+	outsider := seedNonOwner(t, application, "formoutsider", "form outsider password")
+	outsiderLogin := login(t, application, outsider.Username, "form outsider password")
+	request := httptest.NewRequest(http.MethodGet, base, nil)
+	request.AddCookie(outsiderLogin.session)
+	response := httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("non-member form access=%d", response.Code)
+	}
+
+	ownerLogin := login(t, application, owner.Username, password)
+	csrfCookie, token, _ := csrfPage(t, application, base, ownerLogin.session)
+	ownerCreated := formPost(application, base+"/fields", url.Values{
+		"csrf_token": {token}, "field_type": {"rating_1_5"}, "label": {"Owner rating"},
+	}, ownerLogin.session, csrfCookie)
+	if ownerCreated.Code != http.StatusSeeOther {
+		t.Fatalf("owner add field=%d", ownerCreated.Code)
+	}
+	if _, err := application.Database.Exec(`UPDATE campaigns SET status='archived',archived_at=? WHERE id=?`, db.Now(), campaign.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, _, archivedBody := csrfPage(t, application, base, ownerLogin.session, csrfCookie)
+	if !strings.Contains(archivedBody, "read-only") || strings.Contains(archivedBody, `action="`+base+`/fields"`) {
+		t.Fatalf("archived form was not read-only: %s", archivedBody)
+	}
+}

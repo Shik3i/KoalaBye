@@ -2,7 +2,7 @@
 
 KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform for uninstall feedback and lightweight anonymous surveys. It is designed for browser extensions, apps, and small developer tools that need honest feedback without tracking people.
 
-> **Status:** early foundation. Authentication, organizations, campaign management, cookie-free public campaign pages, privacy-first visit counting, permissions, audit logging, and deployment packaging are present. Feedback forms and response collection are not implemented yet.
+> **Status:** early product. Authentication, organizations, campaign management, a form builder, cookie-free public feedback pages, anonymous submissions, privacy-first visit counting, response inboxes, permissions, audit logging, and deployment packaging are present.
 
 ## Principles
 
@@ -85,6 +85,12 @@ Active campaigns may expose cookie-free public pages at `/c/{campaignPublicID}` 
 
 Campaign pages include Chrome/Chromium and Firefox uninstall URL examples. The generated token is random, local to the extension, and optional.
 
+Each campaign has one ordered active feedback form. Supported fields are plain text blocks, checkbox groups, radio groups, 1-5 ratings, and bounded free-text areas. Fields and options are soft-archived so historical answer snapshots remain understandable.
+
+Anonymous submissions work without JavaScript, login, or cookies. Validation ignores unknown fields, rejects invalid options and ratings, enforces required fields and textarea limits, caps request bodies at 128 KiB, and uses a honeypot that returns generic success without storing spam. Submissions may link to a visit by public ID and reuse its HMAC token hash; raw tokens, IP addresses, and raw user agents are never stored.
+
+Campaign owners, editors, and analysts can read responses; viewers cannot. Owners and editors can change forms. Instance Owners do not receive access to private response contents solely from their instance role: they must also have organization and campaign access. Monthly submission limits use UTC boundaries and remain adjustable safety controls.
+
 ```js
 // Chrome / Chromium
 const token = crypto.randomUUID();
@@ -104,6 +110,6 @@ The optional bootstrap admin variables may create the first owner only when no o
 
 ## Roadmap
 
-The next layers are a form builder, response storage, exports, and aggregate analytics. Passkeys and optional email may follow. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
+The next layer is aggregate analytics and CSV/JSON export. Conditional forms, multi-page forms, uploads, custom JavaScript, email notifications, and AI analysis remain out of the current scope. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
 See [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).

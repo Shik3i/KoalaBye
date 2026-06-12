@@ -32,6 +32,33 @@ type Campaign struct {
 	DisabledAt        interface{} `json:"disabled_at"`
 }
 
+type CampaignFormField struct {
+	ID         int64       `json:"id"`
+	PublicID   string      `json:"public_id"`
+	CampaignID int64       `json:"campaign_id"`
+	FieldType  string      `json:"field_type"`
+	Label      string      `json:"label"`
+	HelpText   interface{} `json:"help_text"`
+	Required   int64       `json:"required"`
+	SortOrder  int64       `json:"sort_order"`
+	ConfigJson interface{} `json:"config_json"`
+	CreatedAt  string      `json:"created_at"`
+	UpdatedAt  string      `json:"updated_at"`
+	ArchivedAt interface{} `json:"archived_at"`
+}
+
+type CampaignFormOption struct {
+	ID         int64       `json:"id"`
+	PublicID   string      `json:"public_id"`
+	FieldID    int64       `json:"field_id"`
+	Label      string      `json:"label"`
+	Value      string      `json:"value"`
+	SortOrder  int64       `json:"sort_order"`
+	CreatedAt  string      `json:"created_at"`
+	UpdatedAt  string      `json:"updated_at"`
+	ArchivedAt interface{} `json:"archived_at"`
+}
+
 type CampaignMember struct {
 	ID              int64       `json:"id"`
 	CampaignID      int64       `json:"campaign_id"`
@@ -54,6 +81,25 @@ type CampaignSetting struct {
 	ShowPrivacyNotice      int64       `json:"show_privacy_notice"`
 	UpdatedAt              string      `json:"updated_at"`
 	UpdatedByUserID        interface{} `json:"updated_by_user_id"`
+}
+
+type CampaignSubmission struct {
+	ID               int64       `json:"id"`
+	PublicID         string      `json:"public_id"`
+	CampaignID       int64       `json:"campaign_id"`
+	VisitID          interface{} `json:"visit_id"`
+	InstallTokenHash interface{} `json:"install_token_hash"`
+	SubmittedAt      string      `json:"submitted_at"`
+}
+
+type CampaignSubmissionAnswer struct {
+	ID                 int64       `json:"id"`
+	SubmissionID       int64       `json:"submission_id"`
+	FieldID            interface{} `json:"field_id"`
+	FieldPublicID      string      `json:"field_public_id"`
+	FieldType          string      `json:"field_type"`
+	FieldLabelSnapshot string      `json:"field_label_snapshot"`
+	ValueJson          string      `json:"value_json"`
 }
 
 type CampaignVisit struct {

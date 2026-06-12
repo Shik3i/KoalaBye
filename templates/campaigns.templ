@@ -11,6 +11,8 @@ templ CampaignNav(campaign db.Campaign) {
 		<a href={ templ.SafeURL(campaignPath(campaign)) }>{ tr(ctx, "campaign.overview") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/settings") }>{ tr(ctx, "campaign.settings") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/privacy") }>{ tr(ctx, "campaign.privacy.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/access") }>{ tr(ctx, "campaign.access.title") }</a>
 	</nav>
 }
@@ -66,7 +68,7 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 	}
 }
 
-templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, stats db.CampaignVisitStats, role, baseURL string) {
+templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, stats db.CampaignVisitStats, submissionStats db.SubmissionStats, role, baseURL string) {
 	@Layout(campaign.Name, instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
@@ -103,6 +105,11 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<article class="panel"><h2>{ tr(ctx, "visits.unique_total") }</h2><strong class="metric">{ fmt.Sprint(stats.UniqueTokenTotal) }</strong></article>
 			<article class="panel"><h2>{ tr(ctx, "visits.current_month") }</h2><strong class="metric">{ fmt.Sprint(stats.CurrentMonthTotal) }</strong><p>{ tr(ctx, "visits.last", nullable(stats.LastVisitAt)) }</p></article>
 		</section>
+		<section class="grid three">
+			<article class="panel"><h2>{ tr(ctx, "submissions.total") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.Total) }</strong></article>
+			<article class="panel"><h2>{ tr(ctx, "submissions.current_month") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.CurrentMonth) }</strong></article>
+			<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(submissionStats.LatestAt) }</p><p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a> · <a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a></p></article>
+		</section>
 		<section class="panel">
 			<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
 			<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
@@ -111,7 +118,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<pre><code>{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
 		</section>
 		<section class="grid three">
-			for _, key := range []string{"form", "public_page", "visits", "responses", "analytics", "export"} {
+			for _, key := range []string{"analytics", "export"} {
 				<article class="panel"><h2>{ tr(ctx, "campaign.future." + key) }</h2><span class="badge quiet">{ tr(ctx, "campaign.future.label") }</span></article>
 			}
 		</section>

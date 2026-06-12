@@ -21,6 +21,11 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - Optional install tokens are length-bounded and HMAC-SHA256 hashed with the instance secret; raw values are never stored or rendered.
 - Referrers are reduced to hostnames and user agents to coarse browser/OS families before storage.
 - Monthly visit safety limits are enforced before a visit row is inserted.
+- Public feedback bodies are capped at 128 KiB and validated against active fields and options.
+- Submission inserts and UTC monthly safety limits are enforced transactionally.
+- Submission rows store no IP address, raw user agent, or raw install token; linked visits contribute only their existing HMAC hash.
+- A honeypot returns generic success without storing a submission.
+- Response contents require organization membership plus an owner, editor, or analyst campaign role. Instance Owner status alone is insufficient.
 - CSP, frame denial, MIME sniffing prevention, no-referrer, and restrictive permissions headers.
 - SQLite foreign keys, WAL mode, busy timeout, transactions, and migrations.
 - No external CDN requests, IP database storage, fingerprinting, or raw user-agent retention.
@@ -35,7 +40,7 @@ Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the databas
 - There is no password reset, MFA, passkey, account recovery, or session management UI.
 - Audit retention and export policies are not configurable yet.
 - Invite links are bearer credentials and must be shared through a trusted channel.
-- Public feedback questions, submissions, retention controls, exports, and detailed aggregate analytics are not implemented yet.
+- Submission retention controls, exports, and detailed aggregate analytics are not implemented yet.
 - Security contact and signed release procedures must be finalized before a public hosted launch.
 - Dependency and container scanning are not yet automated in CI.
 - SQLite backups and restore verification remain an operator responsibility.

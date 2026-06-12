@@ -37,6 +37,8 @@ Campaign changes must preserve organization tenancy, explicit-owner invariants, 
 
 Public campaign changes must remain cookie-free, work without JavaScript, and avoid external assets. Hash optional install tokens with HMAC-SHA256 and the instance secret, keep tokens out of responses and logs, reduce referrers to hostnames, and discard raw user agents after coarse classification. Treat raw and first-seen-token visits as separate counters, and use UTC month boundaries for visit safety limits.
 
+Form and submission changes must keep field content plain text, preserve answer snapshots, validate values server-side, and enforce request-size and UTC monthly submission limits. Never add IP, raw user-agent, or raw-token columns. Public honeypot hits must not write data. Response access requires actual organization membership; do not inherit the general Instance Owner campaign shortcut for private response contents.
+
 KoalaBye is 100% free forever. Safety limits are operational abuse-prevention controls, not plans. Do not add billing, subscription, payment, premium, or upgrade concepts to code, copy, schema, or documentation.
 
 ## Translations

@@ -26,6 +26,9 @@ These rules apply to human contributors and coding agents.
 - Install-token processing must use HMAC-SHA256 with the instance secret and must never store, render, audit, or log raw tokens.
 - Store only referrer hostnames and coarse documented browser/OS families when their campaign settings permit it.
 - Keep public pages functional without JavaScript and free of external assets or analytics.
+- Store form content as plain text and rely on escaped rendering; never permit raw HTML or custom JavaScript.
+- Validate public answers against active fields and options, cap request bodies, and silently avoid storage for honeypot hits.
+- Response contents require organization membership plus an owner, editor, or analyst campaign role. Instance Owner status alone is not private-response access.
 
 ## Engineering
 
@@ -73,4 +76,5 @@ These rules apply to human contributors and coding agents.
 - Audit sensitive Instance Owner overrides, status changes, role changes, and safety-limit changes.
 - Campaign routes use public IDs, enforce organization-scoped slugs, and keep archived or disabled records counted against safety limits.
 - Public visit limits use UTC month boundaries. Raw visits and first-seen token visits are distinct counters.
+- Public submission limits use UTC month boundaries. Submission rows contain no IP, raw user agent, or raw install token.
 - Do not add external CDNs, mandatory email, billing, analytics, or external services unless explicitly requested.

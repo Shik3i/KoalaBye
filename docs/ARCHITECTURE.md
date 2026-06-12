@@ -40,7 +40,7 @@ Manual invite codes are long random bearer values. Only their SHA-256 hashes are
 
 ## Safety Limits
 
-Instance defaults seed per-organization limits. Organization, member, active-invite, campaign, and monthly visit limits are enforced now. Submission limits remain prepared for the future module that owns submissions. Visit months use UTC boundaries. These are abuse-prevention controls for free instances, never product plans or monetization boundaries.
+Instance defaults seed per-organization limits. Organization, member, active-invite, campaign, monthly visit, and monthly submission limits are enforced. Visit and submission months use UTC boundaries. These are abuse-prevention controls for free instances, never product plans or monetization boundaries.
 
 Instance Owners can adjust defaults and per-organization limits. Sensitive overrides, status changes, settings changes, and organization membership administration produce audit events.
 
@@ -51,6 +51,16 @@ Each campaign has a privacy-settings row from creation. Strict privacy disables 
 Canonical public links are `/c/{campaignPublicID}`. A readable `/u/{orgSlug}/{campaignSlug}` form resolves to the same page. Only active, public-link-enabled campaigns in enabled organizations are available; every other state returns a generic response.
 
 Visits store a raw-count flag and a first-seen-token-count flag separately. Optional opaque install tokens are limited to 256 characters, HMAC-SHA256 hashed with `KOALABYE_SECRET`, and never persisted or rendered raw. Repeated hashes may be stored as raw visits but count as unique only once. Referrers are reduced to lowercase hostnames. User agents are reduced to documented browser (`Chrome`, `Firefox`, `Safari`, `Edge`, `Other`, `Unknown`) and OS (`Windows`, `macOS`, `Linux`, `Android`, `iOS`, `Other`, `Unknown`) families; raw user agents are discarded.
+
+## Forms and Submissions
+
+Campaign forms are ordered rows in `campaign_form_fields`, with type-specific JSON limited to plain text-block bodies and textarea lengths. Checkbox and radio choices live in `campaign_form_options`. Fields and options are soft-archived; there is no raw HTML, conditional logic, multi-page state, upload, or custom JavaScript.
+
+Public submissions are capped at 128 KiB and validated against the current active form. Unknown fields are ignored. Required values, active option membership, ratings from 1 through 5, and textarea limits are enforced server-side. A hidden honeypot returns the same thank-you page without writing a submission.
+
+`campaign_submissions` stores a public ID, campaign, optional visit link, optional copied HMAC install-token hash, and UTC timestamp. It has no IP or user-agent columns. Answers store field public ID, type, label snapshot, and JSON value so later form edits do not erase historical meaning. Templ escapes all labels and free text during rendering.
+
+Owners and editors edit forms. Owners, editors, and analysts read response contents; viewers and non-members cannot. Instance Owner moderation rights do not imply private response access: response handlers require actual organization membership and a response-capable campaign role.
 
 ## First-Run Setup
 
@@ -76,9 +86,8 @@ KoalaBye has no analytics SDK, external browser asset, IP column, raw user-agent
 
 ## Planned Modules
 
-- Submission storage and retention controls
-- Form builder and public feedback questions
-- Aggregate analytics and exports
+- Aggregate analytics and CSV/JSON exports
+- Submission retention controls
 - Passkeys
 - Optional email integration
 

@@ -86,6 +86,17 @@ pre code { padding: 0; }
 table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: .9rem; }
 th, td { text-align: left; padding: 11px 8px; border-bottom: 1px solid var(--line); }
 th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; }
+.field-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.field-heading h2 { margin-top: 8px; }
+.form-field-card { margin-bottom: 16px; }
+.actions.compact { display: flex; gap: 14px; margin-top: 16px; }
+.public-field { border: 0; border-top: 1px solid var(--line); padding: 18px 0 0; margin: 0; }
+.public-field legend { font-weight: 750; padding: 0 8px 0 0; }
+.public-field textarea { width: 100%; min-height: 120px; border: 1px solid #cbd4ca; border-radius: 9px; padding: 11px 12px; }
+.choice { display: block; margin: 10px 0; }
+.choice-row { display: flex; flex-wrap: wrap; gap: 14px; }
+.honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.response-answer { margin: 16px 0; white-space: pre-wrap; }
 
 @media (max-width: 720px) {
   .grid.two, .grid.three { grid-template-columns: 1fr; }

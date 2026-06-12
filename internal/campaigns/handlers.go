@@ -72,7 +72,12 @@ func (h *Handler) public(w http.ResponseWriter, r *http.Request, resolve func() 
 		h.publicUnavailable(w, r, http.StatusServiceUnavailable, false, publicCampaign.Settings.PublicLanguageDefault)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.PublicCampaignPage(h.cfg.InstanceName, publicCampaign.Campaign, publicCampaign.Settings))
+	fields, err := h.q.ListFormFields(r.Context(), publicCampaign.Campaign.ID, false)
+	if err != nil {
+		h.publicUnavailable(w, r, http.StatusServiceUnavailable, false, publicCampaign.Settings.PublicLanguageDefault)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.PublicCampaignPage(h.cfg.InstanceName, publicCampaign.Campaign, publicCampaign.Settings, fields, publicID, ""))
 }
 
 func (h *Handler) publicUnavailable(w http.ResponseWriter, r *http.Request, status int, quota bool, defaultLocale string) {
@@ -250,7 +255,12 @@ func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "load campaign visits", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, stats, role, strings.TrimRight(h.cfg.BaseURL, "/")))
+	submissionStats, err := h.q.SubmissionStats(r.Context(), campaign.ID, time.Now())
+	if err != nil {
+		http.Error(w, "load campaign submissions", http.StatusInternalServerError)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, stats, submissionStats, role, strings.TrimRight(h.cfg.BaseURL, "/")))
 }
 
 func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
