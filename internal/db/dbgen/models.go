@@ -32,6 +32,21 @@ type Campaign struct {
 	DisabledAt        interface{} `json:"disabled_at"`
 }
 
+type CampaignBranding struct {
+	CampaignID           int64       `json:"campaign_id"`
+	BrandName            interface{} `json:"brand_name"`
+	BrandUrl             interface{} `json:"brand_url"`
+	PrivacyPolicyUrl     interface{} `json:"privacy_policy_url"`
+	LegalNoticeUrl       interface{} `json:"legal_notice_url"`
+	SupportUrl           interface{} `json:"support_url"`
+	ContactUrl           interface{} `json:"contact_url"`
+	AccentPreset         string      `json:"accent_preset"`
+	BackgroundStyle      string      `json:"background_style"`
+	ShowKoalabyeBranding int64       `json:"show_koalabye_branding"`
+	UpdatedAt            string      `json:"updated_at"`
+	UpdatedByUserID      interface{} `json:"updated_by_user_id"`
+}
+
 type CampaignFormField struct {
 	ID         int64       `json:"id"`
 	PublicID   string      `json:"public_id"`

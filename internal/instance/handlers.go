@@ -142,17 +142,17 @@ func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	values := map[string]string{
-		"registration_enabled": boolString(r.FormValue("registration_enabled") == "on"),
-		"invite_only": boolString(r.FormValue("invite_only") == "on"),
-		"invite_registration_enabled": boolString(r.FormValue("invite_registration_enabled") == "on"),
-		"instance_name": strings.TrimSpace(r.FormValue("instance_name")),
-		"instance_operator_name": strings.TrimSpace(r.FormValue("instance_operator_name")),
-		"instance_operator_url": safeURL(r.FormValue("instance_operator_url")),
-		"instance_legal_notice_url": safeURL(r.FormValue("instance_legal_notice_url")),
-		"instance_privacy_policy_url": safeURL(r.FormValue("instance_privacy_policy_url")),
-		"instance_source_url": safeURL(r.FormValue("instance_source_url")),
-		"instance_contact_url": safeURL(r.FormValue("instance_contact_url")),
-		"instance_support_url": safeURL(r.FormValue("instance_support_url")),
+		"registration_enabled":                  boolString(r.FormValue("registration_enabled") == "on"),
+		"invite_only":                           boolString(r.FormValue("invite_only") == "on"),
+		"invite_registration_enabled":           boolString(r.FormValue("invite_registration_enabled") == "on"),
+		"instance_name":                         strings.TrimSpace(r.FormValue("instance_name")),
+		"instance_operator_name":                strings.TrimSpace(r.FormValue("instance_operator_name")),
+		"instance_operator_url":                 safeURL(r.FormValue("instance_operator_url")),
+		"instance_legal_notice_url":             safeURL(r.FormValue("instance_legal_notice_url")),
+		"instance_privacy_policy_url":           safeURL(r.FormValue("instance_privacy_policy_url")),
+		"instance_source_url":                   safeURL(r.FormValue("instance_source_url")),
+		"instance_contact_url":                  safeURL(r.FormValue("instance_contact_url")),
+		"instance_support_url":                  safeURL(r.FormValue("instance_support_url")),
 		"instance_legal_pages_are_placeholders": boolString(r.FormValue("instance_legal_pages_are_placeholders") == "on"),
 	}
 	for _, k := range []string{"default_max_organizations_per_user", "default_max_campaigns_per_org", "default_max_members_per_org", "default_max_active_invites_per_org", "default_max_monthly_visits_per_org", "default_max_monthly_submissions_per_org"} {

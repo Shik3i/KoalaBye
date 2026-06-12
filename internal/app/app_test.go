@@ -415,8 +415,8 @@ func TestI18nRenderingAndLanguageCookie(t *testing.T) {
 		if !strings.Contains(response.Body.String(), test.contains) {
 			t.Fatalf("%s did not contain %q", test.target, test.contains)
 		}
-		if !strings.Contains(response.Body.String(), `<html lang="`+test.lang+`">`) {
-			t.Fatalf("%s did not render lang=%s", test.target, test.lang)
+		if !strings.Contains(response.Body.String(), `<html lang="`+test.lang+`"`) {
+			t.Errorf("expected lang=%q, got body: %s", test.lang, response.Body.String())
 		}
 		if strings.Contains(test.target, "lang=") {
 			cookie := cookieNamed(response.Result().Cookies(), i18n.LanguageCookie)
@@ -434,8 +434,8 @@ func TestLegalSpanishFallsBackToEnglish(t *testing.T) {
 	response := httptest.NewRecorder()
 	application.Handler.ServeHTTP(response, request)
 	body := response.Body.String()
-	if !strings.Contains(body, `<html lang="en">`) || !strings.Contains(body, "English is shown as the fallback") {
-		t.Fatalf("legal page did not clearly fall back to English: %s", body)
+	if !strings.Contains(body, `<html lang="en"`) || !strings.Contains(body, "English is shown as the fallback") {
+		t.Fatalf("expected english fallback, got %s", body)
 	}
 }
 
@@ -925,7 +925,7 @@ func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
 	response := httptest.NewRecorder()
 	application.Handler.ServeHTTP(response, request)
 	body := response.Body.String()
-	if response.Code != http.StatusOK || !strings.Contains(body, `<html lang="es">`) || !strings.Contains(body, "Comentarios opcionales") {
+	if response.Code != http.StatusOK || !strings.Contains(body, `<html lang="es"`) || !strings.Contains(body, "Comentarios opcionales") {
 		t.Fatalf("public campaign by ID failed: status=%d body=%s", response.Code, body)
 	}
 	if len(response.Result().Cookies()) != 0 {
@@ -1129,7 +1129,7 @@ func TestPublicPageLanguageOverrideDoesNotSetCookie(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID+tc.query, nil)
 		response := httptest.NewRecorder()
 		application.Handler.ServeHTTP(response, request)
-		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `<html lang="`+tc.lang+`">`) || !strings.Contains(response.Body.String(), tc.text) {
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `<html lang="`+tc.lang+`"`) || !strings.Contains(response.Body.String(), tc.text) {
 			t.Fatalf("language %q failed: %d %s", tc.query, response.Code, response.Body.String())
 		}
 		if cookieNamed(response.Result().Cookies(), i18n.LanguageCookie) != nil {
