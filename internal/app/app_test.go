@@ -2,6 +2,9 @@ package app
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -814,5 +817,207 @@ func TestInstanceCampaignModerationAndTranslations(t *testing.T) {
 	application.Handler.ServeHTTP(response, request)
 	if response.Code != http.StatusForbidden {
 		t.Fatalf("normal user campaign admin access=%d", response.Code)
+	}
+}
+
+func seedActivePublicCampaign(t *testing.T, application *App, publicID, slug, language string) (db.User, db.Organization, db.Campaign) {
+	t.Helper()
+	owner, _ := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	orgs, err := q.ListOrganizationsForUser(context.Background(), owner.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	org := orgs[0]
+	campaign, err := q.CreateCampaign(context.Background(), db.CreateCampaignInput{
+		PublicID: publicID, OrganizationID: org.ID, CreatedBy: owner.ID,
+		Name: "Public Campaign", Slug: slug, Language: language, PrivacyPreset: "strict",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = application.Database.Exec(`UPDATE campaigns SET status='active',public_link_enabled=1 WHERE id=?`, campaign.ID); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := q.GetCampaignByPublicID(context.Background(), org.PublicID, campaign.PublicID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return owner, org, loaded
+}
+
+func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	_, org, campaign := seedActivePublicCampaign(t, application, "camp_public", "public-campaign", "es")
+	if _, err := application.Database.Exec(`UPDATE campaign_settings SET collect_referrer_domain=1,collect_coarse_browser=1,collect_coarse_os=1 WHERE campaign_id=?`, campaign.ID); err != nil {
+		t.Fatal(err)
+	}
+	rawToken := "opaque-install-token"
+	request := httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID+"?t="+rawToken, nil)
+	request.Header.Set("Referer", "https://Example.COM/private/path?secret=value")
+	request.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0) AppleWebKit Chrome/124.0 Safari/537.36")
+	response := httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	body := response.Body.String()
+	if response.Code != http.StatusOK || !strings.Contains(body, `<html lang="es">`) || !strings.Contains(body, "Sentimos que te vayas") {
+		t.Fatalf("public campaign by ID failed: status=%d body=%s", response.Code, body)
+	}
+	if len(response.Result().Cookies()) != 0 {
+		t.Fatalf("public page set cookies: %#v", response.Result().Cookies())
+	}
+	if strings.Contains(body, rawToken) || strings.Contains(body, "https://cdn") || strings.Contains(body, "<script") {
+		t.Fatal("public page leaked token or loaded scripts/external assets")
+	}
+	mac := hmac.New(sha256.New, []byte(application.Config.Secret))
+	_, _ = mac.Write([]byte(rawToken))
+	expectedHash := hex.EncodeToString(mac.Sum(nil))
+	var storedHash, referrer, browser, os string
+	if err := application.Database.QueryRow(`SELECT install_token_hash,referrer_domain,coarse_browser,coarse_os FROM campaign_visits ORDER BY id LIMIT 1`).Scan(&storedHash, &referrer, &browser, &os); err != nil {
+		t.Fatal(err)
+	}
+	if storedHash != expectedHash || storedHash == rawToken {
+		t.Fatalf("install token was not HMAC-hashed: %q", storedHash)
+	}
+	if referrer != "example.com" || browser != "Chrome" || os != "Windows" {
+		t.Fatalf("coarse metadata incorrect: referrer=%q browser=%q os=%q", referrer, browser, os)
+	}
+	var leaked int
+	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM campaign_visits WHERE referrer_domain LIKE '%/%' OR coarse_browser LIKE '%Mozilla%' OR coarse_os LIKE '%Mozilla%'`).Scan(&leaked); err != nil || leaked != 0 {
+		t.Fatalf("full URL or raw user-agent stored: %d %v", leaked, err)
+	}
+
+	for _, target := range []string{
+		"/c/" + campaign.PublicID + "?t=" + rawToken + "&lang=de",
+		"/u/" + org.Slug + "/" + campaign.Slug + "?t=" + rawToken + "&lang=en",
+	} {
+		request = httptest.NewRequest(http.MethodGet, target, nil)
+		response = httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || strings.Contains(response.Body.String(), rawToken) {
+			t.Fatalf("%s failed or leaked token: %d", target, response.Code)
+		}
+	}
+	var rawTotal, uniqueTotal int
+	if err := application.Database.QueryRow(`SELECT SUM(counted_as_raw_visit),SUM(counted_as_unique_token_visit) FROM campaign_visits WHERE campaign_id=?`, campaign.ID).Scan(&rawTotal, &uniqueTotal); err != nil {
+		t.Fatal(err)
+	}
+	if rawTotal != 3 || uniqueTotal != 1 {
+		t.Fatalf("repeat token counting wrong: raw=%d unique=%d", rawTotal, uniqueTotal)
+	}
+
+	longToken := strings.Repeat("x", 257)
+	request = httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID+"?t="+longToken, nil)
+	response = httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || strings.Contains(response.Body.String(), longToken) {
+		t.Fatalf("long token handling failed: %d", response.Code)
+	}
+	var nullHashes int
+	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM campaign_visits WHERE campaign_id=? AND install_token_hash IS NULL`, campaign.ID).Scan(&nullHashes); err != nil || nullHashes != 1 {
+		t.Fatalf("long token was not ignored: %d %v", nullHashes, err)
+	}
+}
+
+func TestPublicCampaignUnavailableStatesAreSafe(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, org, campaign := seedActivePublicCampaign(t, application, "camp_states", "states", "en")
+	q := db.NewQuerier(application.Database)
+	checkUnavailable := func(target string) {
+		t.Helper()
+		request := httptest.NewRequest(http.MethodGet, target, nil)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), "currently unavailable") {
+			t.Fatalf("%s unsafe unavailable response: %d %s", target, response.Code, response.Body.String())
+		}
+		if strings.Contains(response.Body.String(), campaign.Name) {
+			t.Fatalf("%s leaked campaign details", target)
+		}
+	}
+	checkUnavailable("/c/unknown_campaign")
+	for _, status := range []string{"draft", "paused", "archived"} {
+		if _, err := application.Database.Exec(`UPDATE campaigns SET status=?,public_link_enabled=1,disabled_at=NULL WHERE id=?`, status, campaign.ID); err != nil {
+			t.Fatal(err)
+		}
+		checkUnavailable("/c/" + campaign.PublicID)
+	}
+	if _, err := application.Database.Exec(`UPDATE campaigns SET status='active',public_link_enabled=0 WHERE id=?`, campaign.ID); err != nil {
+		t.Fatal(err)
+	}
+	checkUnavailable("/c/" + campaign.PublicID)
+	if _, err := application.Database.Exec(`UPDATE campaigns SET public_link_enabled=1,disabled_at=? WHERE id=?`, db.Now(), campaign.ID); err != nil {
+		t.Fatal(err)
+	}
+	checkUnavailable("/c/" + campaign.PublicID)
+	if _, err := application.Database.Exec(`UPDATE campaigns SET disabled_at=NULL WHERE id=?`, campaign.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.SetOrganizationDisabled(context.Background(), org.PublicID, true, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	checkUnavailable("/u/" + org.Slug + "/" + campaign.Slug)
+}
+
+func TestPublicVisitQuotaCanBeRaisedAndDashboardShowsCounters(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, org, campaign := seedActivePublicCampaign(t, application, "camp_limit", "limit", "en")
+	if _, err := application.Database.Exec(`UPDATE organization_limits SET max_monthly_visits=1 WHERE organization_id=?`, org.ID); err != nil {
+		t.Fatal(err)
+	}
+	first := httptest.NewRecorder()
+	application.Handler.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID, nil))
+	if first.Code != http.StatusOK {
+		t.Fatalf("first visit failed: %d", first.Code)
+	}
+	limited := httptest.NewRecorder()
+	application.Handler.ServeHTTP(limited, httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID, nil))
+	lower := strings.ToLower(limited.Body.String())
+	if limited.Code != http.StatusServiceUnavailable || !strings.Contains(lower, "safety limit") || strings.Contains(lower, "upgrade") || strings.Contains(lower, "paid") {
+		t.Fatalf("quota page invalid: %d %s", limited.Code, limited.Body.String())
+	}
+	q := db.NewQuerier(application.Database)
+	limits, _ := q.GetOrganizationLimits(context.Background(), org.ID)
+	limits.MaxMonthlyVisits = 2
+	if err := q.UpdateOrganizationLimits(context.Background(), org.ID, limits, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	again := httptest.NewRecorder()
+	application.Handler.ServeHTTP(again, httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID, nil))
+	if again.Code != http.StatusOK {
+		t.Fatalf("visit did not resume after limit increase: %d", again.Code)
+	}
+	ownerLogin := login(t, application, owner.Username, "a sufficiently long password")
+	request := httptest.NewRequest(http.MethodGet, "/app/orgs/"+org.PublicID+"/campaigns/"+campaign.PublicID, nil)
+	request.AddCookie(ownerLogin.session)
+	response := httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Raw visits") || !strings.Contains(response.Body.String(), ">2<") {
+		t.Fatalf("dashboard counters missing: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestPublicPageLanguageOverrideDoesNotSetCookie(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	_, _, campaign := seedActivePublicCampaign(t, application, "camp_language", "language", "de")
+	for _, tc := range []struct {
+		query, lang, text string
+	}{
+		{"", "de", "Schade, dass du gehst"},
+		{"?lang=es", "es", "Sentimos que te vayas"},
+		{"?lang=fr", "en", "Sorry to see you go"},
+	} {
+		request := httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID+tc.query, nil)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `<html lang="`+tc.lang+`">`) || !strings.Contains(response.Body.String(), tc.text) {
+			t.Fatalf("language %q failed: %d %s", tc.query, response.Code, response.Body.String())
+		}
+		if cookieNamed(response.Result().Cookies(), i18n.LanguageCookie) != nil {
+			t.Fatalf("public language override set a cookie")
+		}
 	}
 }

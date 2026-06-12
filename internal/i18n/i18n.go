@@ -157,11 +157,13 @@ func Middleware(catalog *Catalog, secureCookies bool) func(http.Handler) http.Ha
 			locale := detect(r)
 			if raw := r.URL.Query().Get("lang"); raw != "" {
 				locale = Normalize(raw)
-				http.SetCookie(w, &http.Cookie{
-					Name: LanguageCookie, Value: string(locale), Path: "/",
-					Secure: secureCookies, SameSite: http.SameSiteLaxMode,
-					MaxAge: int(languageLifetime.Seconds()), Expires: time.Now().Add(languageLifetime),
-				})
+				if !IsPublicCampaignPath(r.URL.Path) {
+					http.SetCookie(w, &http.Cookie{
+						Name: LanguageCookie, Value: string(locale), Path: "/",
+						Secure: secureCookies, SameSite: http.SameSiteLaxMode,
+						MaxAge: int(languageLifetime.Seconds()), Expires: time.Now().Add(languageLifetime),
+					})
+				}
 			}
 			switchURLs := make(map[Locale]string, len(Supported))
 			for _, supportedLocale := range Supported {
@@ -173,6 +175,29 @@ func Middleware(catalog *Catalog, secureCookies bool) func(http.Handler) http.Ha
 			next.ServeHTTP(w, r.WithContext(WithLocale(r.Context(), requestLocale)))
 		})
 	}
+}
+
+func PublicCampaignContext(ctx context.Context, r *http.Request, defaultLocale string) context.Context {
+	current := FromContext(ctx)
+	if raw := r.URL.Query().Get("lang"); raw != "" {
+		current.Locale = Normalize(raw)
+	} else {
+		current.Locale = Normalize(defaultLocale)
+	}
+	current.RequestedLocale = current.Locale
+	current.LegalFallbackUsed = false
+	current.SwitchURLs = make(map[Locale]string, len(Supported))
+	for _, locale := range Supported {
+		query := cloneValues(r.URL.Query())
+		query.Del("t")
+		query.Set("lang", string(locale))
+		current.SwitchURLs[locale] = r.URL.Path + "?" + query.Encode()
+	}
+	return WithLocale(ctx, current)
+}
+
+func IsPublicCampaignPath(path string) bool {
+	return strings.HasPrefix(path, "/c/") || strings.HasPrefix(path, "/u/")
 }
 
 func detect(r *http.Request) Locale {

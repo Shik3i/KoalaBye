@@ -94,6 +94,8 @@ func Routes(
 	r.Get("/register", registrationHandler.Get)
 	r.Post("/register", registrationHandler.Post)
 	r.Get("/join/{inviteCode}", organizationsHandler.JoinGet)
+	r.Get("/c/{campaignPublicID}", campaignsHandler.PublicByID)
+	r.Get("/u/{orgSlug}/{campaignSlug}", campaignsHandler.PublicBySlug)
 	r.With(auth.RequireUser(csrf), auth.ValidatePosts(csrf)).Post("/join/{inviteCode}", organizationsHandler.JoinPost)
 	r.Get("/legal/privacy", func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(i18n.LegalContext(r.Context()))

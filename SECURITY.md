@@ -17,6 +17,10 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - Transactional enforcement of organization, member, and active-invite safety limits.
 - Transactional campaign quota and final-explicit-owner enforcement.
 - Campaign privacy settings make token hashing mandatory and keep IP storage and fingerprinting outside the data model.
+- Cookie-free public campaign pages require no session and use URL-based language selection.
+- Optional install tokens are length-bounded and HMAC-SHA256 hashed with the instance secret; raw values are never stored or rendered.
+- Referrers are reduced to hostnames and user agents to coarse browser/OS families before storage.
+- Monthly visit safety limits are enforced before a visit row is inserted.
 - CSP, frame denial, MIME sniffing prevention, no-referrer, and restrictive permissions headers.
 - SQLite foreign keys, WAL mode, busy timeout, transactions, and migrations.
 - No external CDN requests, IP database storage, fingerprinting, or raw user-agent retention.
@@ -31,9 +35,9 @@ Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the databas
 - There is no password reset, MFA, passkey, account recovery, or session management UI.
 - Audit retention and export policies are not configurable yet.
 - Invite links are bearer credentials and must be shared through a trusted channel.
-- Public campaign routes, visit counting, and install-token ingestion are not implemented yet. Displayed campaign links are previews only.
+- Public feedback questions, submissions, retention controls, exports, and detailed aggregate analytics are not implemented yet.
 - Security contact and signed release procedures must be finalized before a public hosted launch.
 - Dependency and container scanning are not yet automated in CI.
 - SQLite backups and restore verification remain an operator responsibility.
 
-The authenticated application may store a non-sensitive language preference cookie after an explicit language choice. Future public uninstall and survey pages must remain cookie-free by default unless a visitor explicitly selects a language.
+The authenticated application may store a non-sensitive language preference cookie after an explicit language choice. Public uninstall pages remain cookie-free; language selection is carried in the URL.

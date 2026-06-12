@@ -2,7 +2,7 @@
 
 KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform for uninstall feedback and lightweight anonymous surveys. It is designed for browser extensions, apps, and small developer tools that need honest feedback without tracking people.
 
-> **Status:** early foundation. Authentication, organizations, campaign management, permissions, privacy settings, audit logging, and deployment packaging are present. Public survey pages and response collection are intentionally not implemented yet.
+> **Status:** early foundation. Authentication, organizations, campaign management, cookie-free public campaign pages, privacy-first visit counting, permissions, audit logging, and deployment packaging are present. Feedback forms and response collection are not implemented yet.
 
 ## Principles
 
@@ -79,12 +79,31 @@ A campaign is one uninstall-feedback or feedback-collection target inside an org
 
 Organization owners and admins have implicit campaign-owner access. Other organization members receive an explicit `owner`, `editor`, `analyst`, or `viewer` campaign role. Every campaign retains at least one explicit owner.
 
-Campaign privacy defaults are strict. Optional coarse referrer, browser-family, and operating-system-family settings can be enabled with the Balanced preset. Neither preset stores IP addresses, fingerprints visitors, or permits raw install-token storage. Future public links will use `/c/{campaignPublicID}` with `/u/{orgSlug}/{campaignSlug}` as a readable form; they are previews only in this phase.
+Campaign privacy defaults are strict. Optional coarse referrer, browser-family, and operating-system-family settings can be enabled with the Balanced preset. Neither preset stores IP addresses, fingerprints visitors, or permits raw install-token storage.
+
+Active campaigns may expose cookie-free public pages at `/c/{campaignPublicID}` and `/u/{orgSlug}/{campaignSlug}`. An optional opaque `?t=` install token is HMAC-SHA256 hashed with the instance secret before storage. Raw visits and first-seen token visits are separate counters. Referrers are reduced to hostnames, user agents to coarse browser/OS categories, and raw tokens, IP addresses, full referrers, and raw user agents are never stored. Monthly organization visit limits use UTC boundaries and are safety controls only.
+
+Campaign pages include Chrome/Chromium and Firefox uninstall URL examples. The generated token is random, local to the extension, and optional.
+
+```js
+// Chrome / Chromium
+const token = crypto.randomUUID();
+await chrome.storage.local.set({ koalaByeToken: token });
+chrome.runtime.setUninstallURL(
+  "https://example.com/c/camp_xxx?t=" + encodeURIComponent(token)
+);
+
+// Firefox / WebExtensions
+await browser.storage.local.set({ koalaByeToken: token });
+browser.runtime.setUninstallURL(
+  "https://example.com/c/camp_xxx?t=" + encodeURIComponent(token)
+);
+```
 
 The optional bootstrap admin variables may create the first owner only when no owner exists. They never overwrite users and the password is never logged.
 
 ## Roadmap
 
-The next layers are a form builder, cookie-free public uninstall pages, privacy-preserving visit counts, response storage, exports, and aggregate analytics. Passkeys and optional email may follow. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
+The next layers are a form builder, response storage, exports, and aggregate analytics. Passkeys and optional email may follow. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
 See [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).

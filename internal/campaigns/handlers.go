@@ -1,11 +1,16 @@
 package campaigns
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/koalastuff/koalabye/internal/auth"
@@ -28,6 +33,129 @@ type Handler struct {
 
 func New(cfg config.Config, q *db.Querier, p *permissions.Service) *Handler {
 	return &Handler{cfg: cfg, q: q, permissions: p}
+}
+
+func (h *Handler) PublicByID(w http.ResponseWriter, r *http.Request) {
+	h.public(w, r, func() (db.PublicCampaign, error) {
+		return h.q.GetPublicCampaignByID(r.Context(), chi.URLParam(r, "campaignPublicID"))
+	})
+}
+
+func (h *Handler) PublicBySlug(w http.ResponseWriter, r *http.Request) {
+	h.public(w, r, func() (db.PublicCampaign, error) {
+		return h.q.GetPublicCampaignBySlug(r.Context(), chi.URLParam(r, "orgSlug"), chi.URLParam(r, "campaignSlug"))
+	})
+}
+
+func (h *Handler) public(w http.ResponseWriter, r *http.Request, resolve func() (db.PublicCampaign, error)) {
+	publicCampaign, err := resolve()
+	if err != nil {
+		h.publicUnavailable(w, r, http.StatusNotFound, false, "en")
+		return
+	}
+	if !publicCampaign.Available() {
+		h.publicUnavailable(w, r, http.StatusNotFound, false, publicCampaign.Settings.PublicLanguageDefault)
+		return
+	}
+	r = r.WithContext(i18n.PublicCampaignContext(r.Context(), r, publicCampaign.Settings.PublicLanguageDefault))
+	input := h.visitInput(r, publicCampaign)
+	publicID, err := ids.New("visit")
+	if err != nil {
+		h.publicUnavailable(w, r, http.StatusServiceUnavailable, false, publicCampaign.Settings.PublicLanguageDefault)
+		return
+	}
+	input.PublicID = publicID
+	if err = h.q.RecordCampaignVisit(r.Context(), input); errors.Is(err, db.ErrVisitLimitReached) {
+		h.publicUnavailable(w, r, http.StatusServiceUnavailable, true, publicCampaign.Settings.PublicLanguageDefault)
+		return
+	} else if err != nil {
+		h.publicUnavailable(w, r, http.StatusServiceUnavailable, false, publicCampaign.Settings.PublicLanguageDefault)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.PublicCampaignPage(h.cfg.InstanceName, publicCampaign.Campaign, publicCampaign.Settings))
+}
+
+func (h *Handler) publicUnavailable(w http.ResponseWriter, r *http.Request, status int, quota bool, defaultLocale string) {
+	r = r.WithContext(i18n.PublicCampaignContext(r.Context(), r, defaultLocale))
+	web.Render(w, r, status, templates.PublicCampaignUnavailable(h.cfg.InstanceName, quota))
+}
+
+func (h *Handler) visitInput(r *http.Request, publicCampaign db.PublicCampaign) db.RecordVisitInput {
+	settings := publicCampaign.Settings
+	tokenHash := ""
+	token := r.URL.Query().Get("t")
+	if settings.CollectInstallToken && token != "" && len(token) <= 256 {
+		tokenHash = hashInstallToken(h.cfg.Secret, token)
+	}
+	referrer := ""
+	if settings.CollectReferrerDomain {
+		referrer = referrerDomain(r.Header.Get("Referer"))
+	}
+	browser, os := "", ""
+	if settings.CollectCoarseBrowser || settings.CollectCoarseOS {
+		browser, os = coarseUserAgent(r.Header.Get("User-Agent"))
+		if !settings.CollectCoarseBrowser {
+			browser = ""
+		}
+		if !settings.CollectCoarseOS {
+			os = ""
+		}
+	}
+	return db.RecordVisitInput{
+		CampaignID: publicCampaign.Campaign.ID, OrganizationID: publicCampaign.Campaign.OrganizationID,
+		TokenHash: tokenHash, ReferrerDomain: referrer, CoarseBrowser: browser, CoarseOS: os,
+		CountRaw: settings.CountRawVisits, CountUnique: settings.CountUniqueTokenVisits,
+		CollectToken: settings.CollectInstallToken, CreatedAt: time.Now().UTC(),
+	}
+}
+
+func hashInstallToken(secret, token string) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte(token))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func referrerDomain(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Hostname() == "" {
+		return ""
+	}
+	return strings.ToLower(parsed.Hostname())
+}
+
+func coarseUserAgent(raw string) (string, string) {
+	value := strings.ToLower(raw)
+	browser := "Unknown"
+	switch {
+	case value == "":
+	case strings.Contains(value, "edg/"):
+		browser = "Edge"
+	case strings.Contains(value, "firefox/") || strings.Contains(value, "fxios/"):
+		browser = "Firefox"
+	case strings.Contains(value, "chrome/") || strings.Contains(value, "crios/"):
+		browser = "Chrome"
+	case strings.Contains(value, "safari/"):
+		browser = "Safari"
+	default:
+		browser = "Other"
+	}
+	os := "Unknown"
+	switch {
+	case value == "":
+	case strings.Contains(value, "android"):
+		os = "Android"
+	case strings.Contains(value, "iphone") || strings.Contains(value, "ipad") || strings.Contains(value, "ios"):
+		os = "iOS"
+	case strings.Contains(value, "windows"):
+		os = "Windows"
+	case strings.Contains(value, "mac os") || strings.Contains(value, "macintosh"):
+		os = "macOS"
+	case strings.Contains(value, "linux"):
+		os = "Linux"
+	default:
+		os = "Other"
+	}
+	return browser, os
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +245,12 @@ func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "load settings", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, role, strings.TrimRight(h.cfg.BaseURL, "/")))
+	stats, err := h.q.CampaignVisitStats(r.Context(), campaign.ID, time.Now())
+	if err != nil {
+		http.Error(w, "load campaign visits", http.StatusInternalServerError)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, stats, role, strings.TrimRight(h.cfg.BaseURL, "/")))
 }
 
 func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {

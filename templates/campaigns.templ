@@ -2,6 +2,7 @@ package templates
 
 import (
 	"context"
+	"fmt"
 	"github.com/koalastuff/koalabye/internal/db"
 )
 
@@ -65,7 +66,7 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 	}
 }
 
-templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, role, baseURL string) {
+templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, stats db.CampaignVisitStats, role, baseURL string) {
 	@Layout(campaign.Name, instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
@@ -81,15 +82,15 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 		<section class="grid two">
 			<article class="panel">
 				<h2>{ tr(ctx, "campaign.public_link") }</h2>
-				<p>{ tr(ctx, "campaign.public_link.preview") }</p>
-				<code>{ baseURL + "/c/" + campaign.PublicID }</code>
-				<p><code>{ baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug }</code></p>
+				<p>{ tr(ctx, "campaign.public_link.working") }</p>
+				<a href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }><code>{ baseURL + "/c/" + campaign.PublicID }</code></a>
+				<p><a href={ templ.SafeURL(baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug) }><code>{ baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug }</code></a></p>
 				if campaign.PublicLinkEnabled {
 					<span class="badge">{ tr(ctx, "common.enabled") }</span>
 				} else {
 					<span class="badge quiet">{ tr(ctx, "common.disabled") }</span>
 				}
-				<p class="muted">{ tr(ctx, "campaign.public_link.future") }</p>
+				<p class="muted">{ tr(ctx, "campaign.public_link.requirements") }</p>
 			</article>
 			<article class="panel">
 				<h2>{ tr(ctx, "campaign.privacy.title") }</h2>
@@ -97,10 +98,17 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				<ul><li>{ tr(ctx, "campaign.privacy.no_ip") }</li><li>{ tr(ctx, "campaign.privacy.no_fingerprint") }</li><li>{ tr(ctx, "campaign.privacy.no_raw_token") }</li><li>{ tr(ctx, "campaign.privacy.cookie_free") }</li></ul>
 			</article>
 		</section>
+		<section class="grid three">
+			<article class="panel"><h2>{ tr(ctx, "visits.raw_total") }</h2><strong class="metric">{ fmt.Sprint(stats.RawTotal) }</strong></article>
+			<article class="panel"><h2>{ tr(ctx, "visits.unique_total") }</h2><strong class="metric">{ fmt.Sprint(stats.UniqueTokenTotal) }</strong></article>
+			<article class="panel"><h2>{ tr(ctx, "visits.current_month") }</h2><strong class="metric">{ fmt.Sprint(stats.CurrentMonthTotal) }</strong><p>{ tr(ctx, "visits.last", nullable(stats.LastVisitAt)) }</p></article>
+		</section>
 		<section class="panel">
 			<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
-			<pre><code>{ `chrome.runtime.setUninstallURL("` + baseURL + `/c/` + campaign.PublicID + `?t=" + token);` }</code></pre>
-			<p class="muted">{ tr(ctx, "campaign.snippet.future") }</p>
+			<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
+			<pre><code>{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
+			<p class="muted">{ tr(ctx, "campaign.snippet.firefox") }</p>
+			<pre><code>{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
 		</section>
 		<section class="grid three">
 			for _, key := range []string{"form", "public_page", "visits", "responses", "analytics", "export"} {
@@ -228,4 +236,28 @@ func privacySummary(ctx context.Context, settings db.CampaignSettings) string {
 		return tr(ctx, "campaign.privacy.balanced_summary")
 	}
 	return tr(ctx, "campaign.privacy.strict_summary")
+}
+
+func chromeSnippet(publicURL string) string {
+	return `chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === "install") {
+    const token = crypto.randomUUID();
+    await chrome.storage.local.set({ koalaByeToken: token });
+    chrome.runtime.setUninstallURL(
+      "` + publicURL + `?t=" + encodeURIComponent(token)
+    );
+  }
+});`
+}
+
+func firefoxSnippet(publicURL string) string {
+	return `browser.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason === "install") {
+    const token = crypto.randomUUID();
+    await browser.storage.local.set({ koalaByeToken: token });
+    browser.runtime.setUninstallURL(
+      "` + publicURL + `?t=" + encodeURIComponent(token)
+    );
+  }
+});`
 }

@@ -16,9 +16,9 @@ Go provides a small deployment artifact, predictable resource use, strong concur
 
 Translation catalogs are flat dotted-key JSON files embedded from `internal/i18n/locales/`. Startup validates that German and Spanish contain exactly the English baseline keys. Requests receive locale context before authentication and rendering.
 
-Resolution order is explicit `?lang=xx`, future authenticated user preference, the `koalabye_lang` cookie, `Accept-Language`, then English. Explicit selection writes a SameSite=Lax cookie for one year. Templates resolve all visible strings through the request catalog and set `<html lang>` correctly. Unsupported locales and missing translations fall back safely to English; a completely unknown key renders a visible marker instead of crashing.
+Resolution order in the authenticated application is explicit `?lang=xx`, future authenticated user preference, the `koalabye_lang` cookie, `Accept-Language`, then English. Explicit selection writes a SameSite=Lax cookie for one year. Public campaign pages instead use the campaign default and an explicit `?lang=en|de|es` override without writing a cookie. Templates resolve all visible strings through the request catalog and set `<html lang>` correctly. Unsupported locales and missing translations fall back safely to English; a completely unknown key renders a visible marker instead of crashing.
 
-Legal routes are intentionally narrower: `/legal/privacy` and `/legal/imprint` support English and German. A Spanish request renders English with a visible availability note. Future public survey pages must avoid setting locale cookies unless the visitor explicitly changes language.
+Legal routes are intentionally narrower: `/legal/privacy` and `/legal/imprint` support English and German. A Spanish request renders English with a visible availability note.
 
 ## Data and Tenancy
 
@@ -40,15 +40,17 @@ Manual invite codes are long random bearer values. Only their SHA-256 hashes are
 
 ## Safety Limits
 
-Instance defaults seed per-organization limits. Organization, member, active-invite, and campaign limits are enforced now. Visit and submission limits are stored for the future modules that own those operations. These are abuse-prevention controls for free instances, never product plans or monetization boundaries.
+Instance defaults seed per-organization limits. Organization, member, active-invite, campaign, and monthly visit limits are enforced now. Submission limits remain prepared for the future module that owns submissions. Visit months use UTC boundaries. These are abuse-prevention controls for free instances, never product plans or monetization boundaries.
 
 Instance Owners can adjust defaults and per-organization limits. Sensitive overrides, status changes, settings changes, and organization membership administration produce audit events.
 
 ## Campaign Privacy and Links
 
-Each campaign has a privacy-settings row from creation. Strict privacy disables optional coarse referrer, browser, and operating-system data. Balanced enables those coarse fields but never IP storage or fingerprinting. The schema requires install-token hashing to remain enabled; future visit storage must use HMAC-SHA256 with the server secret and must never persist raw tokens.
+Each campaign has a privacy-settings row from creation. Strict privacy disables optional coarse referrer, browser, and operating-system data. Balanced enables those coarse fields but never IP storage or fingerprinting. Public pages work without JavaScript, load only local assets, require no session, and set no cookies.
 
-Future canonical public links are `/c/{campaignPublicID}`. A readable `/u/{orgSlug}/{campaignSlug}` form is also reserved. Neither public route is implemented in Phase 4, so management pages label all links and extension snippets as previews.
+Canonical public links are `/c/{campaignPublicID}`. A readable `/u/{orgSlug}/{campaignSlug}` form resolves to the same page. Only active, public-link-enabled campaigns in enabled organizations are available; every other state returns a generic response.
+
+Visits store a raw-count flag and a first-seen-token-count flag separately. Optional opaque install tokens are limited to 256 characters, HMAC-SHA256 hashed with `KOALABYE_SECRET`, and never persisted or rendered raw. Repeated hashes may be stored as raw visits but count as unique only once. Referrers are reduced to lowercase hostnames. User agents are reduced to documented browser (`Chrome`, `Firefox`, `Safari`, `Edge`, `Other`, `Unknown`) and OS (`Windows`, `macOS`, `Linux`, `Android`, `iOS`, `Other`, `Unknown`) families; raw user agents are discarded.
 
 ## First-Run Setup
 
@@ -70,14 +72,12 @@ Authentication middleware loads identity. Authorization remains explicit in prot
 
 ## Privacy Model
 
-The foundation stores account, organization, campaign, role, and privacy-setting data only. It has no analytics SDK, external browser asset, IP column, user-agent column, or fingerprinting code. Future public pages must remain cookie-free and collect only fields declared by the campaign owner.
+KoalaBye has no analytics SDK, external browser asset, IP column, raw user-agent column, or fingerprinting code. Public pages are cookie-free and collect only fields enabled by the campaign owner. Campaign dashboards expose totals and timestamps, not visitor profiles or charts.
 
 ## Planned Modules
 
-- Form builder
-- Public uninstall and survey pages
-- Privacy-preserving visit counting
 - Submission storage and retention controls
+- Form builder and public feedback questions
 - Aggregate analytics and exports
 - Passkeys
 - Optional email integration

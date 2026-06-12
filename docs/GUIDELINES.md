@@ -15,7 +15,7 @@ These rules apply to human contributors and coding agents.
 
 - Store no IP addresses in the database.
 - Do not fingerprint users or retain raw user-agent strings by default.
-- Future public survey pages must not set cookies.
+- Public survey pages must not set session, language, or tracking cookies. Language changes use `?lang=`.
 - Make collected data transparent and avoid dark patterns or guilt-inducing uninstall copy.
 - Treat tenancy boundaries, role checks, session handling, and public submissions as security-critical.
 - Check every permission server-side. Hidden links are not authorization.
@@ -23,7 +23,9 @@ These rules apply to human contributors and coding agents.
 - Never store raw invite codes. Show a newly generated invite only once and store its hash.
 - Preserve at least one owner per organization and one active Instance Owner per instance.
 - Preserve at least one explicit owner per campaign. Organization owners and admins retain documented implicit campaign-owner access.
-- Future install-token processing must use HMAC-SHA256 and must never store raw tokens.
+- Install-token processing must use HMAC-SHA256 with the instance secret and must never store, render, audit, or log raw tokens.
+- Store only referrer hostnames and coarse documented browser/OS families when their campaign settings permit it.
+- Keep public pages functional without JavaScript and free of external assets or analytics.
 
 ## Engineering
 
@@ -70,4 +72,5 @@ These rules apply to human contributors and coding agents.
 - Before changing architecture, update `docs/ARCHITECTURE.md`.
 - Audit sensitive Instance Owner overrides, status changes, role changes, and safety-limit changes.
 - Campaign routes use public IDs, enforce organization-scoped slugs, and keep archived or disabled records counted against safety limits.
+- Public visit limits use UTC month boundaries. Raw visits and first-seen token visits are distinct counters.
 - Do not add external CDNs, mandatory email, billing, analytics, or external services unless explicitly requested.

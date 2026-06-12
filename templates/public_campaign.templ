@@ -1,0 +1,78 @@
+package templates
+
+import (
+	"context"
+	"github.com/koalastuff/koalabye/internal/db"
+	"github.com/koalastuff/koalabye/internal/i18n"
+)
+
+templ PublicLayout(title, instanceName string) {
+	<!DOCTYPE html>
+	<html lang={ string(localeFromContext(ctx).Locale) }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="description" content={ tr(ctx, "public.meta") }/>
+			<title>{ title } · { instanceName }</title>
+			<link rel="stylesheet" href="/assets/app.css"/>
+		</head>
+		<body class="public-body">
+			<header class="public-header">
+				<a class="brand" href="/">{ instanceName }</a>
+				<nav class="language-switcher" aria-label={ tr(ctx, "language.label") }>
+					for _, language := range i18n.Supported {
+						<a href={ localeFromContext(ctx).SwitchURLs[language] } lang={ string(language) } aria-current={ languageCurrent(ctx, language) }>{ tr(ctx, "language." + string(language)) }</a>
+					}
+				</nav>
+			</header>
+			<main class="public-page">
+				{ children... }
+			</main>
+			<footer class="site-footer">
+				<p>{ tr(ctx, "public.footer") }</p>
+				<nav aria-label={ tr(ctx, "nav.aria") }><a href="/legal/privacy">{ tr(ctx, "legal.privacy.link") }</a><a href="/legal/imprint">{ tr(ctx, "legal.imprint.link") }</a></nav>
+			</footer>
+		</body>
+	</html>
+}
+
+templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.CampaignSettings) {
+	@PublicLayout(campaign.Name, instanceName) {
+		<section class="public-hero">
+			<div class="eyebrow">{ campaign.Name }</div>
+			<h1>{ tr(ctx, "public.heading") }</h1>
+			<p class="lede">{ tr(ctx, "public.intro") }</p>
+		</section>
+		if settings.ShowPrivacyNotice {
+			<section class="panel public-card">
+				<h2>{ tr(ctx, "public.privacy.title") }</h2>
+				<p>{ tr(ctx, "public.privacy.text") }</p>
+				<p class="muted">{ publicCollectionSummary(ctx, settings) }</p>
+			</section>
+		}
+		<section class="panel public-card">
+			<h2>{ tr(ctx, "public.form.title") }</h2>
+			<p>{ tr(ctx, "public.form.placeholder") }</p>
+		</section>
+	}
+}
+
+templ PublicCampaignUnavailable(instanceName string, quota bool) {
+	@PublicLayout(tr(ctx, "public.unavailable.title"), instanceName) {
+		<section class="public-hero">
+			<h1>{ tr(ctx, "public.unavailable.title") }</h1>
+			if quota {
+				<p class="lede">{ tr(ctx, "public.unavailable.quota") }</p>
+			} else {
+				<p class="lede">{ tr(ctx, "public.unavailable.generic") }</p>
+			}
+		</section>
+	}
+}
+
+func publicCollectionSummary(ctx context.Context, settings db.CampaignSettings) string {
+	if settings.CollectReferrerDomain || settings.CollectCoarseBrowser || settings.CollectCoarseOS {
+		return tr(ctx, "public.privacy.balanced")
+	}
+	return tr(ctx, "public.privacy.strict")
+}

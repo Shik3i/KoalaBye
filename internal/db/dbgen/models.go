@@ -56,6 +56,20 @@ type CampaignSetting struct {
 	UpdatedByUserID        interface{} `json:"updated_by_user_id"`
 }
 
+type CampaignVisit struct {
+	ID                        int64       `json:"id"`
+	PublicID                  string      `json:"public_id"`
+	CampaignID                int64       `json:"campaign_id"`
+	InstallTokenHash          interface{} `json:"install_token_hash"`
+	VisitKind                 string      `json:"visit_kind"`
+	CountedAsUniqueTokenVisit int64       `json:"counted_as_unique_token_visit"`
+	CountedAsRawVisit         int64       `json:"counted_as_raw_visit"`
+	ReferrerDomain            interface{} `json:"referrer_domain"`
+	CoarseBrowser             interface{} `json:"coarse_browser"`
+	CoarseOs                  interface{} `json:"coarse_os"`
+	CreatedAt                 string      `json:"created_at"`
+}
+
 type InstanceRole struct {
 	ID              int64       `json:"id"`
 	UserID          int64       `json:"user_id"`
