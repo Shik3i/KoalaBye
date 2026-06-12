@@ -329,7 +329,7 @@ func (q *Querier) SubmissionStats(ctx context.Context, campaignID int64, now tim
 func (q *Querier) ListSubmissions(ctx context.Context, campaignID int64) ([]Submission, error) {
 	rows, err := q.db.QueryContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,
 		COALESCE((SELECT a.field_label_snapshot FROM campaign_submission_answers a WHERE a.submission_id=s.id ORDER BY a.id LIMIT 1),'')
-		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? ORDER BY s.id DESC`, campaignID)
+		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? ORDER BY s.id DESC LIMIT 100`, campaignID)
 	if err != nil {
 		return nil, err
 	}

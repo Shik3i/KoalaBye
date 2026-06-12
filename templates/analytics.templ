@@ -14,7 +14,7 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 			<div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "analytics.title") }</h1><p class="muted">{ tr(ctx, "analytics.description") }</p></div>
 		</section>
 		if messageKey != "" {
-			<div class="alert">{ tr(ctx, messageKey) }</div>
+			<div class="alert" role="alert">{ tr(ctx, messageKey) }</div>
 		}
 		<nav class="range-nav" aria-label={ tr(ctx, "analytics.range") }>
 			for _, item := range []string{"7", "30", "90", "all"} {

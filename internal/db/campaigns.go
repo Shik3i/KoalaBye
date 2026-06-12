@@ -336,7 +336,7 @@ func (q *Querier) ListInstanceCampaigns(ctx context.Context) ([]Campaign, error)
 		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner'),
 		(cs.collect_referrer_domain=1 OR cs.collect_coarse_browser=1 OR cs.collect_coarse_os=1)
 		FROM campaigns c JOIN organizations o ON o.id=c.organization_id JOIN users u ON u.id=c.created_by_user_id
-		JOIN campaign_settings cs ON cs.campaign_id=c.id ORDER BY c.id DESC`)
+		JOIN campaign_settings cs ON cs.campaign_id=c.id ORDER BY c.id DESC LIMIT 100`)
 	if err != nil {
 		return nil, err
 	}

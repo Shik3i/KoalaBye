@@ -18,7 +18,7 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 			<div class="notice">{ tr(ctx, "form.read_only") }</div>
 		}
 		if errorKey != "" {
-			<div class="alert">{ tr(ctx, errorKey) }</div>
+			<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
 		}
 		<section class="grid two">
 			<div>
@@ -92,7 +92,7 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 			<div class="notice">{ tr(ctx, "form.read_only") }</div>
 		}
 		if errorKey != "" {
-			<div class="alert">{ tr(ctx, errorKey) }</div>
+			<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
 		}
 		<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID) } class="panel form-stack">
 			<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
@@ -173,27 +173,27 @@ templ PublicFields(fields []db.FormField, enabled bool) {
 					}
 				</legend>
 				if field.HelpText.Valid {
-					<p class="muted">{ field.HelpText.String }</p>
+					<p class="muted" id={ helpID(field) }>{ field.HelpText.String }</p>
 				}
 				switch field.FieldType {
 					case "textarea":
-						<textarea name={ "field_" + field.PublicID } maxlength={ fmt.Sprint(field.Config().MaxLength) } required?={ enabled && field.Required } disabled?={ !enabled }></textarea>
+						<textarea name={ "field_" + field.PublicID } maxlength={ fmt.Sprint(field.Config().MaxLength) } required?={ enabled && field.Required } disabled?={ !enabled } { fieldAttrs(field)... }></textarea>
 					case "rating_1_5":
 						<div class="choice-row">
 							for rating := 1; rating <= 5; rating++ {
-								<label><input type="radio" name={ "field_" + field.PublicID } value={ fmt.Sprint(rating) } required?={ enabled && field.Required } disabled?={ !enabled }/> { fmt.Sprint(rating) }</label>
+								<label><input type="radio" name={ "field_" + field.PublicID } value={ fmt.Sprint(rating) } required?={ enabled && field.Required } disabled?={ !enabled } { fieldAttrs(field)... }/> { fmt.Sprint(rating) }</label>
 							}
 						</div>
 					case "radio_group":
 						for _, option := range field.Options {
 							if !option.ArchivedAt.Valid {
-								<label class="choice"><input type="radio" name={ "field_" + field.PublicID } value={ option.Value } required?={ enabled && field.Required } disabled?={ !enabled }/> { option.Label }</label>
+								<label class="choice"><input type="radio" name={ "field_" + field.PublicID } value={ option.Value } required?={ enabled && field.Required } disabled?={ !enabled } { fieldAttrs(field)... }/> { option.Label }</label>
 							}
 						}
 					case "checkbox_group":
 						for _, option := range field.Options {
 							if !option.ArchivedAt.Valid {
-								<label class="choice"><input type="checkbox" name={ "field_" + field.PublicID } value={ option.Value } disabled?={ !enabled }/> { option.Label }</label>
+								<label class="choice"><input type="checkbox" name={ "field_" + field.PublicID } value={ option.Value } disabled?={ !enabled } { fieldAttrs(field)... }/> { option.Label }</label>
 							}
 						}
 				}
@@ -263,4 +263,15 @@ func submissionAnswerDisplay(raw string) string {
 	default:
 		return fmt.Sprint(value)
 	}
+}
+
+func helpID(field db.FormField) string {
+	return "help_" + field.PublicID
+}
+
+func fieldAttrs(field db.FormField) templ.Attributes {
+	if field.HelpText.Valid {
+		return templ.Attributes{"aria-describedby": helpID(field)}
+	}
+	return nil
 }

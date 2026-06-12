@@ -454,8 +454,9 @@ func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
 			t.Fatalf("%s: expected %q, got %q", header, want, got)
 		}
 	}
-	if !strings.Contains(response.Header().Get("Content-Security-Policy"), "default-src 'self'") {
-		t.Fatal("missing restrictive CSP")
+	csp := response.Header().Get("Content-Security-Policy")
+	if !strings.Contains(csp, "default-src 'self'") || !strings.Contains(csp, "script-src 'self'") || !strings.Contains(csp, "style-src 'self'") {
+		t.Fatalf("missing restrictive CSP: %q", csp)
 	}
 	if strings.Contains(response.Body.String(), "https://") || strings.Contains(response.Body.String(), "http://") {
 		t.Fatal("rendered HTML contains an external URL")
@@ -851,7 +852,7 @@ func TestInstanceCampaignModerationAndTranslations(t *testing.T) {
 	}
 	ownerLogin := login(t, application, owner.Username, password)
 	csrfCookie, token, body := csrfPage(t, application, "/instance/campaigns?lang=es", ownerLogin.session)
-	if !strings.Contains(body, "Moderación de campañas") || strings.Contains(body, "https://cdn") {
+	if !strings.Contains(body, "Últimas 100 campañas") || strings.Contains(body, "https://cdn") {
 		t.Fatalf("Spanish campaign admin page invalid")
 	}
 	disabled := formPost(application, "/instance/campaigns/status", url.Values{"csrf_token": {token}, "public_id": {campaign.PublicID}, "disabled": {"true"}}, ownerLogin.session, csrfCookie)
@@ -924,7 +925,7 @@ func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
 	response := httptest.NewRecorder()
 	application.Handler.ServeHTTP(response, request)
 	body := response.Body.String()
-	if response.Code != http.StatusOK || !strings.Contains(body, `<html lang="es">`) || !strings.Contains(body, "Sentimos que te vayas") {
+	if response.Code != http.StatusOK || !strings.Contains(body, `<html lang="es">`) || !strings.Contains(body, "Comentarios opcionales") {
 		t.Fatalf("public campaign by ID failed: status=%d body=%s", response.Code, body)
 	}
 	if len(response.Result().Cookies()) != 0 {
@@ -1121,9 +1122,9 @@ func TestPublicPageLanguageOverrideDoesNotSetCookie(t *testing.T) {
 	for _, tc := range []struct {
 		query, lang, text string
 	}{
-		{"", "de", "Schade, dass du gehst"},
-		{"?lang=es", "es", "Sentimos que te vayas"},
-		{"?lang=fr", "en", "Sorry to see you go"},
+		{"", "de", "Freiwilliges Feedback"},
+		{"?lang=es", "es", "Comentarios opcionales"},
+		{"?lang=fr", "en", "Optional feedback"},
 	} {
 		request := httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID+tc.query, nil)
 		response := httptest.NewRecorder()

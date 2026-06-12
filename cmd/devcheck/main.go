@@ -37,6 +37,20 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	fmt.Println("==> govulncheck")
+	if _, err := exec.LookPath("govulncheck"); err != nil {
+		fmt.Println("govulncheck not found. Skipping vulnerability scan.")
+		fmt.Println("Please install it with: go install golang.org/x/vuln/cmd/govulncheck@latest")
+	} else {
+		cmd := exec.Command("govulncheck", "./...")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "govulncheck failed: %v\n", err)
+			os.Exit(1)
+		}
+	}
 }
 
 func checkGoFormatting() error {
