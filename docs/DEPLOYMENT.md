@@ -16,39 +16,6 @@ Local image builds require Docker Desktop or another Docker daemon to be install
 
 2. Generate a production secret and set it in `.env`:
 
-   ```bash
-   openssl rand -base64 48
-   ```
-
-3. Set the public HTTPS URL and secure cookies:
-
-   ```dotenv
-   KOALABYE_BASE_URL=https://bye.example.com
-   KOALABYE_SECURE_COOKIES=true
-   ```
-
-4. Start the service:
-
-   ```bash
-   docker compose -f docker-compose.example.yml up -d --build
-   ```
-
-5. Open `https://bye.example.com/setup`. There are no default credentials. The first account becomes the Instance Owner.
-
-The Compose example mounts the named `koalabye_data` volume at `/data`. The SQLite database is `/data/koalabye.db`.
-
-## Caddy
-
-The included `Caddyfile.example` expects Caddy to share the `koalabye` Docker network:
-
-```caddyfile
-bye.example.com {
-	encode zstd gzip
-	reverse_proxy koalabye:8080
-}
-```
-
-Caddy obtains and renews HTTPS certificates when DNS and ports 80/443 are configured correctly. Keep `KOALABYE_BASE_URL` equal to the public origin and set `KOALABYE_SECURE_COOKIES=true` behind HTTPS.
 
 ## Environment Variables
 

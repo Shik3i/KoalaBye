@@ -1,12 +1,12 @@
 # Staging
 
-Use a dedicated HTTPS host such as `staging-bye.example.com`, a separate SQLite volume, and a separate random secret. Never point staging at production data.
+Use a dedicated HTTPS host such as `bye-staging.koalastuff.net`, a separate SQLite volume, and a separate random secret. Never point staging at production data.
 
 ## Recommended Configuration
 
 - Start with `docker-compose.staging.example.yml`.
 - Copy `.env.example` to `.env.staging`.
-- Set `KOALABYE_BASE_URL=https://staging-bye.example.com`.
+- Set `KOALABYE_BASE_URL=https://bye-staging.koalastuff.net`.
 - Set `KOALABYE_SECURE_COOKIES=true`.
 - Keep public registration disabled and use invitation-based access.
 - Adapt `Caddyfile.staging.example` to the real staging domain.

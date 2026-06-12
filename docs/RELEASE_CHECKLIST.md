@@ -56,8 +56,18 @@
 
 ## Release Candidate Record
 
+- [ ] Ensure working tree clean.
+- [ ] Run local checks.
+- [ ] Ensure `govulncheck` clean.
+- [ ] Ensure Docker build passes locally or in CI.
+- [ ] Ensure legal placeholders are acceptable for staging.
+- [ ] Backup current DB if upgrading.
+- [ ] Create tag only after CI green.
+- [ ] Verify release workflow.
+- [ ] Deploy to staging.
+- [ ] Run end-to-end smoke test.
+- [ ] Only then consider production.
 - [ ] Record the commit SHA and working-tree status.
 - [ ] Record test, vet, formatting, generated-code, vulnerability-scan, and Docker results.
 - [ ] Record clean-install, migration, and backup/restore drill results.
 - [ ] Record remaining blockers and the person accepting each known limitation.
-

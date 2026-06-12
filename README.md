@@ -37,7 +37,7 @@ Go, chi, templ, SQLite, sqlc, goose, server-rendered HTML, and locally vendored 
 
 The application UI supports English (`en`), German (`de`), and Spanish (`es`). English is the default and fallback language. Locale selection follows `?lang=xx`, the `koalabye_lang` cookie, `Accept-Language`, then English. The language switcher preserves the current path.
 
-Legal placeholders under `/legal/privacy` and `/legal/imprint` currently support English and German only. Spanish requests clearly fall back to English.
+Legal placeholders under `/legal/privacy` and `/legal/imprint` currently support English and German only. Spanish requests clearly fall back to English. **These are placeholders and must be reviewed/replaced before running a public official instance.**
 
 ## Docker Quick Start
 
@@ -110,27 +110,7 @@ Campaign analytics use only KoalaBye's minimized first-party records. Overview c
 
 CSV and JSON exports include public IDs, timestamps, optional visit public IDs, a token-hash presence boolean, field snapshots, and answer values. CSV checkbox values are semicolon-separated. Exports never contain internal integer IDs, IP addresses, raw user agents, raw install tokens, or install-token hash values. Every export is audited without logging answer contents.
 
-Campaign owners can enable a 30, 90, 180, or 365 day retention threshold. No scheduler runs: owners manually hard-delete eligible visits and submissions. They may also permanently delete all responses or all visits after typing the campaign slug. Deleting visits leaves submissions intact and clears their optional visit link.
-
-```js
-// Chrome / Chromium
-const token = crypto.randomUUID();
-await chrome.storage.local.set({ koalaByeToken: token });
-chrome.runtime.setUninstallURL(
-  "https://example.com/c/camp_xxx?t=" + encodeURIComponent(token)
-);
-
-// Firefox / WebExtensions
-await browser.storage.local.set({ koalaByeToken: token });
-browser.runtime.setUninstallURL(
-  "https://example.com/c/camp_xxx?t=" + encodeURIComponent(token)
-);
-```
-
-The optional bootstrap admin variables may create the first owner only when no owner exists. They never overwrite users and the password is never logged.
-
-## Roadmap
 
 Future work may add retention scheduling and richer aggregate views. Conditional forms, multi-page forms, uploads, custom JavaScript, email notifications, and AI analysis remain out of scope. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
-See [Deployment](docs/DEPLOYMENT.md), [Operations](docs/OPERATIONS.md), [Staging](docs/STAGING.md), [Backup and Restore](docs/BACKUP_RESTORE.md), [Release Checklist](docs/RELEASE_CHECKLIST.md), [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).
+See [Deployment](docs/DEPLOYMENT.md), [Operations](docs/OPERATIONS.md), [Staging](docs/STAGING.md), [Backup and Restore](docs/BACKUP_RESTORE.md), [Release Checklist](docs/RELEASE_CHECKLIST.md), [Versioning](docs/VERSIONING.md), [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).
