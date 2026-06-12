@@ -1,17 +1,17 @@
 package templates
 
 templ Landing(instanceName string) {
-	@Layout("Private feedback", instanceName, nil) {
+	@Layout(tr(ctx, "landing.title"), instanceName, nil) {
 		<section class="hero">
-			<div class="eyebrow">Open source · Self-hosted · Free</div>
-			<h1>Learn why users leave without following them around.</h1>
-			<p class="lede">KoalaBye is a privacy-focused foundation for uninstall feedback and lightweight anonymous surveys.</p>
-			<div class="actions"><a class="button" href="/login">Log in</a></div>
+			<div class="eyebrow">{ tr(ctx, "landing.eyebrow") }</div>
+			<h1>{ tr(ctx, "landing.heading") }</h1>
+			<p class="lede">{ tr(ctx, "landing.subtitle") }</p>
+			<div class="actions"><a class="button" href="/login">{ tr(ctx, "landing.login") }</a></div>
 		</section>
 		<section class="grid three">
-			<article class="panel"><h2>Private</h2><p>No analytics scripts, fingerprinting, IP storage, or external CDNs.</p></article>
-			<article class="panel"><h2>Small</h2><p>A focused Go service, server-rendered pages, and SQLite.</p></article>
-			<article class="panel"><h2>Yours</h2><p>MIT licensed, self-hostable, and free from billing machinery.</p></article>
+			<article class="panel"><h2>{ tr(ctx, "landing.private.title") }</h2><p>{ tr(ctx, "landing.private.text") }</p></article>
+			<article class="panel"><h2>{ tr(ctx, "landing.small.title") }</h2><p>{ tr(ctx, "landing.small.text") }</p></article>
+			<article class="panel"><h2>{ tr(ctx, "landing.yours.title") }</h2><p>{ tr(ctx, "landing.yours.text") }</p></article>
 		</section>
 	}
 }

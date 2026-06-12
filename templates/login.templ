@@ -1,19 +1,19 @@
 package templates
 
-templ Login(instanceName, csrfToken, errorMessage string) {
-	@Layout("Log in", instanceName, nil) {
+templ Login(instanceName, csrfToken, errorKey string) {
+	@Layout(tr(ctx, "auth.login.page_title"), instanceName, nil) {
 		<section class="auth-shell">
-			<div class="eyebrow">Welcome back</div>
-			<h1>Log in</h1>
-			<p class="lede">Use your KoalaBye username and password.</p>
-			if errorMessage != "" {
-				<div class="alert" role="alert">{ errorMessage }</div>
+			<div class="eyebrow">{ tr(ctx, "auth.login.eyebrow") }</div>
+			<h1>{ tr(ctx, "auth.login.title") }</h1>
+			<p class="lede">{ tr(ctx, "auth.login.subtitle") }</p>
+			if errorKey != "" {
+				<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
 			}
 			<form method="post" action="/login" class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
-				<label>Username<input name="username" autocomplete="username" required autofocus/></label>
-				<label>Password<input name="password" type="password" autocomplete="current-password" required/></label>
-				<button type="submit">Log in</button>
+				<label>{ tr(ctx, "auth.login.username") }<input name="username" autocomplete="username" required autofocus/></label>
+				<label>{ tr(ctx, "auth.login.password") }<input name="password" type="password" autocomplete="current-password" required/></label>
+				<button type="submit">{ tr(ctx, "auth.login.submit") }</button>
 			</form>
 		</section>
 	}

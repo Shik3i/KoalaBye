@@ -11,6 +11,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/auth"
 	"github.com/koalastuff/koalabye/internal/config"
 	"github.com/koalastuff/koalabye/internal/db"
+	"github.com/koalastuff/koalabye/internal/i18n"
 	"github.com/koalastuff/koalabye/internal/web"
 	"github.com/koalastuff/koalabye/templates"
 )
@@ -23,10 +24,11 @@ type Handler struct {
 	queries  *db.Querier
 	sessions *auth.SessionManager
 	csrf     *auth.CSRF
+	catalog  *i18n.Catalog
 }
 
-func New(cfg config.Config, queries *db.Querier, sessions *auth.SessionManager, csrf *auth.CSRF) *Handler {
-	return &Handler{cfg: cfg, queries: queries, sessions: sessions, csrf: csrf}
+func New(cfg config.Config, queries *db.Querier, sessions *auth.SessionManager, csrf *auth.CSRF, catalog *i18n.Catalog) *Handler {
+	return &Handler{cfg: cfg, queries: queries, sessions: sessions, csrf: csrf, catalog: catalog}
 }
 
 func (h *Handler) Required(r *http.Request) (bool, error) {
@@ -59,18 +61,18 @@ func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := r.ParseForm(); err != nil || h.csrf.Validate(r) != nil {
-		h.renderError(w, r, "Your form expired. Please try again.")
+		h.renderError(w, r, "setup.error.expired")
 		return
 	}
 	displayName := strings.TrimSpace(r.FormValue("display_name"))
 	username := strings.TrimSpace(r.FormValue("username"))
 	password := r.FormValue("password")
 	if displayName == "" || len(displayName) > 80 || !usernamePattern.MatchString(username) {
-		h.renderError(w, r, "Enter a display name and a 3-40 character username using letters, numbers, underscores, or hyphens.")
+		h.renderError(w, r, "setup.error.invalid_identity")
 		return
 	}
 	if password != r.FormValue("password_confirm") {
-		h.renderError(w, r, "The passwords do not match.")
+		h.renderError(w, r, "setup.error.password_mismatch")
 		return
 	}
 	user, _, err := h.createOwner(r, username, displayName, password, "first_setup_owner_created", "setup")
@@ -79,7 +81,7 @@ func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
-		h.renderError(w, r, "Could not create the owner. The username may already be in use.")
+		h.renderError(w, r, "setup.error.create_failed")
 		return
 	}
 	if h.sessions.Start(r.Context(), w, user.ID) != nil {
@@ -120,15 +122,15 @@ func (h *Handler) createOwner(r *http.Request, username, displayName, password, 
 	return h.queries.CreateFirstOwner(r.Context(), db.FirstOwnerInput{
 		UserPublicID: randomID("usr"), Username: username, UsernameNormalized: db.NormalizeUsername(username),
 		DisplayName: displayName, PasswordHash: hash, OrganizationPublicID: randomID("org"),
-		OrganizationSlug: slug, OrganizationName: displayName + "'s organization",
+		OrganizationSlug: slug, OrganizationName: h.catalog.Translate(i18n.FromContext(r.Context()).Locale, "setup.default_org_name", displayName),
 		InstanceName: h.cfg.InstanceName, RegistrationEnabled: h.cfg.RegistrationEnabled,
 		InviteOnly: h.cfg.InviteOnly, AuditAction: action, AuditSource: source,
 	})
 }
 
-func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, message string) {
+func (h *Handler) renderError(w http.ResponseWriter, r *http.Request, key string) {
 	token, _ := h.csrf.Token(w, r)
-	web.Render(w, r, http.StatusUnprocessableEntity, templates.Setup(h.cfg.InstanceName, token, message))
+	web.Render(w, r, http.StatusUnprocessableEntity, templates.Setup(h.cfg.InstanceName, token, key))
 }
 
 func randomID(prefix string) string {

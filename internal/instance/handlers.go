@@ -6,6 +6,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/auth"
 	"github.com/koalastuff/koalabye/internal/config"
 	"github.com/koalastuff/koalabye/internal/db"
+	"github.com/koalastuff/koalabye/internal/i18n"
 	"github.com/koalastuff/koalabye/internal/permissions"
 	"github.com/koalastuff/koalabye/internal/web"
 	"github.com/koalastuff/koalabye/templates"
@@ -29,7 +30,12 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !allowed {
-		http.Error(w, "forbidden", http.StatusForbidden)
+		web.Render(w, r, http.StatusForbidden, templates.ErrorPage(
+			h.cfg.InstanceName,
+			http.StatusForbidden,
+			i18n.T(r.Context(), "error.forbidden.title"),
+			i18n.T(r.Context(), "error.forbidden.message"),
+		))
 		return
 	}
 	registration, err := h.queries.GetSetting(r.Context(), "registration_enabled")

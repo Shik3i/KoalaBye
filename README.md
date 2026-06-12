@@ -17,6 +17,12 @@ KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform fo
 
 Go, chi, templ, SQLite, sqlc, goose, server-rendered HTML, and locally vendored HTMX. The application is a single binary with embedded migrations and static assets.
 
+## Languages
+
+The application UI supports English (`en`), German (`de`), and Spanish (`es`). English is the default and fallback language. Locale selection follows `?lang=xx`, the `koalabye_lang` cookie, `Accept-Language`, then English. The language switcher preserves the current path.
+
+Legal placeholders under `/legal/privacy` and `/legal/imprint` currently support English and German only. Spanish requests clearly fall back to English.
+
 ## Docker Quick Start
 
 ```bash
@@ -41,7 +47,7 @@ export KOALABYE_SECRET=change-me-long-random-secret
 make dev
 ```
 
-The insecure example secret is accepted only for a local HTTP URL. Use `make test`, `make vet`, and `make fmt` before submitting changes. `make sqlc` regenerates typed queries.
+The insecure example secret is accepted only for a local HTTP URL. Run `make check` before submitting changes. It checks Go and templ formatting, generated templ/sqlc code, tests, and vet. `make sqlc` regenerates typed queries.
 
 ## Configuration
 

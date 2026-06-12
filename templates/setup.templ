@@ -1,21 +1,21 @@
 package templates
 
-templ Setup(instanceName, csrfToken, errorMessage string) {
-	@Layout("First-run setup", instanceName, nil) {
+templ Setup(instanceName, csrfToken, errorKey string) {
+	@Layout(tr(ctx, "setup.page_title"), instanceName, nil) {
 		<section class="auth-shell">
-			<div class="eyebrow">First run</div>
-			<h1>Create the Instance Owner</h1>
-			<p class="lede">This account controls the whole instance. There are no default credentials.</p>
-			if errorMessage != "" {
-				<div class="alert" role="alert">{ errorMessage }</div>
+			<div class="eyebrow">{ tr(ctx, "setup.eyebrow") }</div>
+			<h1>{ tr(ctx, "setup.title") }</h1>
+			<p class="lede">{ tr(ctx, "setup.subtitle") }</p>
+			if errorKey != "" {
+				<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
 			}
 			<form method="post" action="/setup" class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
-				<label>Display name<input name="display_name" autocomplete="name" required maxlength="80"/></label>
-				<label>Username<input name="username" autocomplete="username" required minlength="3" maxlength="40" pattern="[A-Za-z0-9_-]+"/></label>
-				<label>Password<input name="password" type="password" autocomplete="new-password" required minlength="12"/></label>
-				<label>Confirm password<input name="password_confirm" type="password" autocomplete="new-password" required minlength="12"/></label>
-				<button type="submit">Create secure instance</button>
+				<label>{ tr(ctx, "setup.display_name") }<input name="display_name" autocomplete="name" required maxlength="80"/></label>
+				<label>{ tr(ctx, "setup.username") }<input name="username" autocomplete="username" required minlength="3" maxlength="40" pattern="[A-Za-z0-9_-]+"/></label>
+				<label>{ tr(ctx, "setup.password") }<input name="password" type="password" autocomplete="new-password" required minlength="12"/></label>
+				<label>{ tr(ctx, "setup.password_confirm") }<input name="password_confirm" type="password" autocomplete="new-password" required minlength="12"/></label>
+				<button type="submit">{ tr(ctx, "setup.submit") }</button>
 			</form>
 		</section>
 	}

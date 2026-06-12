@@ -1,0 +1,16 @@
+package templates
+
+templ Legal(instanceName, page string) {
+	@Layout(tr(ctx, "legal."+page+".page_title"), instanceName, nil) {
+		<section class="auth-shell legal-page">
+			<div class="eyebrow">{ tr(ctx, "legal.placeholder") }</div>
+			<h1>{ tr(ctx, "legal." + page + ".title") }</h1>
+			if localeFromContext(ctx).LegalFallbackUsed {
+				<div class="notice" role="note">{ tr(ctx, "legal.language_notice") }</div>
+			}
+			<div class="panel">
+				<p>{ tr(ctx, "legal." + page + ".text") }</p>
+			</div>
+		</section>
+	}
+}

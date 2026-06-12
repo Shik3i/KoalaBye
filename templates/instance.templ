@@ -1,29 +1,30 @@
 package templates
 
 import (
+	"context"
 	"database/sql"
 	"github.com/koalastuff/koalabye/internal/db"
 )
 
 templ Instance(instanceName string, user db.User, registrationEnabled string, events []db.AuditEvent) {
-	@Layout("Instance admin", instanceName, &user) {
-		<section class="page-heading"><div><div class="eyebrow">Instance owner</div><h1>Instance administration</h1></div></section>
+	@Layout(tr(ctx, "instance.page_title"), instanceName, &user) {
+		<section class="page-heading"><div><div class="eyebrow">{ tr(ctx, "instance.eyebrow") }</div><h1>{ tr(ctx, "instance.title") }</h1></div></section>
 		<section class="grid three">
-			<article class="panel"><h2>Overview</h2><p>{ instanceName }</p><span class="badge">Healthy</span></article>
-			<article class="panel"><h2>Registration</h2><p>Global registration is <strong>{ registrationEnabled }</strong>.</p><span class="muted">Read-only in this foundation.</span></article>
-			<article class="panel"><h2>Administration</h2><p>Users, organizations, quotas, and moderation tools are prepared for later modules.</p></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.overview") }</h2><p>{ instanceName }</p><span class="badge">{ tr(ctx, "common.healthy") }</span></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.registration") }</h2><p>{ tr(ctx, "instance.registration_status", translatedBoolean(ctx, registrationEnabled)) }</p><span class="muted">{ tr(ctx, "instance.read_only") }</span></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.administration") }</h2><p>{ tr(ctx, "instance.administration_text") }</p></article>
 		</section>
 		<section class="panel">
-			<h2>Recent audit events</h2>
+			<h2>{ tr(ctx, "instance.audit") }</h2>
 			if len(events) == 0 {
-				<p class="muted">No audit events.</p>
+				<p class="muted">{ tr(ctx, "instance.no_audit") }</p>
 			} else {
 				<div class="table-wrap">
 					<table>
-						<thead><tr><th>Action</th><th>Target</th><th>Created</th></tr></thead>
+						<thead><tr><th>{ tr(ctx, "instance.audit_action") }</th><th>{ tr(ctx, "instance.audit_target") }</th><th>{ tr(ctx, "instance.audit_created") }</th></tr></thead>
 						<tbody>
 							for _, event := range events {
-								<tr><td>{ event.Action }</td><td>{ nullable(event.TargetID) }</td><td>{ event.CreatedAt }</td></tr>
+								<tr><td>{ translatedAuditAction(ctx, event.Action) }</td><td>{ nullable(event.TargetID) }</td><td>{ event.CreatedAt }</td></tr>
 							}
 						</tbody>
 					</table>
@@ -31,6 +32,17 @@ templ Instance(instanceName string, user db.User, registrationEnabled string, ev
 			}
 		</section>
 	}
+}
+
+func translatedBoolean(ctx context.Context, value string) string {
+	if value == "true" {
+		return tr(ctx, "common.enabled")
+	}
+	return tr(ctx, "common.disabled")
+}
+
+func translatedAuditAction(ctx context.Context, action string) string {
+	return tr(ctx, "audit.action."+action)
 }
 
 func nullable(value sql.NullString) string {

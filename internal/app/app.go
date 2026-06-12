@@ -13,6 +13,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/config"
 	"github.com/koalastuff/koalabye/internal/dashboard"
 	"github.com/koalastuff/koalabye/internal/db"
+	"github.com/koalastuff/koalabye/internal/i18n"
 	"github.com/koalastuff/koalabye/internal/instance"
 	"github.com/koalastuff/koalabye/internal/permissions"
 	"github.com/koalastuff/koalabye/internal/setup"
@@ -35,11 +36,16 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 	}
 
 	queries := db.NewQuerier(database)
+	catalog, err := i18n.Load()
+	if err != nil {
+		database.Close()
+		return nil, fmt.Errorf("load translations: %w", err)
+	}
 	sessions := auth.NewSessionManager(queries, cfg.SecureCookies)
 	csrf := auth.NewCSRF(cfg.Secret, cfg.SecureCookies)
 	auditLogger := audit.New(queries)
 	permissionService := permissions.New(queries)
-	setupHandler := setup.New(cfg, queries, sessions, csrf)
+	setupHandler := setup.New(cfg, queries, sessions, csrf, catalog)
 
 	bootstrapRequest, err := http.NewRequestWithContext(ctx, http.MethodGet, cfg.BaseURL+"/setup", nil)
 	if err != nil {
@@ -54,7 +60,7 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 	authHandler := auth.NewHandler(cfg, queries, sessions, csrf, auditLogger)
 	dashboardHandler := dashboard.New(cfg, queries, permissionService)
 	instanceHandler := instance.New(cfg, queries, permissionService)
-	handler := Routes(cfg, database, queries, sessions, csrf, setupHandler, authHandler, dashboardHandler, instanceHandler)
+	handler := Routes(cfg, database, queries, sessions, csrf, catalog, setupHandler, authHandler, dashboardHandler, instanceHandler)
 
 	return &App{Config: cfg, Database: database, Handler: handler}, nil
 }

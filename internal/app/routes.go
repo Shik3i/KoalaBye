@@ -12,6 +12,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/config"
 	"github.com/koalastuff/koalabye/internal/dashboard"
 	"github.com/koalastuff/koalabye/internal/db"
+	"github.com/koalastuff/koalabye/internal/i18n"
 	"github.com/koalastuff/koalabye/internal/instance"
 	"github.com/koalastuff/koalabye/internal/setup"
 	"github.com/koalastuff/koalabye/internal/web"
@@ -25,6 +26,7 @@ func Routes(
 	queries *db.Querier,
 	sessions *auth.SessionManager,
 	csrf *auth.CSRF,
+	catalog *i18n.Catalog,
 	setupHandler *setup.Handler,
 	authHandler *auth.Handler,
 	dashboardHandler *dashboard.Handler,
@@ -36,6 +38,7 @@ func Routes(
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.Timeout(30 * time.Second))
 	r.Use(securityHeaders)
+	r.Use(i18n.Middleware(catalog, cfg.SecureCookies))
 	r.Use(auth.LoadUser(sessions))
 
 	assets, _ := fs.Sub(staticassets.FS, ".")
@@ -82,8 +85,35 @@ func Routes(
 		authHandler.LoginGet(w, r)
 	})
 	r.Post("/login", authHandler.LoginPost)
+	r.Get("/legal/privacy", func(w http.ResponseWriter, r *http.Request) {
+		r = r.WithContext(i18n.LegalContext(r.Context()))
+		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "privacy"))
+	})
+	r.Get("/legal/imprint", func(w http.ResponseWriter, r *http.Request) {
+		r = r.WithContext(i18n.LegalContext(r.Context()))
+		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "imprint"))
+	})
 
 	r.Group(func(protected chi.Router) {
+		protected.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				required, err := setupHandler.Required(r)
+				if err != nil {
+					web.Render(w, r, http.StatusInternalServerError, templates.ErrorPage(
+						cfg.InstanceName,
+						http.StatusInternalServerError,
+						i18n.T(r.Context(), "error.internal.title"),
+						i18n.T(r.Context(), "error.internal.message"),
+					))
+					return
+				}
+				if required {
+					http.Redirect(w, r, "/setup", http.StatusSeeOther)
+					return
+				}
+				next.ServeHTTP(w, r)
+			})
+		})
 		protected.Use(auth.RequireUser(csrf))
 		protected.Post("/logout", authHandler.LogoutPost)
 		protected.Get("/app", dashboardHandler.Get)
@@ -91,7 +121,12 @@ func Routes(
 	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		web.Render(w, r, http.StatusNotFound, templates.ErrorPage(cfg.InstanceName, http.StatusNotFound, "Page not found", "That page does not exist."))
+		web.Render(w, r, http.StatusNotFound, templates.ErrorPage(
+			cfg.InstanceName,
+			http.StatusNotFound,
+			i18n.T(r.Context(), "error.not_found.title"),
+			i18n.T(r.Context(), "error.not_found.message"),
+		))
 	})
 	return r
 }

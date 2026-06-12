@@ -1,14 +1,17 @@
 package templates
 
-import "github.com/koalastuff/koalabye/internal/db"
+import (
+	"github.com/koalastuff/koalabye/internal/db"
+	"github.com/koalastuff/koalabye/internal/i18n"
+)
 
 templ Layout(title string, instanceName string, user *db.User) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang={ string(localeFromContext(ctx).Locale) }>
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<meta name="description" content="Private, self-hosted feedback without tracking."/>
+			<meta name="description" content={ tr(ctx, "meta.description") }/>
 			<title>{ title } · { instanceName }</title>
 			<link rel="stylesheet" href="/assets/app.css"/>
 			<script src="/assets/htmx.min.js" defer></script>
@@ -17,20 +20,33 @@ templ Layout(title string, instanceName string, user *db.User) {
 		<body>
 			<header class="site-header">
 				<a class="brand" href="/">{ instanceName }</a>
-				if user != nil {
-					<nav aria-label="Main navigation">
-						<a href="/app">Dashboard</a>
-						<form method="post" action="/logout" class="inline-form">
-							<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-							<button class="link-button" type="submit">Log out</button>
-						</form>
+				<div class="header-actions">
+					if user != nil {
+						<nav aria-label={ tr(ctx, "nav.aria") }>
+							<a href="/app">{ tr(ctx, "nav.dashboard") }</a>
+							<form method="post" action="/logout" class="inline-form">
+								<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+								<button class="link-button" type="submit">{ tr(ctx, "common.logout") }</button>
+							</form>
+						</nav>
+					}
+					<nav class="language-switcher" aria-label={ tr(ctx, "language.label") }>
+						for _, language := range i18n.Supported {
+							<a href={ localeFromContext(ctx).SwitchURLs[language] } lang={ string(language) } aria-current={ languageCurrent(ctx, language) }>{ tr(ctx, "language." + string(language)) }</a>
+						}
 					</nav>
-				}
+				</div>
 			</header>
 			<main class="page">
 				{ children... }
 			</main>
-			<footer class="site-footer">Private by design. No tracking, no external assets.</footer>
+			<footer class="site-footer">
+				<p>{ tr(ctx, "common.private_footer") }</p>
+				<nav aria-label={ tr(ctx, "nav.aria") }>
+					<a href="/legal/privacy">{ tr(ctx, "legal.privacy.link") }</a>
+					<a href="/legal/imprint">{ tr(ctx, "legal.imprint.link") }</a>
+				</nav>
+			</footer>
 		</body>
 	</html>
 }

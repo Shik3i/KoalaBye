@@ -12,6 +12,14 @@ KoalaBye is one stateless HTTP process except for its SQLite database and in-mem
 
 Go provides a small deployment artifact, predictable resource use, strong concurrency primitives, and an approachable standard library. SQLite keeps self-hosting operationally small while WAL mode and a busy timeout support the expected workload. Server-rendered templ components keep the security boundary on the server. HTMX is vendored locally for future progressive enhancement.
 
+## Internationalization
+
+Translation catalogs are flat dotted-key JSON files embedded from `internal/i18n/locales/`. Startup validates that German and Spanish contain exactly the English baseline keys. Requests receive locale context before authentication and rendering.
+
+Resolution order is explicit `?lang=xx`, future authenticated user preference, the `koalabye_lang` cookie, `Accept-Language`, then English. Explicit selection writes a SameSite=Lax cookie for one year. Templates resolve all visible strings through the request catalog and set `<html lang>` correctly. Unsupported locales and missing translations fall back safely to English; a completely unknown key renders a visible marker instead of crashing.
+
+Legal routes are intentionally narrower: `/legal/privacy` and `/legal/imprint` support English and German. A Spanish request renders English with a visible availability note. Future public survey pages must avoid setting locale cookies unless the visitor explicitly changes language.
+
 ## Data and Tenancy
 
 Users are global identities. Organizations are tenant boundaries, connected through `organization_members`. Organization roles are `owner`, `admin`, `member`, and `viewer`. Instance roles are separate and global; only `instance_owner` is active in the current UI. Prepared roles include admin, moderator, and support.
@@ -27,6 +35,10 @@ On every relevant request, the app checks for an active Instance Owner. With non
 Passwords use Argon2id with per-password random salts. Sessions use 256-bit random bearer tokens; only SHA-256 hashes are stored. The cookie is HttpOnly, SameSite=Lax, scoped to `/`, and optionally Secure. Logout revokes the row. CSRF uses a signed, HttpOnly, SameSite=Strict cookie matched against a hidden form value.
 
 The in-memory login limiter is intentionally small and username-keyed so it does not persist IP addresses. A distributed public deployment will need a privacy-preserving shared limiter.
+
+## Quality Gates
+
+Go tests exercise authentication, session revocation, permissions, locale resolution, HTTP headers/assets, migrations, and core queries. `make check` verifies formatting, generated templ/sqlc output, tests, and vet. GitHub Actions runs the same gate on pushes and pull requests, then builds the production Docker image.
 
 ## Permissions and Audit
 

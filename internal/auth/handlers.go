@@ -36,32 +36,32 @@ func (h *Handler) LoginGet(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil || h.csrf.Validate(r) != nil {
-		h.loginError(w, r, "Your form expired. Please try again.")
+		h.loginError(w, r, "auth.error.expired")
 		return
 	}
 	username := db.NormalizeUsername(r.FormValue("username"))
 	if !h.limiter.Allow(username) {
-		h.loginError(w, r, "Too many attempts. Please wait a few minutes.")
+		h.loginError(w, r, "auth.error.rate_limited")
 		return
 	}
 	user, err := h.queries.GetUserByNormalizedUsername(r.Context(), username)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			h.loginError(w, r, "Login is temporarily unavailable.")
+			h.loginError(w, r, "auth.error.unavailable")
 			return
 		}
 		h.audit.Record(r.Context(), nil, "login_failure", "username", username)
-		h.loginError(w, r, "Invalid username or password.")
+		h.loginError(w, r, "auth.error.invalid_credentials")
 		return
 	}
 	valid, err := VerifyPassword(user.PasswordHash, r.FormValue("password"))
 	if err != nil || !valid || user.DisabledAt.Valid {
 		h.audit.Record(r.Context(), user.ID, "login_failure", "user", user.PublicID)
-		h.loginError(w, r, "Invalid username or password.")
+		h.loginError(w, r, "auth.error.invalid_credentials")
 		return
 	}
 	if err := h.sessions.Start(r.Context(), w, user.ID); err != nil {
-		h.loginError(w, r, "Login is temporarily unavailable.")
+		h.loginError(w, r, "auth.error.unavailable")
 		return
 	}
 	h.limiter.Success(username)
@@ -83,7 +83,7 @@ func (h *Handler) LogoutPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-func (h *Handler) loginError(w http.ResponseWriter, r *http.Request, message string) {
+func (h *Handler) loginError(w http.ResponseWriter, r *http.Request, key string) {
 	token, _ := h.csrf.Token(w, r)
-	web.Render(w, r, http.StatusUnprocessableEntity, templates.Login(h.cfg.InstanceName, token, strings.TrimSpace(message)))
+	web.Render(w, r, http.StatusUnprocessableEntity, templates.Login(h.cfg.InstanceName, token, strings.TrimSpace(key)))
 }

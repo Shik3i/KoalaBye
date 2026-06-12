@@ -16,6 +16,7 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - SQLite foreign keys, WAL mode, busy timeout, transactions, and migrations.
 - No external CDN requests, IP database storage, fingerprinting, or raw user-agent retention.
 - A non-root runtime container and persistent `/data` volume.
+- Automated tests cover setup lockout, authentication success/failure, session revocation, permission denial, CSRF-backed flows, security headers, and migrations.
 
 Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the database file and backups, and replace the example secret with at least 32 random characters.
 
@@ -27,3 +28,5 @@ Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the databas
 - Security contact and signed release procedures must be finalized before a public hosted launch.
 - Dependency and container scanning are not yet automated in CI.
 - SQLite backups and restore verification remain an operator responsibility.
+
+The authenticated application may store a non-sensitive language preference cookie after an explicit language choice. Future public uninstall and survey pages must remain cookie-free by default unless a visitor explicitly selects a language.
