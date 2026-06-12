@@ -1,4 +1,4 @@
-﻿services:
+services:
   koalabye:
     image: ghcr.io/shik3i/koalabye:latest
     container_name: koalabye
@@ -31,7 +31,7 @@
       - KOALABYE_INSTANCE_NAME=KoalaBye
       
       # Optional: Bootstrap the first admin user on startup (only created if no users exist)
-      # - KOALABYE_BOOTSTRAP_ADMIN_USERNAME=admin@example.com
+      # - KOALABYE_BOOTSTRAP_ADMIN_USERNAME=admin
       # - KOALABYE_BOOTSTRAP_ADMIN_PASSWORD=your-secure-password
       # - KOALABYE_BOOTSTRAP_ADMIN_DISPLAY_NAME=Administrator
     volumes:
