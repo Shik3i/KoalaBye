@@ -29,6 +29,10 @@ These rules apply to human contributors and coding agents.
 - Store form content as plain text and rely on escaped rendering; never permit raw HTML or custom JavaScript.
 - Validate public answers against active fields and options, cap request bodies, and silently avoid storage for honeypot hits.
 - Response contents require organization membership plus an owner, editor, or analyst campaign role. Instance Owner status alone is not private-response access.
+- Analytics and exports inherit the private-response membership boundary. Never expose answer contents or exports through global Instance Owner moderation access alone.
+- Built-in charts must be local, accessible, and based only on minimized stored data. Keep an HTML table fallback.
+- Exports must omit internal IDs, IP addresses, raw user agents, raw install tokens, and install-token hash values. Audit format and counts, not content.
+- Retention and manual deletion actions are owner-only, CSRF-protected, transactional, and permanently destructive.
 
 ## Engineering
 
@@ -77,4 +81,5 @@ These rules apply to human contributors and coding agents.
 - Campaign routes use public IDs, enforce organization-scoped slugs, and keep archived or disabled records counted against safety limits.
 - Public visit limits use UTC month boundaries. Raw visits and first-seen token visits are distinct counters.
 - Public submission limits use UTC month boundaries. Submission rows contain no IP, raw user agent, or raw install token.
+- Analytics date ranges and daily grouping use UTC. Metadata summaries render only when the corresponding collection setting is enabled.
 - Do not add external CDNs, mandatory email, billing, analytics, or external services unless explicitly requested.

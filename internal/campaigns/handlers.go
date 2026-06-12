@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -301,7 +302,7 @@ func (h *Handler) Privacy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
-	web.Render(w, r, http.StatusOK, templates.CampaignPrivacy(h.cfg.InstanceName, user, campaign, settings))
+	web.Render(w, r, http.StatusOK, templates.CampaignPrivacy(h.cfg.InstanceName, user, campaign, settings, ""))
 }
 
 func (h *Handler) PrivacyPost(w http.ResponseWriter, r *http.Request) {
@@ -316,6 +317,16 @@ func (h *Handler) PrivacyPost(w http.ResponseWriter, r *http.Request) {
 		CollectReferrerDomain: r.FormValue("collect_referrer_domain") == "on", CollectCoarseBrowser: r.FormValue("collect_coarse_browser") == "on",
 		CollectCoarseOS: r.FormValue("collect_coarse_os") == "on", PublicLanguageDefault: validLanguage(r.FormValue("public_language_default")),
 		ShowPrivacyNotice: r.FormValue("show_privacy_notice") == "on",
+		RetentionEnabled:  r.FormValue("retention_enabled") == "on",
+	}
+	if settings.RetentionEnabled {
+		days, err := strconv.ParseInt(r.FormValue("retention_days"), 10, 64)
+		if err != nil || (days != 30 && days != 90 && days != 180 && days != 365) {
+			current, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+			web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignPrivacy(h.cfg.InstanceName, user, campaign, current, "retention.invalid"))
+			return
+		}
+		settings.RetentionDays = sql.NullInt64{Int64: days, Valid: true}
 	}
 	if err := h.q.UpdateCampaignPrivacy(r.Context(), campaign, settings, user.ID); err != nil {
 		http.Error(w, "privacy update denied", http.StatusUnprocessableEntity)

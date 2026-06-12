@@ -1,0 +1,196 @@
+package templates
+
+import (
+	"fmt"
+	"math"
+
+	"github.com/koalastuff/koalabye/internal/db"
+)
+
+templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, analytics db.CampaignAnalytics, rangeKey string, canDelete bool, messageKey string) {
+	@Layout(tr(ctx, "analytics.title"), instanceName, &user) {
+		@CampaignNav(campaign)
+		<section class="page-heading">
+			<div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "analytics.title") }</h1><p class="muted">{ tr(ctx, "analytics.description") }</p></div>
+		</section>
+		if messageKey != "" {
+			<div class="alert">{ tr(ctx, messageKey) }</div>
+		}
+		<nav class="range-nav" aria-label={ tr(ctx, "analytics.range") }>
+			for _, item := range []string{"7", "30", "90", "all"} {
+				<a class={ templ.KV("button secondary", true), templ.KV("selected", item == rangeKey) } href={ templ.SafeURL(campaignPath(campaign) + "/analytics?range=" + item) }>{ tr(ctx, "analytics.range." + item) }</a>
+			}
+		</nav>
+		<section class="grid three">
+			@metricCard("visits.raw_total", analytics.Overview.RawVisits)
+			@metricCard("visits.unique_total", analytics.Overview.UniqueVisits)
+			@metricCard("submissions.total", analytics.Overview.Submissions)
+			<article class="panel"><h2>{ tr(ctx, "analytics.submission_rate") }</h2><strong class="metric">{ submissionRate(analytics.Overview.Submissions, analytics.Overview.RawVisits) }</strong></article>
+			@metricCard("visits.current_month", analytics.Overview.CurrentMonthVisits)
+			@metricCard("submissions.current_month", analytics.Overview.CurrentMonthSubmissions)
+		</section>
+		<section class="grid two">
+			<article class="panel"><h2>{ tr(ctx, "analytics.latest_visit") }</h2><p>{ nullable(analytics.Overview.LatestVisitAt) }</p></article>
+			<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(analytics.Overview.LatestSubmissionAt) }</p></article>
+		</section>
+		<section class="panel">
+			<h2>{ tr(ctx, "analytics.trend") }</h2>
+			<p>{ tr(ctx, "analytics.utc_note") }</p>
+			if len(analytics.Trend) == 0 {
+				<p>{ tr(ctx, "analytics.empty") }</p>
+			} else {
+				@trendSVG(analytics.Trend)
+				<div class="table-wrap">
+					<table>
+						<thead><tr><th>{ tr(ctx, "analytics.day") }</th><th>{ tr(ctx, "visits.raw_total") }</th><th>{ tr(ctx, "visits.unique_total") }</th><th>{ tr(ctx, "submissions.total") }</th></tr></thead>
+						<tbody>
+							for _, point := range analytics.Trend {
+								<tr><td>{ point.Day }</td><td>{ fmt.Sprint(point.RawVisits) }</td><td>{ fmt.Sprint(point.UniqueVisits) }</td><td>{ fmt.Sprint(point.Submissions) }</td></tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</section>
+		if settings.CollectReferrerDomain || settings.CollectCoarseBrowser || settings.CollectCoarseOS {
+			<section class="panel">
+				<h2>{ tr(ctx, "analytics.metadata.title") }</h2>
+				<p>{ tr(ctx, "analytics.metadata.description") }</p>
+				<div class="grid three">
+					if settings.CollectReferrerDomain {
+						@metadataList("analytics.metadata.referrers", analytics.Referrers)
+					}
+					if settings.CollectCoarseBrowser {
+						@metadataList("analytics.metadata.browsers", analytics.Browsers)
+					}
+					if settings.CollectCoarseOS {
+						@metadataList("analytics.metadata.os", analytics.OSFamilies)
+					}
+				</div>
+			</section>
+		}
+		<section>
+			<h2>{ tr(ctx, "analytics.fields.title") }</h2>
+			for _, field := range analytics.Fields {
+				<article class="panel field-summary">
+					<div class="field-heading">
+						<div><span class="badge quiet">{ tr(ctx, "form.type." + field.FieldType) }</span><h3>{ field.Label }</h3></div>
+						if field.Archived {
+							<span class="badge quiet">{ tr(ctx, "analytics.archived") }</span>
+						}
+					</div>
+					<p>{ tr(ctx, "analytics.answered_skipped", field.Answered, field.Skipped) }</p>
+					if field.FieldType == "rating_1_5" {
+						<p><strong>{ tr(ctx, "analytics.average") }:</strong> { ratingAverage(field) }</p>
+					}
+					if field.FieldType == "textarea" {
+						<p>{ tr(ctx, "analytics.text_count", field.Answered) } <a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "analytics.view_responses") }</a></p>
+					} else {
+						<table>
+							<thead><tr><th>{ tr(ctx, "analytics.value") }</th><th>{ tr(ctx, "analytics.count") }</th><th>{ tr(ctx, "analytics.percentage") }</th></tr></thead>
+							<tbody>
+								for _, value := range field.Values {
+									<tr><td>{ value.Label }</td><td>{ fmt.Sprint(value.Count) }</td><td>{ fmt.Sprintf("%.1f%%", value.Percentage) }</td></tr>
+								}
+							</tbody>
+						</table>
+						if field.FieldType == "checkbox_group" {
+							<p>{ tr(ctx, "analytics.total_selections", field.TotalSelections) }</p>
+						}
+					}
+				</article>
+			}
+			if len(analytics.Fields) == 0 {
+				<div class="notice">{ tr(ctx, "analytics.fields.empty") }</div>
+			}
+		</section>
+		<section class="panel">
+			<h2>{ tr(ctx, "export.title") }</h2>
+			<div class="notice">{ tr(ctx, "export.warning") }</div>
+			<div class="actions compact">
+				<a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/export/submissions.csv") }>{ tr(ctx, "export.csv") }</a>
+				<a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/export/submissions.json") }>{ tr(ctx, "export.json") }</a>
+			</div>
+		</section>
+		if canDelete {
+			<section class="panel danger-zone">
+				<h2>{ tr(ctx, "deletion.title") }</h2>
+				<p>{ tr(ctx, "deletion.confirm_help", campaign.Slug) }</p>
+				if settings.RetentionEnabled {
+					<p>{ tr(ctx, "retention.summary", settings.RetentionDays.Int64) }</p>
+					@dangerForm(campaignPath(campaign)+"/retention/delete-old", "retention.delete_old", false)
+				} else {
+					<p>{ tr(ctx, "retention.disabled") }</p>
+				}
+				@dangerForm(campaignPath(campaign)+"/responses/delete-all", "deletion.responses", true)
+				@dangerForm(campaignPath(campaign)+"/visits/delete-all", "deletion.visits", true)
+			</section>
+		}
+	}
+}
+
+templ metricCard(key string, value int64) {
+	<article class="panel"><h2>{ tr(ctx, key) }</h2><strong class="metric">{ fmt.Sprint(value) }</strong></article>
+}
+
+templ metadataList(key string, items []db.MetadataCount) {
+	<div>
+		<h3>{ tr(ctx, key) }</h3>
+		<ul class="clean-list">
+			for _, item := range items {
+				<li><span>{ item.Value }</span><strong>{ fmt.Sprint(item.Count) }</strong></li>
+			}
+		</ul>
+	</div>
+}
+
+templ trendSVG(points []db.DailyTrend) {
+	<svg class="trend-chart" viewBox={ fmt.Sprintf("0 0 %d 180", maxInt(420, len(points)*34+50)) } role="img" aria-label={ tr(ctx, "analytics.trend") }>
+		<line x1="35" y1="150" x2={ fmt.Sprint(maxInt(400, len(points)*34+30)) } y2="150" class="chart-axis"></line>
+		for index, point := range points {
+			<rect x={ fmt.Sprint(45 + index*34) } y={ fmt.Sprint(150 - barHeight(point.RawVisits, points)) } width="8" height={ fmt.Sprint(barHeight(point.RawVisits, points)) } class="bar raw"><title>{ point.Day } { tr(ctx, "visits.raw_total") }: { fmt.Sprint(point.RawVisits) }</title></rect>
+			<rect x={ fmt.Sprint(54 + index*34) } y={ fmt.Sprint(150 - barHeight(point.UniqueVisits, points)) } width="8" height={ fmt.Sprint(barHeight(point.UniqueVisits, points)) } class="bar unique"><title>{ point.Day } { tr(ctx, "visits.unique_total") }: { fmt.Sprint(point.UniqueVisits) }</title></rect>
+			<rect x={ fmt.Sprint(63 + index*34) } y={ fmt.Sprint(150 - barHeight(point.Submissions, points)) } width="8" height={ fmt.Sprint(barHeight(point.Submissions, points)) } class="bar submissions"><title>{ point.Day } { tr(ctx, "submissions.total") }: { fmt.Sprint(point.Submissions) }</title></rect>
+		}
+	</svg>
+	<div class="chart-legend"><span class="raw">{ tr(ctx, "visits.raw_total") }</span><span class="unique">{ tr(ctx, "visits.unique_total") }</span><span class="submissions">{ tr(ctx, "submissions.total") }</span></div>
+}
+
+templ dangerForm(action, key string, confirmation bool) {
+	<form method="post" action={ templ.SafeURL(action) } class="form-stack danger-form">
+		<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+		if confirmation {
+			<label>{ tr(ctx, "deletion.confirmation") }<input name="confirmation" required/></label>
+		}
+		<button type="submit">{ tr(ctx, key) }</button>
+	</form>
+}
+
+func submissionRate(submissions, visits int64) string {
+	if visits == 0 {
+		return "—"
+	}
+	return fmt.Sprintf("%.1f%%", float64(submissions)*100/float64(visits))
+}
+
+func ratingAverage(field db.FieldSummary) string {
+	if field.Answered == 0 {
+		return "—"
+	}
+	return fmt.Sprintf("%.2f", field.Average)
+}
+
+func barHeight(value int64, points []db.DailyTrend) int {
+	maximum := int64(1)
+	for _, point := range points {
+		maximum = max(maximum, point.RawVisits, point.UniqueVisits, point.Submissions)
+	}
+	return int(math.Round(float64(value) * 120 / float64(maximum)))
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}

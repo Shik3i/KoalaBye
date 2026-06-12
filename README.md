@@ -2,7 +2,7 @@
 
 KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform for uninstall feedback and lightweight anonymous surveys. It is designed for browser extensions, apps, and small developer tools that need honest feedback without tracking people.
 
-> **Status:** early product. Authentication, organizations, campaign management, a form builder, cookie-free public feedback pages, anonymous submissions, privacy-first visit counting, response inboxes, permissions, audit logging, and deployment packaging are present.
+> **Status:** early product. Authentication, organizations, campaigns, forms, cookie-free feedback pages, anonymous submissions, privacy-first visits, response inboxes, built-in analytics, audited CSV/JSON exports, retention controls, permissions, and deployment packaging are present.
 
 ## Principles
 
@@ -91,6 +91,12 @@ Anonymous submissions work without JavaScript, login, or cookies. Validation ign
 
 Campaign owners, editors, and analysts can read responses; viewers cannot. Owners and editors can change forms. Instance Owners do not receive access to private response contents solely from their instance role: they must also have organization and campaign access. Monthly submission limits use UTC boundaries and remain adjustable safety controls.
 
+Campaign analytics use only KoalaBye's minimized first-party records. Overview counters, UTC daily trends, rating and choice summaries, textarea answer counts, and optional coarse referrer/browser/OS lists are rendered as accessible HTML and local inline SVG. There is no external analytics service, chart CDN, profiling, sentiment analysis, or raw user-agent data.
+
+CSV and JSON exports include public IDs, timestamps, optional visit public IDs, a token-hash presence boolean, field snapshots, and answer values. CSV checkbox values are semicolon-separated. Exports never contain internal integer IDs, IP addresses, raw user agents, raw install tokens, or install-token hash values. Every export is audited without logging answer contents.
+
+Campaign owners can enable a 30, 90, 180, or 365 day retention threshold. No scheduler runs: owners manually hard-delete eligible visits and submissions. They may also permanently delete all responses or all visits after typing the campaign slug. Deleting visits leaves submissions intact and clears their optional visit link.
+
 ```js
 // Chrome / Chromium
 const token = crypto.randomUUID();
@@ -110,6 +116,6 @@ The optional bootstrap admin variables may create the first owner only when no o
 
 ## Roadmap
 
-The next layer is aggregate analytics and CSV/JSON export. Conditional forms, multi-page forms, uploads, custom JavaScript, email notifications, and AI analysis remain out of the current scope. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
+Future work may add retention scheduling and richer aggregate views. Conditional forms, multi-page forms, uploads, custom JavaScript, email notifications, and AI analysis remain out of scope. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
 See [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).

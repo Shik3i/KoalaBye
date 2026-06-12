@@ -81,6 +81,8 @@ type CampaignSetting struct {
 	ShowPrivacyNotice      int64       `json:"show_privacy_notice"`
 	UpdatedAt              string      `json:"updated_at"`
 	UpdatedByUserID        interface{} `json:"updated_by_user_id"`
+	RetentionEnabled       int64       `json:"retention_enabled"`
+	RetentionDays          interface{} `json:"retention_days"`
 }
 
 type CampaignSubmission struct {

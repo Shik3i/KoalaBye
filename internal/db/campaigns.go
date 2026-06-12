@@ -45,6 +45,8 @@ type CampaignSettings struct {
 	CollectCoarseOS        bool
 	PublicLanguageDefault  string
 	ShowPrivacyNotice      bool
+	RetentionEnabled       bool
+	RetentionDays          sql.NullInt64
 	UpdatedAt              string
 	UpdatedByUserID        sql.NullInt64
 }
@@ -182,8 +184,8 @@ func (q *Querier) CampaignRole(ctx context.Context, campaignID, userID int64) (s
 
 func (q *Querier) GetCampaignSettings(ctx context.Context, campaignID int64) (CampaignSettings, error) {
 	var s CampaignSettings
-	err := q.db.QueryRowContext(ctx, `SELECT collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,public_language_default,show_privacy_notice,updated_at,updated_by_user_id FROM campaign_settings WHERE campaign_id=?`, campaignID).
-		Scan(&s.CollectInstallToken, &s.HashInstallToken, &s.CountRawVisits, &s.CountUniqueTokenVisits, &s.CollectReferrerDomain, &s.CollectCoarseBrowser, &s.CollectCoarseOS, &s.PublicLanguageDefault, &s.ShowPrivacyNotice, &s.UpdatedAt, &s.UpdatedByUserID)
+	err := q.db.QueryRowContext(ctx, `SELECT collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,public_language_default,show_privacy_notice,retention_enabled,retention_days,updated_at,updated_by_user_id FROM campaign_settings WHERE campaign_id=?`, campaignID).
+		Scan(&s.CollectInstallToken, &s.HashInstallToken, &s.CountRawVisits, &s.CountUniqueTokenVisits, &s.CollectReferrerDomain, &s.CollectCoarseBrowser, &s.CollectCoarseOS, &s.PublicLanguageDefault, &s.ShowPrivacyNotice, &s.RetentionEnabled, &s.RetentionDays, &s.UpdatedAt, &s.UpdatedByUserID)
 	return s, err
 }
 
@@ -210,8 +212,8 @@ func (q *Querier) UpdateCampaignPrivacy(ctx context.Context, campaign Campaign, 
 	if s.PublicLanguageDefault != "en" && s.PublicLanguageDefault != "de" && s.PublicLanguageDefault != "es" {
 		return ErrForbidden
 	}
-	_, err := q.db.ExecContext(ctx, `UPDATE campaign_settings SET collect_install_token=?,hash_install_token=1,count_raw_visits=?,count_unique_token_visits=?,collect_referrer_domain=?,collect_coarse_browser=?,collect_coarse_os=?,public_language_default=?,show_privacy_notice=?,updated_at=?,updated_by_user_id=? WHERE campaign_id=?`,
-		s.CollectInstallToken, s.CountRawVisits, s.CountUniqueTokenVisits, s.CollectReferrerDomain, s.CollectCoarseBrowser, s.CollectCoarseOS, s.PublicLanguageDefault, s.ShowPrivacyNotice, Now(), actorID, campaign.ID)
+	_, err := q.db.ExecContext(ctx, `UPDATE campaign_settings SET collect_install_token=?,hash_install_token=1,count_raw_visits=?,count_unique_token_visits=?,collect_referrer_domain=?,collect_coarse_browser=?,collect_coarse_os=?,public_language_default=?,show_privacy_notice=?,retention_enabled=?,retention_days=?,updated_at=?,updated_by_user_id=? WHERE campaign_id=?`,
+		s.CollectInstallToken, s.CountRawVisits, s.CountUniqueTokenVisits, s.CollectReferrerDomain, s.CollectCoarseBrowser, s.CollectCoarseOS, s.PublicLanguageDefault, s.ShowPrivacyNotice, s.RetentionEnabled, nullableInt64(s.RetentionDays), Now(), actorID, campaign.ID)
 	if err != nil {
 		return err
 	}

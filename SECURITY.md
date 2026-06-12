@@ -26,6 +26,10 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - Submission rows store no IP address, raw user agent, or raw install token; linked visits contribute only their existing HMAC hash.
 - A honeypot returns generic success without storing a submission.
 - Response contents require organization membership plus an owner, editor, or analyst campaign role. Instance Owner status alone is insufficient.
+- Private analytics and CSV/JSON exports use the same membership boundary; export audit events contain counts and format, never answers.
+- Exports omit IP addresses, raw user agents, raw tokens, token-hash values, and internal integer IDs.
+- Retention and delete-all actions are CSRF-protected, owner-only, transactional hard deletions. Delete-all requires typed campaign-slug confirmation.
+- Inline SVG charts and HTML tables use only local rendering and minimized stored aggregates.
 - CSP, frame denial, MIME sniffing prevention, no-referrer, and restrictive permissions headers.
 - SQLite foreign keys, WAL mode, busy timeout, transactions, and migrations.
 - No external CDN requests, IP database storage, fingerprinting, or raw user-agent retention.
@@ -40,7 +44,7 @@ Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the databas
 - There is no password reset, MFA, passkey, account recovery, or session management UI.
 - Audit retention and export policies are not configurable yet.
 - Invite links are bearer credentials and must be shared through a trusted channel.
-- Submission retention controls, exports, and detailed aggregate analytics are not implemented yet.
+- Retention deletion is manual; there is no background scheduler or automated retention job.
 - Security contact and signed release procedures must be finalized before a public hosted launch.
 - Dependency and container scanning are not yet automated in CI.
 - SQLite backups and restore verification remain an operator responsibility.

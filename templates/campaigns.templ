@@ -13,6 +13,7 @@ templ CampaignNav(campaign db.Campaign) {
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/privacy") }>{ tr(ctx, "campaign.privacy.title") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.title") }</a>
 		<a href={ templ.SafeURL(campaignPath(campaign) + "/access") }>{ tr(ctx, "campaign.access.title") }</a>
 	</nav>
 }
@@ -117,11 +118,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<p class="muted">{ tr(ctx, "campaign.snippet.firefox") }</p>
 			<pre><code>{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
 		</section>
-		<section class="grid three">
-			for _, key := range []string{"analytics", "export"} {
-				<article class="panel"><h2>{ tr(ctx, "campaign.future." + key) }</h2><span class="badge quiet">{ tr(ctx, "campaign.future.label") }</span></article>
-			}
-		</section>
+		<section class="panel"><h2>{ tr(ctx, "analytics.title") }</h2><p>{ tr(ctx, "analytics.description") }</p><a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.open") }</a></section>
 		if campaign.Status != "archived" && role == "owner" {
 			<section class="panel">
 				<h2>{ tr(ctx, "campaign.lifecycle") }</h2>
@@ -159,11 +156,14 @@ templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, 
 	}
 }
 
-templ CampaignPrivacy(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings) {
+templ CampaignPrivacy(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, errorKey string) {
 	@Layout(tr(ctx, "campaign.privacy.title"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading"><div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "campaign.privacy.title") }</h1></div></section>
 		<div class="notice"><strong>{ tr(ctx, "campaign.privacy.promise") }</strong><p>{ tr(ctx, "campaign.privacy.promise_text") }</p></div>
+		if errorKey != "" {
+			<div class="alert">{ tr(ctx, errorKey) }</div>
+		}
 		<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/privacy") } class="panel form-stack">
 			<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 			@campaignCheck("collect_install_token", "campaign.privacy.install_token", settings.CollectInstallToken)
@@ -176,6 +176,17 @@ templ CampaignPrivacy(instanceName string, user db.User, campaign db.Campaign, s
 				{ tr(ctx, "campaign.language") }@languageSelect(settings.PublicLanguageDefault)
 			</label>
 			@campaignCheck("show_privacy_notice", "campaign.privacy.notice", settings.ShowPrivacyNotice)
+			<h2>{ tr(ctx, "retention.title") }</h2>
+			@campaignCheck("retention_enabled", "retention.enabled", settings.RetentionEnabled)
+			<label>
+				{ tr(ctx, "retention.days") }
+				<select name="retention_days">
+					for _, days := range []int64{30, 90, 180, 365} {
+						<option value={ fmt.Sprint(days) } selected?={ settings.RetentionDays.Valid && settings.RetentionDays.Int64 == days }>{ tr(ctx, "retention.days_option", days) }</option>
+					}
+				</select>
+			</label>
+			<p class="muted">{ tr(ctx, "retention.help") }</p>
 			<p class="muted">{ tr(ctx, "campaign.privacy.hash_locked") }</p>
 			<button type="submit">{ tr(ctx, "common.save") }</button>
 		</form>

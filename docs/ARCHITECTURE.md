@@ -62,6 +62,24 @@ Public submissions are capped at 128 KiB and validated against the current activ
 
 Owners and editors edit forms. Owners, editors, and analysts read response contents; viewers and non-members cannot. Instance Owner moderation rights do not imply private response access: response handlers require actual organization membership and a response-capable campaign role.
 
+## Analytics and Exports
+
+Analytics query the existing visit, submission, answer, field, and option tables directly. There is no tracking SDK or secondary analytics store. Preset ranges are 7, 30, 90 days, and all time; finite ranges begin at UTC midnight and daily trends group ISO timestamps by UTC date.
+
+Overview totals remain campaign-wide while trends and field summaries honor the selected range. Field summaries parse stored JSON values: ratings show average and counts 1-5, radio and checkbox fields show option counts and percentages, and textareas show only answer counts with a link to the inbox. Archived fields remain visible when historical answers reference their public ID and label snapshot.
+
+Optional referrer, browser, and OS lists render only when their campaign collection setting is enabled. Charts are inline SVG with an HTML table fallback and local CSS; no chart library or external asset is used.
+
+CSV exports create one column per historical answer field using its public ID and a sanitized label. Checkbox arrays are semicolon-separated and standard CSV quoting protects commas, quotes, and newlines. JSON export version 1 preserves typed answer values and field snapshots. Both formats expose only public identifiers and the boolean presence of an install-token hash. Export audit metadata contains format, campaign public ID, and approximate submission count, never answers.
+
+Analytics, responses, and exports require actual organization membership plus campaign owner, editor, or analyst access. Viewer and non-member access is denied. Instance Owner status alone does not grant private analytics or export access.
+
+## Retention and Deletion
+
+Campaign settings can enable a 30, 90, 180, or 365 day retention threshold. This phase deliberately has no background scheduler. A campaign owner manually deletes visits and submissions older than the UTC cutoff in one transaction. Answers cascade with deleted submissions; deleting a visit sets surviving submission links to `NULL`.
+
+Campaign owners can also hard-delete every response or every visit after typed campaign-slug confirmation. These actions are CSRF-protected and audited with counts but no deleted content. Analysts, editors, viewers, non-members, and Instance Owners without organization access cannot run deletion actions.
+
 ## First-Run Setup
 
 On every relevant request, the app checks for an active Instance Owner. With none, `/` and login redirect to `/setup`. Setup creates the user, owner role, default organization, owner membership, initial settings, and audit event in one transaction. Once an owner exists, setup redirects to login. Optional environment bootstrap follows the same transaction and never overwrites data.
@@ -82,12 +100,12 @@ Authentication middleware loads identity. Authorization remains explicit in prot
 
 ## Privacy Model
 
-KoalaBye has no analytics SDK, external browser asset, IP column, raw user-agent column, or fingerprinting code. Public pages are cookie-free and collect only fields enabled by the campaign owner. Campaign dashboards expose totals and timestamps, not visitor profiles or charts.
+KoalaBye has no analytics SDK, external browser asset, IP column, raw user-agent column, or fingerprinting code. Public pages are cookie-free and collect only fields enabled by the campaign owner. Campaign analytics expose aggregates and local charts, never visitor profiles.
 
 ## Planned Modules
 
-- Aggregate analytics and CSV/JSON exports
-- Submission retention controls
+- Optional retention scheduling
+- Additional privacy-friendly aggregate views
 - Passkeys
 - Optional email integration
 

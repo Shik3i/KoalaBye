@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -1262,5 +1263,177 @@ func TestPhase6FormBuilderPermissionsAndArchivedReadOnly(t *testing.T) {
 	_, _, archivedBody := csrfPage(t, application, base, ownerLogin.session, csrfCookie)
 	if !strings.Contains(archivedBody, "read-only") || strings.Contains(archivedBody, `action="`+base+`/fields"`) {
 		t.Fatalf("archived form was not read-only: %s", archivedBody)
+	}
+}
+
+func TestPhase7AnalyticsExportsRetentionAndPermissions(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, org, campaign := seedActivePublicCampaign(t, application, "camp_phase7", "phase7", "en")
+	q := db.NewQuerier(application.Database)
+	ctx := context.Background()
+	if err := q.CreateFormField(ctx, db.SaveFormFieldInput{PublicID: "field_phase7", CampaignID: campaign.ID, FieldType: "textarea", Label: `Why, exactly?`}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	field, _ := q.GetFormField(ctx, campaign.ID, "field_phase7")
+	now := time.Now().UTC()
+	if err := q.RecordCampaignVisit(ctx, db.RecordVisitInput{
+		PublicID: "visit_phase7", CampaignID: campaign.ID, OrganizationID: org.ID, TokenHash: "secret-hash-not-exported",
+		ReferrerDomain: "example.org", CoarseBrowser: "Firefox", CoarseOS: "Linux",
+		CountRaw: true, CountUnique: true, CollectToken: true, CreatedAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal("line one,\nline two")
+	if err := q.CreateSubmission(ctx, db.CreateSubmissionInput{
+		PublicID: "submission_phase7", VisitPublicID: "visit_phase7", CampaignID: campaign.ID, OrgID: org.ID, SubmittedAt: now,
+		Answers: []db.SubmissionAnswerInput{{FieldID: field.ID, FieldPublicID: field.PublicID, FieldType: field.FieldType, FieldLabelSnapshot: field.Label, ValueJSON: string(raw)}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	analyst := seedNonOwner(t, application, "phase7analyst", "phase7 analyst password")
+	viewer := seedNonOwner(t, application, "phase7viewer", "phase7 viewer password")
+	for _, member := range []struct {
+		user db.User
+		role string
+	}{{analyst, "analyst"}, {viewer, "viewer"}} {
+		if _, err := application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, member.user.ID, db.Now(), owner.ID); err != nil {
+			t.Fatal(err)
+		}
+		if err := q.SetCampaignMember(ctx, campaign, member.user.PublicID, member.role, owner.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	base := "/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID
+	for _, tc := range []struct {
+		user     db.User
+		password string
+		status   int
+	}{{owner, "a sufficiently long password", http.StatusOK}, {analyst, "phase7 analyst password", http.StatusOK}, {viewer, "phase7 viewer password", http.StatusForbidden}} {
+		session := login(t, application, tc.user.Username, tc.password)
+		request := httptest.NewRequest(http.MethodGet, base+"/analytics?range=7", nil)
+		request.AddCookie(session.session)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != tc.status {
+			t.Fatalf("%s analytics status=%d want=%d", tc.user.Username, response.Code, tc.status)
+		}
+		if tc.status == http.StatusOK {
+			body := response.Body.String()
+			if !strings.Contains(body, "Submission rate") || !strings.Contains(body, "100.0%") || strings.Contains(body, "example.org") || strings.Contains(body, "raw-agent") || strings.Contains(body, "https://cdn") {
+				t.Fatalf("analytics overview/privacy incorrect: %s", body)
+			}
+		}
+	}
+
+	ownerLogin := login(t, application, owner.Username, "a sufficiently long password")
+	for _, locale := range []struct {
+		code, heading string
+	}{{"en", "Analytics"}, {"de", "Analysen"}, {"es", "Analítica"}} {
+		request := httptest.NewRequest(http.MethodGet, base+"/analytics?lang="+locale.code, nil)
+		request.AddCookie(ownerLogin.session)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "<h1>"+locale.heading+"</h1>") {
+			t.Fatalf("analytics locale %s failed: %d", locale.code, response.Code)
+		}
+	}
+	csrfCookie, token, _ := csrfPage(t, application, base+"/privacy", ownerLogin.session)
+	invalidRetention := formPost(application, base+"/privacy", url.Values{
+		"csrf_token": {token}, "public_language_default": {"en"}, "retention_enabled": {"on"}, "retention_days": {"31"},
+	}, ownerLogin.session, csrfCookie)
+	if invalidRetention.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid retention accepted: %d", invalidRetention.Code)
+	}
+	validRetention := formPost(application, base+"/privacy", url.Values{
+		"csrf_token": {token}, "public_language_default": {"en"}, "retention_enabled": {"on"}, "retention_days": {"90"},
+		"collect_referrer_domain": {"on"}, "collect_coarse_browser": {"on"}, "collect_coarse_os": {"on"},
+	}, ownerLogin.session, csrfCookie)
+	if validRetention.Code != http.StatusSeeOther {
+		t.Fatalf("valid retention rejected: %d", validRetention.Code)
+	}
+	analyticsRequest := httptest.NewRequest(http.MethodGet, base+"/analytics?lang=de", nil)
+	analyticsRequest.AddCookie(ownerLogin.session)
+	analyticsResponse := httptest.NewRecorder()
+	application.Handler.ServeHTTP(analyticsResponse, analyticsRequest)
+	if analyticsResponse.Code != http.StatusOK || !strings.Contains(analyticsResponse.Body.String(), "Referrer-Domains") || !strings.Contains(analyticsResponse.Body.String(), "älter als 90 Tage") {
+		t.Fatalf("enabled metadata/translation missing: %d %s", analyticsResponse.Code, analyticsResponse.Body.String())
+	}
+
+	for _, tc := range []struct {
+		path, contentType string
+	}{
+		{"/export/submissions.csv", "text/csv"},
+		{"/export/submissions.json", "application/json"},
+	} {
+		request := httptest.NewRequest(http.MethodGet, base+tc.path, nil)
+		request.AddCookie(ownerLogin.session)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		body := response.Body.String()
+		if response.Code != http.StatusOK || !strings.Contains(response.Header().Get("Content-Type"), tc.contentType) || !strings.Contains(response.Header().Get("Content-Disposition"), "phase7-submissions") {
+			t.Fatalf("%s export headers failed: %d %#v", tc.path, response.Code, response.Header())
+		}
+		if !strings.Contains(body, "submission_phase7") || !strings.Contains(body, "line one") || strings.Contains(body, "secret-hash-not-exported") || strings.Contains(body, "raw-agent") || strings.Contains(body, `"campaign_id"`) {
+			t.Fatalf("%s export content unsafe: %s", tc.path, body)
+		}
+	}
+	var exportAudits int
+	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM audit_log WHERE action IN ('campaign.export.csv','campaign.export.json') AND target_id=?`, campaign.PublicID).Scan(&exportAudits); err != nil || exportAudits != 2 {
+		t.Fatalf("exports not audited: %d %v", exportAudits, err)
+	}
+	viewerLogin := login(t, application, viewer.Username, "phase7 viewer password")
+	request := httptest.NewRequest(http.MethodGet, base+"/export/submissions.csv", nil)
+	request.AddCookie(viewerLogin.session)
+	response := httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("viewer export status=%d", response.Code)
+	}
+
+	noCSRF := formPost(application, base+"/responses/delete-all", url.Values{"confirmation": {campaign.Slug}}, ownerLogin.session)
+	if noCSRF.Code != http.StatusForbidden {
+		t.Fatalf("delete without CSRF=%d", noCSRF.Code)
+	}
+	wrong := formPost(application, base+"/responses/delete-all", url.Values{"csrf_token": {token}, "confirmation": {"wrong"}}, ownerLogin.session, csrfCookie)
+	if wrong.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("wrong deletion confirmation=%d", wrong.Code)
+	}
+	analystLogin := login(t, application, analyst.Username, "phase7 analyst password")
+	analystDelete := formPost(application, base+"/visits/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}}, analystLogin.session, csrfCookie)
+	if analystDelete.Code != http.StatusForbidden {
+		t.Fatalf("analyst deletion=%d", analystDelete.Code)
+	}
+	deleteVisits := formPost(application, base+"/visits/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}}, ownerLogin.session, csrfCookie)
+	if deleteVisits.Code != http.StatusSeeOther {
+		t.Fatalf("visit deletion failed: %d", deleteVisits.Code)
+	}
+	var linked any
+	if err := application.Database.QueryRow(`SELECT visit_id FROM campaign_submissions WHERE public_id='submission_phase7'`).Scan(&linked); err != nil || linked != nil {
+		t.Fatalf("submission not preserved/unlinked: %v %v", linked, err)
+	}
+	deleteResponses := formPost(application, base+"/responses/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}}, ownerLogin.session, csrfCookie)
+	if deleteResponses.Code != http.StatusSeeOther {
+		t.Fatalf("response deletion failed: %d", deleteResponses.Code)
+	}
+
+	privateOwner := seedNonOwner(t, application, "phase7private", "phase7 private password")
+	privateOrg, err := q.CreateOrganization(ctx, db.CreateOrganizationInput{
+		PublicID: "org_phase7_private", Slug: "phase7-private", Name: "Private analytics", UserID: privateOwner.ID,
+		Limits: db.DefaultLimits{MaxOrganizationsPerUser: 2, MaxCampaignsPerOrg: 3, MaxMembersPerOrg: 5, MaxActiveInvitesPerOrg: 10, MaxMonthlyVisitsPerOrg: 100, MaxMonthlySubmissionsPerOrg: 100},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateCampaign, err := q.CreateCampaign(ctx, db.CreateCampaignInput{PublicID: "camp_phase7_private", OrganizationID: privateOrg.ID, CreatedBy: privateOwner.ID, Name: "Private", Slug: "private", Language: "en", PrivacyPreset: "strict"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateRequest := httptest.NewRequest(http.MethodGet, "/app/orgs/"+privateOrg.PublicID+"/campaigns/"+privateCampaign.PublicID+"/analytics", nil)
+	privateRequest.AddCookie(ownerLogin.session)
+	privateResponse := httptest.NewRecorder()
+	application.Handler.ServeHTTP(privateResponse, privateRequest)
+	if privateResponse.Code != http.StatusForbidden {
+		t.Fatalf("instance owner viewed private analytics: %d", privateResponse.Code)
 	}
 }

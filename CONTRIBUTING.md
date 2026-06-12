@@ -39,6 +39,12 @@ Public campaign changes must remain cookie-free, work without JavaScript, and av
 
 Form and submission changes must keep field content plain text, preserve answer snapshots, validate values server-side, and enforce request-size and UTC monthly submission limits. Never add IP, raw user-agent, or raw-token columns. Public honeypot hits must not write data. Response access requires actual organization membership; do not inherit the general Instance Owner campaign shortcut for private response contents.
 
+Analytics must aggregate existing minimized data with UTC boundaries and remain understandable through tables even when charts are present. Do not add external analytics or chart assets. Archived field summaries must use stored public IDs and label snapshots.
+
+Exports are sensitive reads. Keep their permission boundary aligned with responses, audit every completed export without answer contents, and expose no internal IDs or token hashes. CSV changes must use `encoding/csv`; JSON changes must preserve typed values and a documented format version.
+
+Retention and manual deletion are hard-delete paths. Restrict them to campaign owners, require CSRF and typed confirmation where specified, keep multi-table behavior transactional, preserve submissions when visits are deleted through `ON DELETE SET NULL`, and audit counts without deleted content.
+
 KoalaBye is 100% free forever. Safety limits are operational abuse-prevention controls, not plans. Do not add billing, subscription, payment, premium, or upgrade concepts to code, copy, schema, or documentation.
 
 ## Translations

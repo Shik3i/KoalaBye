@@ -97,6 +97,22 @@ th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-s
 .choice-row { display: flex; flex-wrap: wrap; gap: 14px; }
 .honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .response-answer { margin: 16px 0; white-space: pre-wrap; }
+.range-nav { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
+.range-nav .selected { border-color: var(--green); background: var(--green-soft); }
+.trend-chart { width: 100%; min-height: 180px; overflow-x: auto; }
+.chart-axis { stroke: var(--line); stroke-width: 2; }
+.bar.raw { fill: #196b45; }
+.bar.unique { fill: #66a57f; }
+.bar.submissions { fill: #496fa8; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: .85rem; }
+.chart-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; }
+.chart-legend .raw::before { background: #196b45; }
+.chart-legend .unique::before { background: #66a57f; }
+.chart-legend .submissions::before { background: #496fa8; }
+.field-summary { margin: 16px 0; }
+.danger-zone { border-color: #e2aaa0; margin-top: 24px; }
+.danger-form { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 18px; }
+.danger-form button { background: var(--danger); justify-self: start; }
 
 @media (max-width: 720px) {
   .grid.two, .grid.three { grid-template-columns: 1fr; }

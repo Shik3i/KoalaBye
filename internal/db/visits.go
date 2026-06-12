@@ -49,7 +49,7 @@ func (q *Querier) scanPublicCampaign(ctx context.Context, predicate string, args
 	query := `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,NULL,
 		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner'),
 		o.disabled_at,
-		cs.collect_install_token,cs.hash_install_token,cs.count_raw_visits,cs.count_unique_token_visits,cs.collect_referrer_domain,cs.collect_coarse_browser,cs.collect_coarse_os,cs.public_language_default,cs.show_privacy_notice,cs.updated_at,cs.updated_by_user_id
+		cs.collect_install_token,cs.hash_install_token,cs.count_raw_visits,cs.count_unique_token_visits,cs.collect_referrer_domain,cs.collect_coarse_browser,cs.collect_coarse_os,cs.public_language_default,cs.show_privacy_notice,cs.retention_enabled,cs.retention_days,cs.updated_at,cs.updated_by_user_id
 		FROM campaigns c
 		JOIN organizations o ON o.id=c.organization_id
 		JOIN users u ON u.id=c.created_by_user_id
@@ -68,6 +68,7 @@ func (q *Querier) scanPublicCampaign(ctx context.Context, predicate string, args
 		&result.Settings.CountUniqueTokenVisits, &result.Settings.CollectReferrerDomain,
 		&result.Settings.CollectCoarseBrowser, &result.Settings.CollectCoarseOS,
 		&result.Settings.PublicLanguageDefault, &result.Settings.ShowPrivacyNotice,
+		&result.Settings.RetentionEnabled, &result.Settings.RetentionDays,
 		&result.Settings.UpdatedAt, &result.Settings.UpdatedByUserID,
 	)
 	result.OrganizationDisabled = orgDisabled.Valid
