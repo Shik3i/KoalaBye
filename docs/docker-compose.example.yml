@@ -4,35 +4,35 @@
     container_name: koalabye
     restart: always
     environment:
-      # URL der Instanz (für Redirects/E-Mails wichtig)
+      # Public URL of the instance (required for redirects/emails)
       - KOALABYE_BASE_URL=https://bye.koalastuff.net
       
-      # Interner Port (entspricht dem Port im Container)
+      # Internal port (must match the port inside the container)
       - KOALABYE_LISTEN_ADDR=:8080
       
-      # SQLite-Datenbankpfad im Container (gemappt auf Host-Volume)
+      # SQLite database path inside the container (mapped to host volume)
       - KOALABYE_DATABASE_PATH=/data/koalabye.db
       
-      # WICHTIG: Mit einem sicheren (z. B. 64 Zeichen) Zufallswert ersetzen! (z.B. openssl rand -hex 32)
+      # IMPORTANT: Replace with a secure random string! (e.g. openssl rand -hex 32)
       - KOALABYE_SECRET=change-me-to-a-very-long-and-secure-random-string
       
-      # Modus (selfhost oder cloud)
+      # Mode (selfhost or cloud)
       - KOALABYE_MODE=selfhost
       
-      # Anmeldung und Registrierung
+      # Registration and Invite Settings
       - KOALABYE_REGISTRATION_ENABLED=false
       - KOALABYE_INVITE_ONLY=true
       - KOALABYE_INVITE_REGISTRATION_ENABLED=true
       
-      # Cookies sicher über HTTPS übertragen
+      # Ensure cookies are only sent over HTTPS
       - KOALABYE_SECURE_COOKIES=true
       
-      # Name der Instanz (sichtbar für Benutzer)
+      # Name of the instance (visible to users)
       - KOALABYE_INSTANCE_NAME=KoalaBye
       
-      # Optional: Erstmaligen Admin-Benutzer beim Start erstellen (wird nur angelegt, wenn noch keine User existieren)
+      # Optional: Bootstrap the first admin user on startup (only created if no users exist)
       # - KOALABYE_BOOTSTRAP_ADMIN_USERNAME=admin@example.com
-      # - KOALABYE_BOOTSTRAP_ADMIN_PASSWORD=dein-sicheres-passwort
+      # - KOALABYE_BOOTSTRAP_ADMIN_PASSWORD=your-secure-password
       # - KOALABYE_BOOTSTRAP_ADMIN_DISPLAY_NAME=Administrator
     volumes:
       - /home/koala/docker/koalabye/data:/data
