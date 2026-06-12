@@ -113,4 +113,4 @@ CSV and JSON exports include public IDs, timestamps, optional visit public IDs, 
 
 Future work may add retention scheduling and richer aggregate views. Conditional forms, multi-page forms, uploads, custom JavaScript, email notifications, and AI analysis remain out of scope. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
-See [Deployment](docs/DEPLOYMENT.md), [Operations](docs/OPERATIONS.md), [Staging](docs/STAGING.md), [Backup and Restore](docs/BACKUP_RESTORE.md), [Release Checklist](docs/RELEASE_CHECKLIST.md), [Versioning](docs/VERSIONING.md), [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).
+See [Deployment](docs/DEPLOYMENT.md), [Operations](docs/OPERATIONS.md), [First Deployment Test](docs/FIRST_DEPLOYMENT_TEST.md), [Backup and Restore](docs/BACKUP_RESTORE.md), [Release Checklist](docs/RELEASE_CHECKLIST.md), [Versioning](docs/VERSIONING.md), [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).

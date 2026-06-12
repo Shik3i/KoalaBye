@@ -1,24 +1,23 @@
-# Staging
+# First Deployment Test
 
-Use a dedicated HTTPS host such as `bye-staging.koalastuff.net`, a separate SQLite volume, and a separate random secret. Never point staging at production data.
+You can test on any temporary domain or local host before pointing real users at the instance.
 
 ## Recommended Configuration
 
-- Start with `docker-compose.staging.example.yml`.
-- Copy `.env.example` to `.env.staging`.
-- Set `KOALABYE_BASE_URL=https://bye-staging.koalastuff.net`.
-- Set `KOALABYE_SECURE_COOKIES=true`.
+- Start with `docker-compose.example.yml`.
+- Copy `.env.example` to `.env`.
+- Set `KOALABYE_BASE_URL=https://bye.koalastuff.net` (or your actual domain).
+- Set `KOALABYE_SECURE_COOKIES=true` behind HTTPS.
 - Keep public registration disabled and use invitation-based access.
-- Adapt `Caddyfile.staging.example` to the real staging domain.
 
-For local HTTP-only testing, use `KOALABYE_SECURE_COOKIES=false`. Do not carry that value into HTTPS staging or production.
+For local HTTP-only testing, use `KOALABYE_SECURE_COOKIES=false`. Do not carry that value into HTTPS production.
 
 ## Acceptance Drill
 
 1. Complete `/setup` on a clean database.
 2. Create a test organization and campaign.
 3. Configure and activate a feedback form.
-4. Set a browser extension uninstall URL to the staging campaign with an optional random `t` token.
+4. Set a browser extension uninstall URL to the campaign with an optional random `t` token.
 5. Verify duplicate token visits count once as unique.
 6. Submit anonymous feedback and verify the response inbox and analytics.
 7. Export CSV and JSON and confirm no raw token or token hash is present.

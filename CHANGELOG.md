@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0-rc.1 - Unreleased
+## v0.1.0 - Experimental initial release
 
 ### Added
 - setup without default credentials
@@ -24,13 +24,13 @@
 - no external CDN
 
 ### Security
-- Initial RC release
+- Initial experimental release
 
 ### Privacy
-- Initial RC release
+- Initial experimental release
 
 ### Operations
-- Initial RC release
+- Initial experimental release
 
 ### Known limitations
 - retention is manual, no scheduler yet
