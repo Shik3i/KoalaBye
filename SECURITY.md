@@ -22,6 +22,7 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - Referrers are reduced to hostnames and user agents to coarse browser/OS families before storage.
 - Monthly visit safety limits are enforced before a visit row is inserted.
 - Public feedback bodies are capped at 128 KiB and validated against active fields and options.
+- Anonymous public submissions do not use session-bound CSRF tokens because they carry no authenticated session or ambient authority. Body limits, strict validation, a honeypot, and transactional submission quotas provide the applicable abuse controls.
 - Submission inserts and UTC monthly safety limits are enforced transactionally.
 - Submission rows store no IP address, raw user agent, or raw install token; linked visits contribute only their existing HMAC hash.
 - A honeypot returns generic success without storing a submission.

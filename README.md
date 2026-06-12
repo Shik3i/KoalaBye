@@ -4,6 +4,21 @@ KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform fo
 
 > **Status:** early product. Authentication, organizations, campaigns, forms, cookie-free feedback pages, anonymous submissions, privacy-first visits, response inboxes, built-in analytics, audited CSV/JSON exports, retention controls, permissions, and deployment packaging are present.
 
+## Current MVP Capabilities
+
+- First-run setup, local authentication, sessions, registration policies, and instance administration.
+- Multi-organization membership, role-based permissions, and expiring invite codes.
+- Campaign lifecycle management, privacy presets, safety limits, and uninstall URL examples.
+- Ordered feedback forms with checkbox, radio, rating, text, and textarea fields.
+- Cookie-free public feedback pages and anonymous submissions that work without JavaScript.
+- Privacy-minimized visit and response storage with no IP addresses, raw tokens, or raw user agents.
+- Permission-scoped response inboxes, aggregate analytics, and audited CSV/JSON exports.
+- Manual retention and confirmed hard-deletion controls.
+- English, German, and Spanish application UI with accessible server-rendered interfaces.
+- Single-binary and non-root Docker deployment backed only by SQLite.
+
+Remaining planned work is limited to operational hardening such as automated retention scheduling, richer aggregate views, dependency scanning, release procedures, and documented backup/restore verification.
+
 ## Principles
 
 - 100% free software under the MIT License.
