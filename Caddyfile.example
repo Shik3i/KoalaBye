@@ -1,0 +1,3 @@
+bye.example.com {
+	reverse_proxy koalabye:8080
+}

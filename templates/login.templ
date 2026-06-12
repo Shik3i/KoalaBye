@@ -1,0 +1,20 @@
+package templates
+
+templ Login(instanceName, csrfToken, errorMessage string) {
+	@Layout("Log in", instanceName, nil) {
+		<section class="auth-shell">
+			<div class="eyebrow">Welcome back</div>
+			<h1>Log in</h1>
+			<p class="lede">Use your KoalaBye username and password.</p>
+			if errorMessage != "" {
+				<div class="alert" role="alert">{ errorMessage }</div>
+			}
+			<form method="post" action="/login" class="panel form-stack">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<label>Username<input name="username" autocomplete="username" required autofocus/></label>
+				<label>Password<input name="password" type="password" autocomplete="current-password" required/></label>
+				<button type="submit">Log in</button>
+			</form>
+		</section>
+	}
+}

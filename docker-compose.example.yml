@@ -1,0 +1,27 @@
+services:
+  koalabye:
+    build: .
+    restart: unless-stopped
+    environment:
+      KOALABYE_BASE_URL: ${KOALABYE_BASE_URL:-http://localhost:8080}
+      KOALABYE_LISTEN_ADDR: ":8080"
+      KOALABYE_DATABASE_PATH: /data/koalabye.db
+      KOALABYE_SECRET: ${KOALABYE_SECRET:?Set KOALABYE_SECRET in .env}
+      KOALABYE_MODE: ${KOALABYE_MODE:-selfhost}
+      KOALABYE_REGISTRATION_ENABLED: ${KOALABYE_REGISTRATION_ENABLED:-false}
+      KOALABYE_INVITE_ONLY: ${KOALABYE_INVITE_ONLY:-true}
+      KOALABYE_SECURE_COOKIES: ${KOALABYE_SECURE_COOKIES:-false}
+      KOALABYE_INSTANCE_NAME: ${KOALABYE_INSTANCE_NAME:-KoalaBye}
+    ports:
+      - "8080:8080"
+    volumes:
+      - koalabye_data:/data
+    networks:
+      - koalabye
+
+volumes:
+  koalabye_data:
+
+networks:
+  koalabye:
+    name: koalabye

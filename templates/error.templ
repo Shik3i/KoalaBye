@@ -1,0 +1,14 @@
+package templates
+
+import "fmt"
+
+templ ErrorPage(instanceName string, status int, title, message string) {
+	@Layout(title, instanceName, nil) {
+		<section class="auth-shell">
+			<div class="eyebrow">{ fmt.Sprintf("%d", status) }</div>
+			<h1>{ title }</h1>
+			<p class="lede">{ message }</p>
+			<a class="button secondary" href="/">Return home</a>
+		</section>
+	}
+}

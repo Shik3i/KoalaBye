@@ -1,0 +1,33 @@
+package templates
+
+import "github.com/koalastuff/koalabye/internal/db"
+
+templ Dashboard(instanceName string, user db.User, organizations []db.Organization, isOwner bool) {
+	@Layout("Dashboard", instanceName, &user) {
+		<section class="page-heading">
+			<div><div class="eyebrow">Dashboard</div><h1>Welcome, { user.DisplayName }</h1></div>
+			if isOwner {
+				<a class="button secondary" href="/instance">Instance admin</a>
+			}
+		</section>
+		<section class="grid two">
+			<article class="panel">
+				<h2>Your organizations</h2>
+				if len(organizations) == 0 {
+					<p class="muted">No organizations yet.</p>
+				} else {
+					<ul class="clean-list">
+						for _, organization := range organizations {
+							<li><strong>{ organization.Name }</strong><span class="badge">{ organization.Role }</span></li>
+						}
+					</ul>
+				}
+			</article>
+			<article class="panel">
+				<h2>Campaigns</h2>
+				<p>Campaigns, forms, and public uninstall pages arrive in the next product layer.</p>
+				<span class="badge quiet">Foundation ready</span>
+			</article>
+		</section>
+	}
+}

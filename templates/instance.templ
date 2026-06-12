@@ -1,0 +1,41 @@
+package templates
+
+import (
+	"database/sql"
+	"github.com/koalastuff/koalabye/internal/db"
+)
+
+templ Instance(instanceName string, user db.User, registrationEnabled string, events []db.AuditEvent) {
+	@Layout("Instance admin", instanceName, &user) {
+		<section class="page-heading"><div><div class="eyebrow">Instance owner</div><h1>Instance administration</h1></div></section>
+		<section class="grid three">
+			<article class="panel"><h2>Overview</h2><p>{ instanceName }</p><span class="badge">Healthy</span></article>
+			<article class="panel"><h2>Registration</h2><p>Global registration is <strong>{ registrationEnabled }</strong>.</p><span class="muted">Read-only in this foundation.</span></article>
+			<article class="panel"><h2>Administration</h2><p>Users, organizations, quotas, and moderation tools are prepared for later modules.</p></article>
+		</section>
+		<section class="panel">
+			<h2>Recent audit events</h2>
+			if len(events) == 0 {
+				<p class="muted">No audit events.</p>
+			} else {
+				<div class="table-wrap">
+					<table>
+						<thead><tr><th>Action</th><th>Target</th><th>Created</th></tr></thead>
+						<tbody>
+							for _, event := range events {
+								<tr><td>{ event.Action }</td><td>{ nullable(event.TargetID) }</td><td>{ event.CreatedAt }</td></tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</section>
+	}
+}
+
+func nullable(value sql.NullString) string {
+	if value.Valid {
+		return value.String
+	}
+	return "-"
+}

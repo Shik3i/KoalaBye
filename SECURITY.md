@@ -1,0 +1,29 @@
+# Security Policy
+
+## Reporting a Vulnerability
+
+Please do not open a public issue for an exploitable vulnerability. Contact the maintainers privately through the security contact published in the repository profile. Include affected versions, reproduction steps, and impact. The project will acknowledge reports and coordinate disclosure as maintainers become available.
+
+## Current Controls
+
+- No default administrator credentials. The first-run flow creates the Instance Owner.
+- Argon2id password hashing with random salts and a 12-character minimum.
+- Cryptographically random sessions with only token hashes stored server-side.
+- HttpOnly, SameSite session cookies and configurable Secure cookies.
+- Signed CSRF tokens on setup, login, logout, and future state-changing forms.
+- Server-side permission checks with deny-by-default behavior.
+- CSP, frame denial, MIME sniffing prevention, no-referrer, and restrictive permissions headers.
+- SQLite foreign keys, WAL mode, busy timeout, transactions, and migrations.
+- No external CDN requests, IP database storage, fingerprinting, or raw user-agent retention.
+- A non-root runtime container and persistent `/data` volume.
+
+Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the database file and backups, and replace the example secret with at least 32 random characters.
+
+## MVP Limitations
+
+- Login rate limiting is per-process and username-keyed. It is not coordinated across replicas and resets at restart.
+- There is no password reset, MFA, passkey, account recovery, or session management UI.
+- Audit retention and export policies are not configurable yet.
+- Security contact and signed release procedures must be finalized before a public hosted launch.
+- Dependency and container scanning are not yet automated in CI.
+- SQLite backups and restore verification remain an operator responsibility.

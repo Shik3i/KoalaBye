@@ -1,0 +1,17 @@
+package templates
+
+templ Landing(instanceName string) {
+	@Layout("Private feedback", instanceName, nil) {
+		<section class="hero">
+			<div class="eyebrow">Open source · Self-hosted · Free</div>
+			<h1>Learn why users leave without following them around.</h1>
+			<p class="lede">KoalaBye is a privacy-focused foundation for uninstall feedback and lightweight anonymous surveys.</p>
+			<div class="actions"><a class="button" href="/login">Log in</a></div>
+		</section>
+		<section class="grid three">
+			<article class="panel"><h2>Private</h2><p>No analytics scripts, fingerprinting, IP storage, or external CDNs.</p></article>
+			<article class="panel"><h2>Small</h2><p>A focused Go service, server-rendered pages, and SQLite.</p></article>
+			<article class="panel"><h2>Yours</h2><p>MIT licensed, self-hostable, and free from billing machinery.</p></article>
+		</section>
+	}
+}
