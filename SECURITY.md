@@ -47,7 +47,7 @@ Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the databas
 - Invite links are bearer credentials and must be shared through a trusted channel.
 - Retention deletion is manual; there is no background scheduler or automated retention job.
 - Security contact and signed release procedures must be finalized before a public hosted launch.
-- Dependency and container scanning are not yet automated in CI.
+- Go dependency vulnerability scanning runs in CI. Container build validation is automated; container CVE scanning remains a release-process follow-up.
 - SQLite backups and restore verification remain an operator responsibility.
 
 The authenticated application may store a non-sensitive language preference cookie after an explicit language choice. Public uninstall pages remain cookie-free; language selection is carried in the URL.

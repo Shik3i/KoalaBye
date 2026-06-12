@@ -10,6 +10,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/db"
 	"github.com/koalastuff/koalabye/internal/i18n"
 	"github.com/koalastuff/koalabye/internal/permissions"
+	"github.com/koalastuff/koalabye/internal/version"
 	"github.com/koalastuff/koalabye/internal/web"
 	"github.com/koalastuff/koalabye/templates"
 )
@@ -215,5 +216,6 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not load audit log", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.Instance(h.cfg.InstanceName, user, registration, events))
+	build := version.Current()
+	web.Render(w, r, http.StatusOK, templates.Instance(h.cfg.InstanceName+" "+build.Version, user, registration, events))
 }

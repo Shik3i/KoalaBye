@@ -2,6 +2,7 @@ package app
 
 import (
 	"database/sql"
+	"encoding/json"
 	"io/fs"
 	"net/http"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/organizations"
 	"github.com/koalastuff/koalabye/internal/registration"
 	"github.com/koalastuff/koalabye/internal/setup"
+	"github.com/koalastuff/koalabye/internal/version"
 	"github.com/koalastuff/koalabye/internal/web"
 	"github.com/koalastuff/koalabye/templates"
 	staticassets "github.com/koalastuff/koalabye/web/static"
@@ -58,6 +60,10 @@ func Routes(
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("OK\n"))
+	})
+	r.Get("/version", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(version.Current())
 	})
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {

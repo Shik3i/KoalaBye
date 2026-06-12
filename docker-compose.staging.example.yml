@@ -1,0 +1,45 @@
+services:
+  koalabye:
+    build:
+      context: .
+      args:
+        VERSION: ${KOALABYE_VERSION:-staging}
+        COMMIT: ${KOALABYE_COMMIT:-unknown}
+        BUILD_DATE: ${KOALABYE_BUILD_DATE:-unknown}
+    restart: unless-stopped
+    env_file: .env.staging
+    environment:
+      KOALABYE_LISTEN_ADDR: ":8080"
+      KOALABYE_DATABASE_PATH: /data/koalabye.db
+      KOALABYE_SECURE_COOKIES: "true"
+      KOALABYE_REGISTRATION_ENABLED: "false"
+    volumes:
+      - koalabye_staging_data:/data
+    networks: [koalabye_staging]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile.staging.example:/etc/caddy/Caddyfile:ro
+      - caddy_staging_data:/data
+      - caddy_staging_config:/config
+    networks: [koalabye_staging]
+    depends_on:
+      koalabye:
+        condition: service_healthy
+
+volumes:
+  koalabye_staging_data:
+  caddy_staging_data:
+  caddy_staging_config:
+
+networks:
+  koalabye_staging:

@@ -1,0 +1,4 @@
+staging-bye.example.com {
+	encode zstd gzip
+	reverse_proxy koalabye:8080
+}

@@ -10,6 +10,12 @@ Protect backups as sensitive data. They can contain account information and free
 
 ## Safe SQLite Backups
 
+When `sqlite3` is installed, the repository helper performs an online-safe backup and integrity check:
+
+```bash
+scripts/backup-sqlite.sh /data/koalabye.db backups/koalabye-$(date +%F-%H%M%S).db
+```
+
 The safest simple method is to stop writes before copying the database:
 
 ```bash
@@ -43,5 +49,11 @@ The expected result is `ok`.
 6. Ensure the database is writable by the non-root container user.
 7. Start KoalaBye and inspect logs for migration or permission errors.
 8. Verify `/healthz`, login, organizations, campaigns, responses, and a public campaign page.
+
+For a restore into a fresh path:
+
+```bash
+scripts/restore-sqlite.sh backups/koalabye-YYYY-MM-DD-HHMMSS.db /data/koalabye-restored.db
+```
 
 Run a restore drill on a separate volume or test host before relying on the procedure in production. Never test a restore by overwriting the only production copy.

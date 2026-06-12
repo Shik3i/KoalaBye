@@ -4,6 +4,8 @@ KoalaBye is a single Go service backed by SQLite. It does not require email, Red
 
 ## Docker Compose
 
+Use `docker-compose.staging.example.yml` for a source-built staging deployment and `docker-compose.production.example.yml` for a pinned release image. Both include Caddy, HTTPS-oriented cookie settings, persistent `/data`, restart policies, and healthchecks.
+
 1. Copy the example configuration:
 
    ```bash
@@ -71,6 +73,12 @@ The image runs as the non-root `koalabye` user. `/data` must be writable by that
 ## Healthcheck
 
 `GET /healthz` returns `200 OK` only when the application can reach SQLite. The Docker image includes a healthcheck against `http://127.0.0.1:8080/healthz`.
+
+`GET /version` returns non-sensitive build metadata. Compare its version and commit to the intended deployment after every upgrade.
+
+## Legal Pages
+
+The bundled privacy and imprint pages are explicitly placeholders, available in English and German with an English fallback for Spanish. They are not final legal advice or deploy-ready legal text. Replace them before a public production launch.
 
 ## Backups
 

@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -51,6 +52,67 @@ func TestHealthEndpoint(t *testing.T) {
 	}
 	if response.Body.String() != "OK\n" {
 		t.Fatalf("unexpected body %q", response.Body.String())
+	}
+}
+
+func TestVersionEndpointIsSafe(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	request := httptest.NewRequest(http.MethodGet, "/version", nil)
+	response := httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", response.Code)
+	}
+	var payload map[string]string
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode version response: %v", err)
+	}
+	for _, key := range []string{"app_name", "version", "commit", "build_date", "go_version"} {
+		if payload[key] == "" {
+			t.Fatalf("missing %s in version response", key)
+		}
+	}
+	for _, forbidden := range []string{"secret", "database_path", "base_url"} {
+		if _, ok := payload[forbidden]; ok {
+			t.Fatalf("version response exposed %s", forbidden)
+		}
+	}
+}
+
+func TestTemplatesContainNoKnownExternalTrackingReferences(t *testing.T) {
+	t.Parallel()
+	forbidden := []string{
+		"https://cdn.",
+		"https://fonts.googleapis.com",
+		"https://www.google-analytics.com",
+		"googletagmanager",
+		"plausible",
+		"cloudflareinsights",
+	}
+	for _, root := range []string{"../../templates", "../../web/static"} {
+		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+			content, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			lower := strings.ToLower(string(content))
+			for _, value := range forbidden {
+				if strings.Contains(lower, value) {
+					t.Errorf("%s contains forbidden external reference %q", path, value)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("scan %s: %v", root, err)
+		}
 	}
 }
 

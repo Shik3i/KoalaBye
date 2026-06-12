@@ -12,10 +12,13 @@ import (
 
 	"github.com/koalastuff/koalabye/internal/app"
 	"github.com/koalastuff/koalabye/internal/config"
+	"github.com/koalastuff/koalabye/internal/version"
 )
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	build := version.Current()
+	slog.Info("starting KoalaBye", "version", build.Version, "commit", build.Commit, "build_date", build.BuildDate)
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("invalid configuration", "error", err)
