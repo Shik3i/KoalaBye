@@ -11,8 +11,8 @@ templ Instance(instanceName string, user db.User, registrationEnabled string, ev
 		<section class="page-heading"><div><div class="eyebrow">{ tr(ctx, "instance.eyebrow") }</div><h1>{ tr(ctx, "instance.title") }</h1></div></section>
 		<section class="grid three">
 			<article class="panel"><h2>{ tr(ctx, "instance.overview") }</h2><p>{ instanceName }</p><span class="badge">{ tr(ctx, "common.healthy") }</span></article>
-			<article class="panel"><h2>{ tr(ctx, "instance.registration") }</h2><p>{ tr(ctx, "instance.registration_status", translatedBoolean(ctx, registrationEnabled)) }</p><span class="muted">{ tr(ctx, "instance.read_only") }</span></article>
-			<article class="panel"><h2>{ tr(ctx, "instance.administration") }</h2><p>{ tr(ctx, "instance.administration_text") }</p></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.registration") }</h2><p>{ tr(ctx, "instance.registration_status", translatedBoolean(ctx, registrationEnabled)) }</p><a href="/instance/settings">{ tr(ctx, "instance.settings") }</a></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.administration") }</h2><p>{ tr(ctx, "instance.administration_text") }</p><a href="/instance/users">{ tr(ctx, "instance.users") }</a></article>
 		</section>
 		<section class="panel">
 			<h2>{ tr(ctx, "instance.audit") }</h2>

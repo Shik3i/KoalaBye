@@ -16,16 +16,46 @@ type User struct {
 	Username           string
 	UsernameNormalized string
 	DisplayName        string
+	Email              sql.NullString
+	CreatedAt          string
 	PasswordHash       string
 	DisabledAt         sql.NullString
 }
 
 type Organization struct {
-	ID       int64
-	PublicID string
-	Slug     string
-	Name     string
-	Role     string
+	ID          int64
+	PublicID    string
+	Slug        string
+	Name        string
+	Role        string
+	CreatedAt   string
+	DisabledAt  sql.NullString
+	MemberCount int64
+	OwnerCount  int64
+}
+
+type OrganizationLimits struct {
+	MaxCampaigns, MaxMembers, MaxActiveInvites, MaxMonthlyVisits, MaxMonthlySubmissions int64
+}
+
+type OrganizationMember struct {
+	UserID                                           int64
+	PublicID, Username, DisplayName, Role, CreatedAt string
+}
+
+type Invite struct {
+	ID                                             int64
+	PublicID, CodeHash, Role, ExpiresAt, CreatedAt string
+	OrganizationID                                 int64
+	OrganizationPublicID, OrganizationName         string
+	MaxUses, UsedCount                             int64
+	RevokedAt                                      sql.NullString
+}
+
+type InstanceUser struct {
+	ID                                         int64
+	PublicID, Username, DisplayName, CreatedAt string
+	Email, DisabledAt, InstanceRole            sql.NullString
 }
 
 type AuditEvent struct {
@@ -47,6 +77,10 @@ type Querier struct {
 
 func NewQuerier(database *sql.DB) *Querier {
 	return &Querier{db: database, generated: dbgen.New(database)}
+}
+
+func (q *Querier) RawDB() *sql.DB {
+	return q.db
 }
 
 func (q *Querier) CountInstanceOwners(ctx context.Context) (int64, error) {
@@ -94,7 +128,7 @@ func (q *Querier) ListOrganizationsForUser(ctx context.Context, userID int64) ([
 	organizations := make([]Organization, 0, len(rows))
 	for _, row := range rows {
 		organizations = append(organizations, Organization{
-			ID: row.ID, PublicID: row.PublicID, Slug: row.Slug, Name: row.Name, Role: row.Role,
+			ID: row.ID, PublicID: row.PublicID, Slug: row.Slug, Name: row.Name, Role: row.Role, MemberCount: row.MemberCount,
 		})
 	}
 	return organizations, nil
@@ -184,6 +218,9 @@ func (q *Querier) GetSetting(ctx context.Context, key string) (string, error) {
 }
 
 func (q *Querier) CreateFirstOwner(ctx context.Context, input FirstOwnerInput) (User, Organization, error) {
+	if input.Limits.MaxOrganizationsPerUser == 0 {
+		input.Limits = DefaultLimits{MaxOrganizationsPerUser: 1, MaxCampaignsPerOrg: 3, MaxMembersPerOrg: 5, MaxActiveInvitesPerOrg: 10, MaxMonthlyVisitsPerOrg: 10000, MaxMonthlySubmissionsPerOrg: 1000}
+	}
 	tx, err := q.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return User{}, Organization{}, err
@@ -232,9 +269,16 @@ func (q *Querier) CreateFirstOwner(ctx context.Context, input FirstOwnerInput) (
 		return User{}, Organization{}, err
 	}
 	settings := map[string]string{
-		"registration_enabled": fmt.Sprintf("%t", input.RegistrationEnabled),
-		"invite_only":          fmt.Sprintf("%t", input.InviteOnly),
-		"instance_name":        input.InstanceName,
+		"registration_enabled":                    fmt.Sprintf("%t", input.RegistrationEnabled),
+		"invite_only":                             fmt.Sprintf("%t", input.InviteOnly),
+		"invite_registration_enabled":             fmt.Sprintf("%t", input.InviteRegistrationEnabled),
+		"instance_name":                           input.InstanceName,
+		"default_max_organizations_per_user":      fmt.Sprintf("%d", input.Limits.MaxOrganizationsPerUser),
+		"default_max_campaigns_per_org":           fmt.Sprintf("%d", input.Limits.MaxCampaignsPerOrg),
+		"default_max_members_per_org":             fmt.Sprintf("%d", input.Limits.MaxMembersPerOrg),
+		"default_max_active_invites_per_org":      fmt.Sprintf("%d", input.Limits.MaxActiveInvitesPerOrg),
+		"default_max_monthly_visits_per_org":      fmt.Sprintf("%d", input.Limits.MaxMonthlyVisitsPerOrg),
+		"default_max_monthly_submissions_per_org": fmt.Sprintf("%d", input.Limits.MaxMonthlySubmissionsPerOrg),
 	}
 	for key, value := range settings {
 		if _, err := tx.ExecContext(ctx, `
@@ -242,6 +286,13 @@ func (q *Querier) CreateFirstOwner(ctx context.Context, input FirstOwnerInput) (
 			key, value, now, userID); err != nil {
 			return User{}, Organization{}, err
 		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO organization_limits
+		(organization_id, max_campaigns, max_members, max_active_invites, max_monthly_visits, max_monthly_submissions, updated_at, updated_by_user_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, organizationID, input.Limits.MaxCampaignsPerOrg,
+		input.Limits.MaxMembersPerOrg, input.Limits.MaxActiveInvitesPerOrg,
+		input.Limits.MaxMonthlyVisitsPerOrg, input.Limits.MaxMonthlySubmissionsPerOrg, now, userID); err != nil {
+		return User{}, Organization{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO audit_log (actor_user_id, organization_id, action, target_type, target_id, metadata_json, created_at)
@@ -263,19 +314,30 @@ func (q *Querier) CreateFirstOwner(ctx context.Context, input FirstOwnerInput) (
 }
 
 type FirstOwnerInput struct {
-	UserPublicID         string
-	Username             string
-	UsernameNormalized   string
-	DisplayName          string
-	PasswordHash         string
-	OrganizationPublicID string
-	OrganizationSlug     string
-	OrganizationName     string
-	InstanceName         string
-	RegistrationEnabled  bool
-	InviteOnly           bool
-	AuditAction          string
-	AuditSource          string
+	UserPublicID              string
+	Username                  string
+	UsernameNormalized        string
+	DisplayName               string
+	PasswordHash              string
+	OrganizationPublicID      string
+	OrganizationSlug          string
+	OrganizationName          string
+	InstanceName              string
+	RegistrationEnabled       bool
+	InviteOnly                bool
+	InviteRegistrationEnabled bool
+	Limits                    DefaultLimits
+	AuditAction               string
+	AuditSource               string
+}
+
+type DefaultLimits struct {
+	MaxOrganizationsPerUser     int
+	MaxCampaignsPerOrg          int
+	MaxMembersPerOrg            int
+	MaxActiveInvitesPerOrg      int
+	MaxMonthlyVisitsPerOrg      int
+	MaxMonthlySubmissionsPerOrg int
 }
 
 var ErrOwnerExists = errors.New("instance owner already exists")

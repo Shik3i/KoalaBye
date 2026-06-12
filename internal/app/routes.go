@@ -14,6 +14,8 @@ import (
 	"github.com/koalastuff/koalabye/internal/db"
 	"github.com/koalastuff/koalabye/internal/i18n"
 	"github.com/koalastuff/koalabye/internal/instance"
+	"github.com/koalastuff/koalabye/internal/organizations"
+	"github.com/koalastuff/koalabye/internal/registration"
 	"github.com/koalastuff/koalabye/internal/setup"
 	"github.com/koalastuff/koalabye/internal/web"
 	"github.com/koalastuff/koalabye/templates"
@@ -31,6 +33,8 @@ func Routes(
 	authHandler *auth.Handler,
 	dashboardHandler *dashboard.Handler,
 	instanceHandler *instance.Handler,
+	organizationsHandler *organizations.Handler,
+	registrationHandler *registration.Handler,
 ) http.Handler {
 	r := chi.NewRouter()
 	r.Use(chimiddleware.RequestID)
@@ -85,6 +89,10 @@ func Routes(
 		authHandler.LoginGet(w, r)
 	})
 	r.Post("/login", authHandler.LoginPost)
+	r.Get("/register", registrationHandler.Get)
+	r.Post("/register", registrationHandler.Post)
+	r.Get("/join/{inviteCode}", organizationsHandler.JoinGet)
+	r.With(auth.RequireUser(csrf), auth.ValidatePosts(csrf)).Post("/join/{inviteCode}", organizationsHandler.JoinPost)
 	r.Get("/legal/privacy", func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(i18n.LegalContext(r.Context()))
 		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "privacy"))
@@ -115,9 +123,31 @@ func Routes(
 			})
 		})
 		protected.Use(auth.RequireUser(csrf))
+		protected.Use(auth.ValidatePosts(csrf))
 		protected.Post("/logout", authHandler.LogoutPost)
 		protected.Get("/app", dashboardHandler.Get)
+		protected.Get("/app/orgs", organizationsHandler.List)
+		protected.Get("/app/orgs/new", organizationsHandler.New)
+		protected.Post("/app/orgs", organizationsHandler.Create)
+		protected.Get("/app/orgs/{orgPublicID}", organizationsHandler.View)
+		protected.Get("/app/orgs/{orgPublicID}/settings", organizationsHandler.Settings)
+		protected.Post("/app/orgs/{orgPublicID}/settings", organizationsHandler.SettingsPost)
+		protected.Get("/app/orgs/{orgPublicID}/members", organizationsHandler.Members)
+		protected.Post("/app/orgs/{orgPublicID}/members/remove", organizationsHandler.RemoveMember)
+		protected.Post("/app/orgs/{orgPublicID}/members/role", organizationsHandler.UpdateMemberRole)
+		protected.Get("/app/orgs/{orgPublicID}/invites", organizationsHandler.Invites)
+		protected.Post("/app/orgs/{orgPublicID}/invites", organizationsHandler.CreateInvite)
+		protected.Post("/app/orgs/{orgPublicID}/invites/{invitePublicID}/revoke", organizationsHandler.RevokeInvite)
 		protected.Get("/instance", instanceHandler.Get)
+		protected.Get("/instance/users", instanceHandler.Users)
+		protected.Post("/instance/users/status", instanceHandler.UserStatus)
+		protected.Get("/instance/organizations", instanceHandler.Organizations)
+		protected.Post("/instance/organizations/status", instanceHandler.OrganizationStatus)
+		protected.Get("/instance/organizations/limits", instanceHandler.Limits)
+		protected.Post("/instance/organizations/limits", instanceHandler.LimitsPost)
+		protected.Get("/instance/settings", instanceHandler.Settings)
+		protected.Post("/instance/settings", instanceHandler.SettingsPost)
+		protected.Get("/instance/audit", instanceHandler.Audit)
 	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {

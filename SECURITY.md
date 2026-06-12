@@ -12,11 +12,14 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - HttpOnly, SameSite session cookies and configurable Secure cookies.
 - Signed CSRF tokens on setup, login, logout, and future state-changing forms.
 - Server-side permission checks with deny-by-default behavior.
+- Hashed, expiring, revocable organization invite codes with bounded use counts.
+- Owner invariants for organizations and the instance; the final active owner cannot be removed or disabled.
+- Transactional enforcement of organization, member, and active-invite safety limits.
 - CSP, frame denial, MIME sniffing prevention, no-referrer, and restrictive permissions headers.
 - SQLite foreign keys, WAL mode, busy timeout, transactions, and migrations.
 - No external CDN requests, IP database storage, fingerprinting, or raw user-agent retention.
 - A non-root runtime container and persistent `/data` volume.
-- Automated tests cover setup lockout, authentication success/failure, session revocation, permission denial, CSRF-backed flows, security headers, and migrations.
+- Automated tests cover setup lockout, authentication, registration policies, session revocation, tenant isolation, invite lifecycle, owner invariants, instance administration, CSRF-backed flows, security headers, translations, and migrations.
 
 Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the database file and backups, and replace the example secret with at least 32 random characters.
 
@@ -25,6 +28,7 @@ Use HTTPS in production, set `KOALABYE_SECURE_COOKIES=true`, protect the databas
 - Login rate limiting is per-process and username-keyed. It is not coordinated across replicas and resets at restart.
 - There is no password reset, MFA, passkey, account recovery, or session management UI.
 - Audit retention and export policies are not configurable yet.
+- Invite links are bearer credentials and must be shared through a trusted channel.
 - Security contact and signed release procedures must be finalized before a public hosted launch.
 - Dependency and container scanning are not yet automated in CI.
 - SQLite backups and restore verification remain an operator responsibility.

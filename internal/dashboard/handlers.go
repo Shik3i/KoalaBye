@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/koalastuff/koalabye/internal/auth"
 	"github.com/koalastuff/koalabye/internal/config"
@@ -33,5 +34,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not check permissions", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.Dashboard(h.cfg.InstanceName, user, organizations, isOwner))
+	settings, _ := h.queries.Settings(r.Context())
+	limit, _ := strconv.Atoi(settings["default_max_organizations_per_user"])
+	count, _ := h.queries.CountOrganizationsCreatedByUser(r.Context(), user.ID)
+	web.Render(w, r, http.StatusOK, templates.Dashboard(h.cfg.InstanceName, user, organizations, isOwner, count < limit))
 }

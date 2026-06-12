@@ -24,7 +24,21 @@ Legal routes are intentionally narrower: `/legal/privacy` and `/legal/imprint` s
 
 Users are global identities. Organizations are tenant boundaries, connected through `organization_members`. Organization roles are `owner`, `admin`, `member`, and `viewer`. Instance roles are separate and global; only `instance_owner` is active in the current UI. Prepared roles include admin, moderator, and support.
 
+Organization URLs use random public IDs rather than integer primary keys. Owners control all organization settings and owner memberships. Admins can manage non-owner members and invite codes. Members and viewers have read access in this phase. An organization cannot lose its final owner. Disabled users and organizations are denied normal access.
+
 Future campaigns belong to organizations. Campaign permissions must be derived from active membership and checked in handlers, not inferred from URLs or navigation visibility.
+
+## Registration and Invites
+
+Username/password registration is controlled by persisted instance settings. Public registration, invite-only mode, and invite-based registration are separate switches. Email remains optional; there is no SMTP, verification, or password-reset dependency.
+
+Manual invite codes are long random bearer values. Only their SHA-256 hashes are stored. The raw value is rendered once after creation. Acceptance checks revocation, expiry, maximum uses, existing membership, and the organization's member limit in a transaction.
+
+## Safety Limits
+
+Instance defaults seed per-organization limits. Organization and active-invite limits are enforced now; member limits are enforced when invites are accepted. Campaign, visit, and submission limits are stored for the future modules that own those operations. These are abuse-prevention controls for free instances, never product plans or monetization boundaries.
+
+Instance Owners can adjust defaults and per-organization limits. Sensitive overrides, status changes, settings changes, and organization membership administration produce audit events.
 
 ## First-Run Setup
 
@@ -42,7 +56,7 @@ Go tests exercise authentication, session revocation, permissions, locale resolu
 
 ## Permissions and Audit
 
-Authentication middleware loads identity. Authorization remains explicit in protected handlers through the permissions service and denies by default. The audit log records setup, bootstrap, login success/failure, and logout without passwords or session tokens.
+Authentication middleware loads identity. Authorization remains explicit in protected handlers through the permissions service and denies by default. The audit log records setup, bootstrap, login success/failure, logout, instance settings and limit changes, user and organization status changes, and sensitive membership administration without passwords, session tokens, or raw invite codes.
 
 ## Privacy Model
 
@@ -56,7 +70,6 @@ The foundation stores account and organization data only. It has no analytics SD
 - Privacy-preserving visit counting
 - Submission storage and retention controls
 - Aggregate analytics and exports
-- Invite codes and registration workflows
 - Passkeys
 - Optional email integration
 

@@ -1,13 +1,19 @@
 package templates
 
-import "github.com/koalastuff/koalabye/internal/db"
+import (
+	"fmt"
+	"github.com/koalastuff/koalabye/internal/db"
+)
 
-templ Dashboard(instanceName string, user db.User, organizations []db.Organization, isOwner bool) {
+templ Dashboard(instanceName string, user db.User, organizations []db.Organization, isOwner bool, canCreate bool) {
 	@Layout(tr(ctx, "dashboard.page_title"), instanceName, &user) {
 		<section class="page-heading">
 			<div><div class="eyebrow">{ tr(ctx, "dashboard.eyebrow") }</div><h1>{ tr(ctx, "dashboard.welcome", user.DisplayName) }</h1></div>
 			if isOwner {
 				<a class="button secondary" href="/instance">{ tr(ctx, "nav.instance_admin") }</a>
+			}
+			if canCreate {
+				<a class="button" href="/app/orgs/new">{ tr(ctx,"org.create") }</a>
 			}
 		</section>
 		<section class="grid two">
@@ -18,7 +24,7 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 				} else {
 					<ul class="clean-list">
 						for _, organization := range organizations {
-							<li><strong>{ organization.Name }</strong><span class="badge">{ tr(ctx, "role." + organization.Role) }</span></li>
+							<li><a href={ templ.SafeURL("/app/orgs/" + organization.PublicID) }><strong>{ organization.Name }</strong></a><span>{ fmt.Sprintf("%s · %d",tr(ctx, "role." + organization.Role),organization.MemberCount) }</span></li>
 						}
 					</ul>
 				}

@@ -1,0 +1,25 @@
+package templates
+
+templ Register(instanceName, inviteCode string, allowed bool, errorKey string) {
+	@Layout(tr(ctx, "register.title"), instanceName, nil) {
+		<section class="auth-shell">
+			<h1>{ tr(ctx, "register.title") }</h1>
+			if !allowed {
+				<div class="notice">{ tr(ctx, "register.disabled") }</div>
+			} else {
+				if errorKey != "" {
+					<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
+				}
+				<form method="post" action="/register" class="panel form-stack">
+					<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="invite_code" value={ inviteCode }/>
+					<label>{ tr(ctx, "setup.display_name") }<input name="display_name" required maxlength="80"/></label>
+					<label>{ tr(ctx, "auth.login.username") }<input name="username" required minlength="3" maxlength="40"/></label>
+					<label>{ tr(ctx, "register.email") }<input name="email" type="email" autocomplete="email"/></label>
+					<label>{ tr(ctx, "setup.password") }<input name="password" type="password" required minlength="12"/></label>
+					<label>{ tr(ctx, "setup.password_confirm") }<input name="password_confirm" type="password" required minlength="12"/></label>
+					<button type="submit">{ tr(ctx, "register.submit") }</button>
+				</form>
+			}
+		</section>
+	}
+}

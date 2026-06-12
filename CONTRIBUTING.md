@@ -31,6 +31,10 @@ Use ordinary Go conventions, narrow packages, explicit errors, and small interfa
 
 Every change should be reviewed for data minimization, tenant isolation, authorization, CSRF, session impact, and accidental external network requests. Update architecture and security documentation whenever their claims or boundaries change.
 
+Organization actions must preserve role boundaries and the final-owner invariant. Instance Owner overrides, status changes, settings changes, and safety-limit changes require audit events. Invite implementations must store only hashes and must not introduce email as a requirement.
+
+KoalaBye is 100% free forever. Safety limits are operational abuse-prevention controls, not plans. Do not add billing, subscription, payment, premium, or upgrade concepts to code, copy, schema, or documentation.
+
 ## Translations
 
 All visible strings belong in the dotted-key JSON catalogs under `internal/i18n/locales/`. English, German, and Spanish must retain exact key parity. Add keys before adding a page or handler message, use natural language rather than literal machine translation, and test locale routing when behavior changes. Legal pages currently require English and German only.

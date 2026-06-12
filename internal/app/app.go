@@ -15,7 +15,9 @@ import (
 	"github.com/koalastuff/koalabye/internal/db"
 	"github.com/koalastuff/koalabye/internal/i18n"
 	"github.com/koalastuff/koalabye/internal/instance"
+	"github.com/koalastuff/koalabye/internal/organizations"
 	"github.com/koalastuff/koalabye/internal/permissions"
+	"github.com/koalastuff/koalabye/internal/registration"
 	"github.com/koalastuff/koalabye/internal/setup"
 )
 
@@ -26,6 +28,7 @@ type App struct {
 }
 
 func New(ctx context.Context, cfg config.Config) (*App, error) {
+	applyConfigDefaults(&cfg)
 	database, err := db.Open(ctx, cfg.DatabasePath)
 	if err != nil {
 		return nil, err
@@ -60,9 +63,32 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 	authHandler := auth.NewHandler(cfg, queries, sessions, csrf, auditLogger)
 	dashboardHandler := dashboard.New(cfg, queries, permissionService)
 	instanceHandler := instance.New(cfg, queries, permissionService)
-	handler := Routes(cfg, database, queries, sessions, csrf, catalog, setupHandler, authHandler, dashboardHandler, instanceHandler)
+	organizationsHandler := organizations.New(cfg, queries, csrf, permissionService)
+	registrationHandler := registration.New(cfg, queries, sessions, csrf)
+	handler := Routes(cfg, database, queries, sessions, csrf, catalog, setupHandler, authHandler, dashboardHandler, instanceHandler, organizationsHandler, registrationHandler)
 
 	return &App{Config: cfg, Database: database, Handler: handler}, nil
+}
+
+func applyConfigDefaults(cfg *config.Config) {
+	if cfg.DefaultMaxOrganizationsPerUser == 0 {
+		cfg.DefaultMaxOrganizationsPerUser = 1
+	}
+	if cfg.DefaultMaxCampaignsPerOrg == 0 {
+		cfg.DefaultMaxCampaignsPerOrg = 3
+	}
+	if cfg.DefaultMaxMembersPerOrg == 0 {
+		cfg.DefaultMaxMembersPerOrg = 5
+	}
+	if cfg.DefaultMaxActiveInvitesPerOrg == 0 {
+		cfg.DefaultMaxActiveInvitesPerOrg = 10
+	}
+	if cfg.DefaultMaxMonthlyVisitsPerOrg == 0 {
+		cfg.DefaultMaxMonthlyVisitsPerOrg = 10000
+	}
+	if cfg.DefaultMaxMonthlySubmissionsPerOrg == 0 {
+		cfg.DefaultMaxMonthlySubmissionsPerOrg = 1000
+	}
 }
 
 func (a *App) Server() *http.Server {

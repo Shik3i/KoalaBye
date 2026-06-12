@@ -1,0 +1,80 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/koalastuff/koalabye/internal/db"
+)
+
+templ OrganizationInvites(instanceName string, user db.User, org db.Organization, invites []db.Invite, limits db.OrganizationLimits, rawCode, errorKey string) {
+	@Layout(tr(ctx, "invite.title"), instanceName, &user) {
+		<section class="page-heading"><div><div class="eyebrow">{ org.Name }</div><h1>{ tr(ctx, "invite.title") }</h1></div><a href={ templ.SafeURL("/app/orgs/" + org.PublicID) }>{ tr(ctx, "common.back") }</a></section>
+		if rawCode != "" {
+			<div class="success" role="status"><strong>{ tr(ctx, "invite.shown_once") }</strong><code>{ rawCode }</code><p>{ tr(ctx, "invite.copy") }</p></div>
+		}
+		if errorKey != "" {
+			<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
+		}
+		<section class="grid two">
+			<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/invites") } class="panel form-stack">
+				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+				<label>{ tr(ctx, "members.role") }<select name="role"><option value="viewer">{ tr(ctx, "role.viewer") }</option><option value="member">{ tr(ctx, "role.member") }</option><option value="admin">{ tr(ctx, "role.admin") }</option></select></label>
+				<label>{ tr(ctx, "invite.max_uses") }<select name="max_uses"><option>1</option><option>5</option><option>10</option></select></label>
+				<label>{ tr(ctx, "invite.expiry") }<select name="expiry_days"><option value="1">{ tr(ctx, "invite.one_day") }</option><option value="7" selected>{ tr(ctx, "invite.seven_days") }</option><option value="30">{ tr(ctx, "invite.thirty_days") }</option></select></label>
+				<button type="submit">{ tr(ctx, "invite.create") }</button>
+			</form>
+			<article class="panel"><h2>{ tr(ctx, "limits.title") }</h2><p>{ tr(ctx, "invite.limit", fmt.Sprint(limits.MaxActiveInvites)) }</p></article>
+		</section>
+		<section class="panel">
+			<h2>{ tr(ctx, "invite.existing") }</h2>
+			<div class="table-wrap">
+				<table>
+					<thead><tr><th>{ tr(ctx, "members.role") }</th><th>{ tr(ctx, "invite.uses") }</th><th>{ tr(ctx, "invite.expiry") }</th><th></th></tr></thead>
+					<tbody>
+						for _, invite := range invites {
+							<tr>
+								<td>{ tr(ctx, "role." + invite.Role) }</td>
+								<td>{ fmt.Sprintf("%d/%d", invite.UsedCount, invite.MaxUses) }</td>
+								<td>{ invite.ExpiresAt }</td>
+								<td>
+									if !invite.RevokedAt.Valid {
+										<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/invites/" + invite.PublicID + "/revoke") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit">{ tr(ctx, "invite.revoke") }</button></form>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+	}
+}
+
+templ JoinInvite(instanceName string, user *db.User, invite db.Invite, code string, valid, canRegister bool, errorKey string) {
+	@Layout(tr(ctx, "join.title"), instanceName, user) {
+		<section class="auth-shell">
+			<div class="eyebrow">{ tr(ctx, "join.eyebrow") }</div>
+			<h1>{ tr(ctx, "join.title") }</h1>
+			if errorKey != "" {
+				<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
+			}
+			if valid {
+				<div class="panel">
+					<h2>{ invite.OrganizationName }</h2>
+					<p>{ tr(ctx, "join.role", tr(ctx, "role." + invite.Role)) }</p>
+					if user != nil {
+						<form method="post" action={ templ.SafeURL("/join/" + code) }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button type="submit">{ tr(ctx, "join.confirm") }</button></form>
+					} else {
+						<a class="button" href="/login">{ tr(ctx, "landing.login") }</a>
+						if canRegister {
+							<a class="button secondary" href={ templ.SafeURL("/register?invite=" + code) }>{ tr(ctx, "register.title") }</a>
+						} else {
+							<p>{ tr(ctx, "join.existing_required") }</p>
+						}
+					}
+				</div>
+			} else {
+				<div class="alert">{ tr(ctx, "invite.error.unavailable") }</div>
+			}
+		</section>
+	}
+}

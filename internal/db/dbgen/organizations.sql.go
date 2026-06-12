@@ -10,17 +10,19 @@ import (
 )
 
 const listOrganizationsForUser = `-- name: ListOrganizationsForUser :many
-SELECT o.id, o.public_id, o.slug, o.name, om.role
+SELECT o.id, o.public_id, o.slug, o.name, om.role,
+  (SELECT COUNT(*) FROM organization_members count_members WHERE count_members.organization_id = o.id) AS member_count
 FROM organizations o JOIN organization_members om ON om.organization_id = o.id
 WHERE om.user_id = ? AND o.disabled_at IS NULL ORDER BY o.name
 `
 
 type ListOrganizationsForUserRow struct {
-	ID       int64  `json:"id"`
-	PublicID string `json:"public_id"`
-	Slug     string `json:"slug"`
-	Name     string `json:"name"`
-	Role     string `json:"role"`
+	ID          int64  `json:"id"`
+	PublicID    string `json:"public_id"`
+	Slug        string `json:"slug"`
+	Name        string `json:"name"`
+	Role        string `json:"role"`
+	MemberCount int64  `json:"member_count"`
 }
 
 func (q *Queries) ListOrganizationsForUser(ctx context.Context, userID int64) ([]ListOrganizationsForUserRow, error) {
@@ -38,6 +40,7 @@ func (q *Queries) ListOrganizationsForUser(ctx context.Context, userID int64) ([
 			&i.Slug,
 			&i.Name,
 			&i.Role,
+			&i.MemberCount,
 		); err != nil {
 			return nil, err
 		}

@@ -24,6 +24,7 @@ templ Layout(title string, instanceName string, user *db.User) {
 					if user != nil {
 						<nav aria-label={ tr(ctx, "nav.aria") }>
 							<a href="/app">{ tr(ctx, "nav.dashboard") }</a>
+							<a href="/app/orgs">{ tr(ctx, "nav.organizations") }</a>
 							<form method="post" action="/logout" class="inline-form">
 								<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 								<button class="link-button" type="submit">{ tr(ctx, "common.logout") }</button>

@@ -11,7 +11,8 @@ KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform fo
 - No external CDNs, fonts, analytics, fingerprinting, or mandatory third-party services.
 - No IP address storage in the database and no raw user-agent storage by default.
 - Email is optional and is not required for the MVP.
-- The official KoalaStuff instance, if offered, is intended to remain free.
+- The official KoalaStuff instance, if offered, is intended to remain 100% free forever.
+- Safety limits exist only to prevent abuse and accidental overload. They are not paid tiers.
 
 ## Stack
 
@@ -60,13 +61,22 @@ The insecure example secret is accepted only for a local HTTP URL. Run `make che
 | `KOALABYE_MODE` | `selfhost` | `selfhost` or `cloud` |
 | `KOALABYE_REGISTRATION_ENABLED` | `false` | Global registration policy |
 | `KOALABYE_INVITE_ONLY` | `true` | Invitation policy |
+| `KOALABYE_INVITE_REGISTRATION_ENABLED` | `true` | Allow account creation through valid invites |
 | `KOALABYE_SECURE_COOKIES` | `false` | Require HTTPS cookies |
 | `KOALABYE_INSTANCE_NAME` | `KoalaBye` | Display name |
+
+The `KOALABYE_DEFAULT_MAX_*` variables in `.env.example` seed abuse-prevention limits for organizations, members, active invites, and future campaigns, visits, and submissions. Instance Owners can raise organization limits manually. There is no billing, subscription, payment, or upgrade path.
+
+## Organizations and Invites
+
+Users may belong to multiple organizations with `owner`, `admin`, `member`, or `viewer` roles. Owners and admins manage members and create manual invite codes; only owners may change owner memberships. Every organization must retain at least one owner.
+
+Invite codes require no email. KoalaBye stores only a hash, displays the raw code once after creation, and enforces its role, expiry, use count, member limit, and revocation state. Instance Owners manage users, organizations, registration settings, safety limits, and audit events under `/instance`.
 
 The optional bootstrap admin variables may create the first owner only when no owner exists. They never overwrite users and the password is never logged.
 
 ## Roadmap
 
-The next layers are campaigns, a form builder, cookie-free public uninstall pages, privacy-preserving visit counts, response storage, exports, and aggregate analytics. Invite codes, passkeys, and optional email may follow. Billing, paid tiers, and hidden monetization are out of scope.
+The next layers are campaigns, a form builder, cookie-free public uninstall pages, privacy-preserving visit counts, response storage, exports, and aggregate analytics. Passkeys and optional email may follow. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
 See [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).

@@ -124,7 +124,15 @@ func (h *Handler) createOwner(r *http.Request, username, displayName, password, 
 		DisplayName: displayName, PasswordHash: hash, OrganizationPublicID: randomID("org"),
 		OrganizationSlug: slug, OrganizationName: h.catalog.Translate(i18n.FromContext(r.Context()).Locale, "setup.default_org_name", displayName),
 		InstanceName: h.cfg.InstanceName, RegistrationEnabled: h.cfg.RegistrationEnabled,
-		InviteOnly: h.cfg.InviteOnly, AuditAction: action, AuditSource: source,
+		InviteOnly: h.cfg.InviteOnly, InviteRegistrationEnabled: h.cfg.InviteRegistrationEnabled,
+		Limits: db.DefaultLimits{
+			MaxOrganizationsPerUser:     h.cfg.DefaultMaxOrganizationsPerUser,
+			MaxCampaignsPerOrg:          h.cfg.DefaultMaxCampaignsPerOrg,
+			MaxMembersPerOrg:            h.cfg.DefaultMaxMembersPerOrg,
+			MaxActiveInvitesPerOrg:      h.cfg.DefaultMaxActiveInvitesPerOrg,
+			MaxMonthlyVisitsPerOrg:      h.cfg.DefaultMaxMonthlyVisitsPerOrg,
+			MaxMonthlySubmissionsPerOrg: h.cfg.DefaultMaxMonthlySubmissionsPerOrg,
+		}, AuditAction: action, AuditSource: source,
 	})
 }
 

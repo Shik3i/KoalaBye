@@ -5,7 +5,8 @@ These rules apply to human contributors and coding agents.
 ## Product Boundaries
 
 - Keep KoalaBye 100% free, open source, and self-hostable.
-- Do not add billing, paid tiers, cloud-only assumptions, or hidden monetization.
+- Do not add billing, plans, subscriptions, payments, upgrade prompts, cloud-only assumptions, or hidden monetization.
+- Treat quotas only as safety limits for abuse prevention and accidental overload. Trusted users may receive higher limits manually without payment.
 - Do not add mandatory email, SaaS, analytics, or other third-party dependencies without explicit project approval.
 - Do not introduce React, Next.js, Vue, an npm build pipeline, or external CDNs without explicit approval.
 - Prefer server-rendered HTML, small HTMX enhancements, simple Go code, and minimal dependencies.
@@ -19,6 +20,8 @@ These rules apply to human contributors and coding agents.
 - Treat tenancy boundaries, role checks, session handling, and public submissions as security-critical.
 - Check every permission server-side. Hidden links are not authorization.
 - Deny access by default when identity, role, or tenancy is uncertain.
+- Never store raw invite codes. Show a newly generated invite only once and store its hash.
+- Preserve at least one owner per organization and one active Instance Owner per instance.
 
 ## Engineering
 
@@ -63,4 +66,5 @@ These rules apply to human contributors and coding agents.
 - Before adding a table, add a goose migration and migration tests.
 - Before adding a query, update sqlc and commit the generated output.
 - Before changing architecture, update `docs/ARCHITECTURE.md`.
+- Audit sensitive Instance Owner overrides, status changes, role changes, and safety-limit changes.
 - Do not add external CDNs, mandatory email, billing, analytics, or external services unless explicitly requested.

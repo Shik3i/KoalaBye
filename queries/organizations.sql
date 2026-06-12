@@ -1,5 +1,6 @@
 -- name: ListOrganizationsForUser :many
-SELECT o.id, o.public_id, o.slug, o.name, om.role
+SELECT o.id, o.public_id, o.slug, o.name, om.role,
+  (SELECT COUNT(*) FROM organization_members count_members WHERE count_members.organization_id = o.id) AS member_count
 FROM organizations o JOIN organization_members om ON om.organization_id = o.id
 WHERE om.user_id = ? AND o.disabled_at IS NULL ORDER BY o.name;
 

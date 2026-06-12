@@ -1,0 +1,129 @@
+package templates
+
+import (
+	"context"
+	"fmt"
+	"github.com/koalastuff/koalabye/internal/db"
+)
+
+templ InstanceNav() {
+	<nav class="subnav">
+		<a href="/instance">{ tr(ctx, "instance.overview") }</a>
+		<a href="/instance/users">{ tr(ctx, "instance.users") }</a>
+		<a href="/instance/organizations">{ tr(ctx, "nav.organizations") }</a>
+		<a href="/instance/settings">{ tr(ctx, "instance.settings") }</a>
+		<a href="/instance/audit">{ tr(ctx, "instance.audit") }</a>
+	</nav>
+}
+
+templ InstanceUsers(instanceName string, user db.User, users []db.InstanceUser) {
+	@Layout(tr(ctx, "instance.users"), instanceName, &user) {
+		@InstanceNav()
+		<section class="page-heading"><h1>{ tr(ctx, "instance.users") }</h1></section>
+		<section class="panel table-wrap">
+			<table>
+				<thead><tr><th>{ tr(ctx, "auth.login.username") }</th><th>{ tr(ctx, "setup.display_name") }</th><th>{ tr(ctx, "register.email") }</th><th>{ tr(ctx, "members.role") }</th><th></th></tr></thead>
+				<tbody>
+					for _, item := range users {
+						<tr><td>{ item.Username }</td><td>{ item.DisplayName }</td><td>{ nullable(item.Email) }</td><td>{ nullable(item.InstanceRole) }</td><td><form method="post" action="/instance/users/status"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="public_id" value={ item.PublicID }/><input type="hidden" name="disabled" value={ fmt.Sprint(!item.DisabledAt.Valid) }/><button class="link-button" type="submit">{ statusAction(ctx, item.DisabledAt.Valid) }</button></form></td></tr>
+					}
+				</tbody>
+			</table>
+		</section>
+	}
+}
+
+templ InstanceOrganizations(instanceName string, user db.User, orgs []db.Organization) {
+	@Layout(tr(ctx, "nav.organizations"), instanceName, &user) {
+		@InstanceNav()
+		<section class="page-heading"><h1>{ tr(ctx, "nav.organizations") }</h1></section>
+		<section class="panel table-wrap">
+			<table>
+				<thead><tr><th>{ tr(ctx, "org.name") }</th><th>{ tr(ctx, "org.slug") }</th><th>{ tr(ctx, "limits.owners") }</th><th>{ tr(ctx, "limits.members") }</th><th></th></tr></thead>
+				<tbody>
+					for _, org := range orgs {
+						<tr><td>{ org.Name }</td><td>{ org.Slug }</td><td>{ fmt.Sprint(org.OwnerCount) }</td><td>{ fmt.Sprint(org.MemberCount) }</td><td><a href={ templ.SafeURL("/instance/organizations/limits?org=" + org.PublicID) }>{ tr(ctx, "limits.edit") }</a> <form class="inline-form" method="post" action="/instance/organizations/status"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="public_id" value={ org.PublicID }/><input type="hidden" name="disabled" value={ fmt.Sprint(!org.DisabledAt.Valid) }/><button class="link-button" type="submit">{ statusAction(ctx, org.DisabledAt.Valid) }</button></form></td></tr>
+					}
+				</tbody>
+			</table>
+		</section>
+	}
+}
+
+templ InstanceLimits(instanceName string, user db.User, org db.Organization, limits db.OrganizationLimits) {
+	@Layout(tr(ctx, "limits.edit"), instanceName, &user) {
+		@InstanceNav()
+		<section class="auth-shell">
+			<h1>{ tr(ctx, "limits.edit") }: { org.Name }</h1>
+			<p>{ tr(ctx, "limits.explanation") }</p>
+			<form method="post" action="/instance/organizations/limits" class="panel form-stack">
+				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="public_id" value={ org.PublicID }/>
+				@limitInput("max_campaigns", "limits.campaigns", limits.MaxCampaigns)
+				@limitInput("max_members", "limits.members", limits.MaxMembers)
+				@limitInput("max_active_invites", "limits.invites", limits.MaxActiveInvites)
+				@limitInput("max_monthly_visits", "limits.visits", limits.MaxMonthlyVisits)
+				@limitInput("max_monthly_submissions", "limits.submissions", limits.MaxMonthlySubmissions)
+				<button>{ tr(ctx, "common.save") }</button>
+			</form>
+		</section>
+	}
+}
+
+templ InstanceSettings(instanceName string, user db.User, settings map[string]string) {
+	@Layout(tr(ctx, "instance.settings"), instanceName, &user) {
+		@InstanceNav()
+		<section class="auth-shell">
+			<h1>{ tr(ctx, "instance.settings") }</h1>
+			<form method="post" action="/instance/settings" class="panel form-stack">
+				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+				<label>{ tr(ctx, "instance.name") }<input name="instance_name" value={ settings["instance_name"] }/></label>
+				@checkInput("registration_enabled", "instance.registration", settings["registration_enabled"] == "true")
+				@checkInput("invite_only", "instance.invite_only", settings["invite_only"] == "true")
+				@checkInput("invite_registration_enabled", "instance.invite_registration", settings["invite_registration_enabled"] == "true")
+				@settingInput(settings, "default_max_organizations_per_user", "limits.organizations")
+				@settingInput(settings, "default_max_campaigns_per_org", "limits.campaigns")
+				@settingInput(settings, "default_max_members_per_org", "limits.members")
+				@settingInput(settings, "default_max_active_invites_per_org", "limits.invites")
+				@settingInput(settings, "default_max_monthly_visits_per_org", "limits.visits")
+				@settingInput(settings, "default_max_monthly_submissions_per_org", "limits.submissions")
+				<button>{ tr(ctx, "common.save") }</button>
+			</form>
+		</section>
+	}
+}
+
+templ InstanceAudit(instanceName string, user db.User, events []db.AuditEvent) {
+	@Layout(tr(ctx, "instance.audit"), instanceName, &user) {
+		@InstanceNav()
+		<section class="page-heading"><h1>{ tr(ctx, "instance.audit") }</h1></section>
+		<section class="panel table-wrap">
+			<table>
+				<thead><tr><th>{ tr(ctx, "instance.audit_action") }</th><th>{ tr(ctx, "instance.audit_target") }</th><th>{ tr(ctx, "instance.audit_created") }</th></tr></thead>
+				<tbody>
+					for _, event := range events {
+						<tr><td>{ translatedAuditAction(ctx, event.Action) }</td><td>{ nullable(event.TargetID) }</td><td>{ event.CreatedAt }</td></tr>
+					}
+				</tbody>
+			</table>
+		</section>
+	}
+}
+
+templ limitInput(name, key string, value int64) {
+	<label>{ tr(ctx, key) }<input type="number" min="0" name={ name } value={ fmt.Sprint(value) } required/></label>
+}
+
+templ settingInput(settings map[string]string, name, key string) {
+	<label>{ tr(ctx, key) }<input type="number" min="0" name={ name } value={ settings[name] } required/></label>
+}
+
+templ checkInput(name, key string, checked bool) {
+	<label class="check"><input type="checkbox" name={ name } checked?={ checked }/>{ tr(ctx, key) }</label>
+}
+
+func statusAction(ctx context.Context, disabled bool) string {
+	if disabled {
+		return tr(ctx, "instance.enable")
+	}
+	return tr(ctx, "instance.disable")
+}

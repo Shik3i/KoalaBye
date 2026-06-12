@@ -17,7 +17,7 @@
 body { margin: 0; min-height: 100vh; background: var(--paper); color: var(--ink); line-height: 1.55; }
 a { color: var(--green-dark); text-decoration-thickness: 1px; text-underline-offset: 3px; }
 a:hover { color: var(--green); }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 :focus-visible { outline: 3px solid #8cc9a8; outline-offset: 3px; }
 .site-header { min-height: 68px; max-width: 1120px; margin: auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
 .site-header nav { display: flex; align-items: center; gap: 22px; }
@@ -37,8 +37,8 @@ button, input { font: inherit; }
 .eyebrow { color: var(--green); font-size: .78rem; text-transform: uppercase; letter-spacing: .15em; font-weight: 800; }
 .lede { color: var(--muted); font-size: 1.15rem; max-width: 680px; }
 .actions { margin-top: 30px; }
-.button, button[type="submit"] { appearance: none; border: 0; border-radius: 10px; background: var(--green); color: white; padding: 11px 18px; font-weight: 750; text-decoration: none; cursor: pointer; display: inline-flex; }
-.button:hover, button[type="submit"]:hover { background: var(--green-dark); color: white; }
+.button, button:not(.link-button) { appearance: none; border: 0; border-radius: 10px; background: var(--green); color: white; padding: 11px 18px; font-weight: 750; text-decoration: none; cursor: pointer; display: inline-flex; }
+.button:hover, button:not(.link-button):hover { background: var(--green-dark); color: white; }
 .button.secondary { background: var(--panel); color: var(--green-dark); border: 1px solid var(--line); }
 .grid { display: grid; gap: 18px; margin: 24px 0; }
 .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -50,9 +50,12 @@ button, input { font: inherit; }
 .auth-shell .panel { margin-top: 28px; }
 .form-stack { display: grid; gap: 18px; }
 .form-stack label { display: grid; gap: 7px; font-size: .9rem; font-weight: 700; }
-.form-stack input { width: 100%; border: 1px solid #cbd4ca; background: white; color: var(--ink); border-radius: 9px; padding: 11px 12px; }
-.form-stack input:focus { border-color: var(--green); }
+.form-stack input, .form-stack select { width: 100%; border: 1px solid #cbd4ca; background: white; color: var(--ink); border-radius: 9px; padding: 11px 12px; }
+.form-stack input:focus, .form-stack select:focus { border-color: var(--green); }
+.form-stack .check { display: flex; grid-template-columns: none; align-items: center; gap: 10px; }
+.form-stack .check input { width: auto; }
 .alert { margin-top: 20px; background: var(--danger-soft); border: 1px solid #f0c5bb; color: var(--danger); padding: 12px 14px; border-radius: 10px; }
+.success { margin: 20px 0; background: var(--green-soft); border: 1px solid #b9ddc5; color: var(--green-dark); padding: 12px 14px; border-radius: 10px; overflow-wrap: anywhere; }
 .notice { margin: 20px 0; background: #eef5ff; border: 1px solid #c8d9ee; color: #294a6b; padding: 12px 14px; border-radius: 10px; }
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 50px 0 28px; }
 .clean-list { list-style: none; padding: 0; margin: 18px 0 0; }
@@ -62,6 +65,12 @@ button, input { font: inherit; }
 .muted { color: var(--muted); }
 .inline-form { display: inline; }
 .link-button { color: var(--green-dark); border: 0; background: transparent; padding: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link-button.danger { color: var(--danger); }
+.subnav { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 28px 0; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.card-link { color: inherit; text-decoration: none; transition: border-color .15s ease, transform .15s ease; }
+.card-link:hover { color: inherit; border-color: #a8c9b4; transform: translateY(-1px); }
+.stats { display: flex; flex-wrap: wrap; gap: 10px 18px; color: var(--muted); font-size: .9rem; }
+code { padding: 2px 6px; border-radius: 6px; background: #eef0ec; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: .9rem; }
 th, td { text-align: left; padding: 11px 8px; border-bottom: 1px solid var(--line); }

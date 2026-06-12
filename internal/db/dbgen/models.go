@@ -32,6 +32,20 @@ type InstanceSetting struct {
 	UpdatedByUserID interface{} `json:"updated_by_user_id"`
 }
 
+type Invite struct {
+	ID              int64       `json:"id"`
+	PublicID        string      `json:"public_id"`
+	CodeHash        string      `json:"code_hash"`
+	OrganizationID  int64       `json:"organization_id"`
+	Role            string      `json:"role"`
+	MaxUses         int64       `json:"max_uses"`
+	UsedCount       int64       `json:"used_count"`
+	ExpiresAt       string      `json:"expires_at"`
+	CreatedByUserID int64       `json:"created_by_user_id"`
+	CreatedAt       string      `json:"created_at"`
+	RevokedAt       interface{} `json:"revoked_at"`
+}
+
 type Organization struct {
 	ID              int64       `json:"id"`
 	PublicID        string      `json:"public_id"`
@@ -41,6 +55,17 @@ type Organization struct {
 	CreatedAt       string      `json:"created_at"`
 	UpdatedAt       string      `json:"updated_at"`
 	DisabledAt      interface{} `json:"disabled_at"`
+}
+
+type OrganizationLimit struct {
+	OrganizationID        int64       `json:"organization_id"`
+	MaxCampaigns          int64       `json:"max_campaigns"`
+	MaxMembers            int64       `json:"max_members"`
+	MaxActiveInvites      int64       `json:"max_active_invites"`
+	MaxMonthlyVisits      int64       `json:"max_monthly_visits"`
+	MaxMonthlySubmissions int64       `json:"max_monthly_submissions"`
+	UpdatedAt             string      `json:"updated_at"`
+	UpdatedByUserID       interface{} `json:"updated_by_user_id"`
 }
 
 type OrganizationMember struct {
