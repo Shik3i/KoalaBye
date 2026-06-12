@@ -133,8 +133,8 @@ th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-s
 .public-body.accent-orange { --green: #f97316; --green-dark: #c2410c; --green-soft: #ffedd5; }
 .public-body.accent-gray { --green: #6b7280; --green-dark: #374151; --green-soft: #f3f4f6; }
 
-.theme-light { --paper: #fdfdfd; --panel: #fff; --line: #ececec; --ink: #111; --muted: #666; color-scheme: light; }
-.theme-dark { --paper: #1a1a1a; --panel: #222; --line: #333; --ink: #ededed; --muted: #a0a0a0; color-scheme: dark; }
+html[data-theme="light"], .theme-light { --paper: #fdfdfd; --panel: #fff; --line: #ececec; --ink: #111; --muted: #666; color-scheme: light; }
+html[data-theme="dark"], .theme-dark { --paper: #1a1a1a; --panel: #222; --line: #333; --ink: #ededed; --muted: #a0a0a0; color-scheme: dark; }
 .theme-soft { --paper: #f0f4f8; --panel: #fff; --line: #d9e2ec; --ink: #2c3e50; --muted: #627d98; color-scheme: light; }
 
 @media (max-width: 720px) {
@@ -162,4 +162,9 @@ th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-s
   .public-header { flex-direction: column; }
   .page-heading .button { width: 100%; }
   .form-stack button:not(.link-button) { width: 100%; }
+}
+
+/* Landing page grid overrides for desktop */
+@media (min-width: 721px) {
+    .hero.grid.two { display: grid; grid-template-columns: 1fr 320px; gap: 40px; max-width: 1120px; }
 }

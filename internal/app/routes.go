@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"io/fs"
@@ -80,7 +81,9 @@ func Routes(
 			http.Redirect(w, r, "/app", http.StatusSeeOther)
 			return
 		}
-		web.Render(w, r, http.StatusOK, templates.Landing(cfg.InstanceName))
+		settings, _ := queries.Settings(r.Context())
+		ctx := context.WithValue(r.Context(), "settings", settings)
+		web.Render(w, r.WithContext(ctx), http.StatusOK, templates.Landing(cfg.InstanceName))
 	})
 	r.Get("/setup", setupHandler.Get)
 	r.Post("/setup", setupHandler.Post)
@@ -108,12 +111,14 @@ func Routes(
 	r.Get("/legal/privacy", func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(i18n.LegalContext(r.Context()))
 		settings, _ := queries.Settings(r.Context())
-		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "privacy", settings))
+		ctx := context.WithValue(r.Context(), "settings", settings)
+		web.Render(w, r.WithContext(ctx), http.StatusOK, templates.Legal(cfg.InstanceName, "privacy", settings))
 	})
 	r.Get("/legal/imprint", func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(i18n.LegalContext(r.Context()))
 		settings, _ := queries.Settings(r.Context())
-		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "imprint", settings))
+		ctx := context.WithValue(r.Context(), "settings", settings)
+		web.Render(w, r.WithContext(ctx), http.StatusOK, templates.Legal(cfg.InstanceName, "imprint", settings))
 	})
 
 	r.Group(func(protected chi.Router) {

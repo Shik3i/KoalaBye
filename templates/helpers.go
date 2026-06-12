@@ -29,3 +29,10 @@ func languageCurrent(ctx context.Context, locale i18n.Locale) string {
 	}
 	return "false"
 }
+
+func instanceSourceURL(ctx context.Context) string {
+	if settings, ok := ctx.Value("settings").(map[string]string); ok {
+		return settings["instance_source_url"]
+	}
+	return ""
+}

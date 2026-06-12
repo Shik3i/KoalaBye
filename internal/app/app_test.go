@@ -1552,3 +1552,32 @@ func TestPhase7AnalyticsExportsRetentionAndPermissions(t *testing.T) {
 		t.Fatalf("instance owner viewed private analytics: %d", privateResponse.Code)
 	}
 }
+func TestI18nPlaceholdersAndForbiddenStrings(t *testing.T) {
+	application := testApp(t)
+
+	routes := []string{
+		"/",
+		"/login",
+		"/register",
+		"/legal/privacy",
+		"/legal/imprint",
+	}
+
+	for _, route := range routes {
+		for _, lang := range []string{"en", "de", "es"} {
+			req := httptest.NewRequest("GET", route, nil)
+			req.AddCookie(&http.Cookie{Name: "lang", Value: lang})
+			rr := httptest.NewRecorder()
+			application.Handler.ServeHTTP(rr, req)
+
+			body := rr.Body.String()
+			if strings.Contains(body, "[missing:") {
+				t.Errorf("Route %s (%s) contains missing i18n key", route, lang)
+			}
+			lowerBody := strings.ToLower(body)
+			if strings.Contains(lowerBody, "ohne ihnen zu folgen") || strings.Contains(lowerBody, "following them around") {
+				t.Errorf("Route %s (%s) contains forbidden wording", route, lang)
+			}
+		}
+	}
+}

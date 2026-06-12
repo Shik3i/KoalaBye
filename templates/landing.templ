@@ -2,11 +2,29 @@ package templates
 
 templ Landing(instanceName string) {
 	@Layout(tr(ctx, "landing.title"), instanceName, nil) {
-		<section class="hero">
-			<div class="eyebrow">{ tr(ctx, "landing.eyebrow") }</div>
-			<h1>{ tr(ctx, "landing.heading") }</h1>
-			<p class="lede">{ tr(ctx, "landing.subtitle") }</p>
-			<div class="actions"><a class="button" href="/login">{ tr(ctx, "landing.login") }</a></div>
+		<section class="hero grid two">
+			<div class="hero-content">
+				<div class="eyebrow">{ tr(ctx, "landing.eyebrow") }</div>
+				<h1>{ tr(ctx, "landing.heading") }</h1>
+				<p class="lede">{ tr(ctx, "landing.subtitle") }</p>
+				<div class="actions">
+					<a class="button" href="/login">{ tr(ctx, "landing.login") }</a>
+					if url := instanceSourceURL(ctx); url != "" {
+						<a class="button secondary" href={ templ.SafeURL(url) }>{ tr(ctx, "landing.source") }</a>
+					}
+				</div>
+			</div>
+			<div class="hero-panel" style="display: flex; align-items: center;">
+				<article class="panel" style="width: 100%;">
+					<h2>{ tr(ctx, "landing.panel.title") }</h2>
+					<ul class="clean-list">
+						<li><span>{ tr(ctx, "landing.panel.text1") }</span></li>
+						<li><span>{ tr(ctx, "landing.panel.text2") }</span></li>
+						<li><span>{ tr(ctx, "landing.panel.text3") }</span></li>
+						<li><span>{ tr(ctx, "landing.panel.text4") }</span></li>
+					</ul>
+				</article>
+			</div>
 		</section>
 		<section class="grid three">
 			<article class="panel"><h2>{ tr(ctx, "landing.private.title") }</h2><p>{ tr(ctx, "landing.private.text") }</p></article>
