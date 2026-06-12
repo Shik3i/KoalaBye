@@ -16,6 +16,46 @@ type AuditLog struct {
 	CreatedAt      string      `json:"created_at"`
 }
 
+type Campaign struct {
+	ID                int64       `json:"id"`
+	PublicID          string      `json:"public_id"`
+	OrganizationID    int64       `json:"organization_id"`
+	Slug              string      `json:"slug"`
+	Name              string      `json:"name"`
+	Description       interface{} `json:"description"`
+	Status            string      `json:"status"`
+	PublicLinkEnabled int64       `json:"public_link_enabled"`
+	CreatedByUserID   int64       `json:"created_by_user_id"`
+	CreatedAt         string      `json:"created_at"`
+	UpdatedAt         string      `json:"updated_at"`
+	ArchivedAt        interface{} `json:"archived_at"`
+	DisabledAt        interface{} `json:"disabled_at"`
+}
+
+type CampaignMember struct {
+	ID              int64       `json:"id"`
+	CampaignID      int64       `json:"campaign_id"`
+	UserID          int64       `json:"user_id"`
+	Role            string      `json:"role"`
+	CreatedAt       string      `json:"created_at"`
+	CreatedByUserID interface{} `json:"created_by_user_id"`
+}
+
+type CampaignSetting struct {
+	CampaignID             int64       `json:"campaign_id"`
+	CollectInstallToken    int64       `json:"collect_install_token"`
+	HashInstallToken       int64       `json:"hash_install_token"`
+	CountRawVisits         int64       `json:"count_raw_visits"`
+	CountUniqueTokenVisits int64       `json:"count_unique_token_visits"`
+	CollectReferrerDomain  int64       `json:"collect_referrer_domain"`
+	CollectCoarseBrowser   int64       `json:"collect_coarse_browser"`
+	CollectCoarseOs        int64       `json:"collect_coarse_os"`
+	PublicLanguageDefault  string      `json:"public_language_default"`
+	ShowPrivacyNotice      int64       `json:"show_privacy_notice"`
+	UpdatedAt              string      `json:"updated_at"`
+	UpdatedByUserID        interface{} `json:"updated_by_user_id"`
+}
+
 type InstanceRole struct {
 	ID              int64       `json:"id"`
 	UserID          int64       `json:"user_id"`

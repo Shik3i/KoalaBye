@@ -11,9 +11,35 @@ templ InstanceNav() {
 		<a href="/instance">{ tr(ctx, "instance.overview") }</a>
 		<a href="/instance/users">{ tr(ctx, "instance.users") }</a>
 		<a href="/instance/organizations">{ tr(ctx, "nav.organizations") }</a>
+		<a href="/instance/campaigns">{ tr(ctx, "campaign.title") }</a>
 		<a href="/instance/settings">{ tr(ctx, "instance.settings") }</a>
 		<a href="/instance/audit">{ tr(ctx, "instance.audit") }</a>
 	</nav>
+}
+
+templ InstanceCampaigns(instanceName string, user db.User, campaigns []db.Campaign) {
+	@Layout(tr(ctx, "instance.campaigns"), instanceName, &user) {
+		@InstanceNav()
+		<section class="page-heading"><h1>{ tr(ctx, "instance.campaigns") }</h1></section>
+		<section class="panel table-wrap">
+			<table>
+				<thead><tr><th>{ tr(ctx, "campaign.name") }</th><th>{ tr(ctx, "campaign.organization") }</th><th>{ tr(ctx, "campaign.status") }</th><th>{ tr(ctx, "campaign.creator") }</th><th>{ tr(ctx, "campaign.privacy.summary") }</th><th>{ tr(ctx, "campaign.public_link") }</th><th></th></tr></thead>
+				<tbody>
+					for _, campaign := range campaigns {
+						<tr>
+							<td>{ campaign.Name }</td>
+							<td>{ campaign.OrganizationName }</td>
+							<td>{ tr(ctx, "campaign.status." + campaign.Status) }</td>
+							<td>{ campaign.CreatorUsername }</td>
+							<td>{ campaignPrivacySummary(ctx, campaign.PrivacyOptionalEnabled) }</td>
+							<td>{ translatedBoolean(ctx, fmt.Sprint(campaign.PublicLinkEnabled)) }</td>
+							<td><form method="post" action="/instance/campaigns/status"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="public_id" value={ campaign.PublicID }/><input type="hidden" name="disabled" value={ fmt.Sprint(!campaign.DisabledAt.Valid) }/><button class="link-button" type="submit">{ statusAction(ctx, campaign.DisabledAt.Valid) }</button></form></td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</section>
+	}
 }
 
 templ InstanceUsers(instanceName string, user db.User, users []db.InstanceUser) {
@@ -126,4 +152,11 @@ func statusAction(ctx context.Context, disabled bool) string {
 		return tr(ctx, "instance.enable")
 	}
 	return tr(ctx, "instance.disable")
+}
+
+func campaignPrivacySummary(ctx context.Context, optional bool) string {
+	if optional {
+		return tr(ctx, "campaign.privacy.balanced")
+	}
+	return tr(ctx, "campaign.privacy.strict")
 }

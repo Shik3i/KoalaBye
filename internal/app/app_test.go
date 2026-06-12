@@ -629,3 +629,190 @@ func TestNewRoutesRenderGermanAndSpanishWithoutExternalCDN(t *testing.T) {
 		}
 	}
 }
+
+func TestCampaignCreationPermissionsQuotaAndCSRF(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	orgs, _ := q.ListOrganizationsForUser(context.Background(), owner.ID)
+	org := orgs[0]
+	ownerLogin := login(t, application, owner.Username, password)
+	target := "/app/orgs/" + org.PublicID + "/campaigns"
+
+	noCSRF := formPost(application, target, url.Values{"name": {"No CSRF"}, "slug": {"no-csrf"}}, ownerLogin.session)
+	if noCSRF.Code != http.StatusForbidden {
+		t.Fatalf("campaign POST without CSRF=%d", noCSRF.Code)
+	}
+	csrfCookie, token, _ := csrfPage(t, application, target+"/new", ownerLogin.session)
+	created := formPost(application, target, url.Values{
+		"csrf_token": {token}, "name": {"KoalaSync Chrome"}, "slug": {"koalasync-chrome"},
+		"description": {"Extension feedback"}, "public_language_default": {"en"}, "privacy_preset": {"strict"},
+	}, ownerLogin.session, csrfCookie)
+	if created.Code != http.StatusSeeOther || !regexp.MustCompile(`/campaigns/camp_[A-Za-z0-9_-]+$`).MatchString(created.Header().Get("Location")) {
+		t.Fatalf("owner campaign creation=%d location=%q body=%s", created.Code, created.Header().Get("Location"), created.Body.String())
+	}
+
+	admin := seedNonOwner(t, application, "campaignadmin", "campaign admin long password")
+	viewer := seedNonOwner(t, application, "campaignviewer", "campaign viewer long password")
+	outsider := seedNonOwner(t, application, "campaignoutsider", "campaign outsider long password")
+	for _, membership := range []struct {
+		user db.User
+		role string
+	}{{admin, "admin"}, {viewer, "viewer"}} {
+		if _, err := application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,?,?,?)`, org.ID, membership.user.ID, membership.role, db.Now(), owner.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	adminLogin := login(t, application, admin.Username, "campaign admin long password")
+	adminCSRF, adminToken, _ := csrfPage(t, application, target+"/new", adminLogin.session)
+	adminCreated := formPost(application, target, url.Values{
+		"csrf_token": {adminToken}, "name": {"Admin Campaign"}, "slug": {"admin-campaign"},
+		"public_language_default": {"de"}, "privacy_preset": {"balanced"},
+	}, adminLogin.session, adminCSRF)
+	if adminCreated.Code != http.StatusSeeOther {
+		t.Fatalf("org admin could not create campaign: %d %s", adminCreated.Code, adminCreated.Body.String())
+	}
+	for _, tc := range []struct {
+		user     db.User
+		password string
+	}{{viewer, "campaign viewer long password"}, {outsider, "campaign outsider long password"}} {
+		session := login(t, application, tc.user.Username, tc.password)
+		request := httptest.NewRequest(http.MethodGet, target+"/new", nil)
+		request.AddCookie(session.session)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != http.StatusForbidden {
+			t.Fatalf("%s create page status=%d", tc.user.Username, response.Code)
+		}
+	}
+
+	if _, err := application.Database.Exec(`UPDATE organization_limits SET max_campaigns=2 WHERE organization_id=?`, org.ID); err != nil {
+		t.Fatal(err)
+	}
+	_, limitToken, limitBody := csrfPage(t, application, target, ownerLogin.session, csrfCookie)
+	if !strings.Contains(limitBody, "safety limit") || strings.Contains(strings.ToLower(limitBody), "upgrade") || strings.Contains(strings.ToLower(limitBody), "paid") {
+		t.Fatalf("quota page language is not safety-focused: %s", limitBody)
+	}
+	limited := formPost(application, target, url.Values{
+		"csrf_token": {limitToken}, "name": {"Over Limit"}, "slug": {"over-limit"},
+		"public_language_default": {"en"}, "privacy_preset": {"strict"},
+	}, ownerLogin.session, csrfCookie)
+	if limited.Code != http.StatusUnprocessableEntity || !strings.Contains(limited.Body.String(), "safety limit") {
+		t.Fatalf("campaign quota response=%d %s", limited.Code, limited.Body.String())
+	}
+}
+
+func TestCampaignRolesPrivacyAndArchivedReadOnly(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	orgs, _ := q.ListOrganizationsForUser(context.Background(), owner.ID)
+	org := orgs[0]
+	campaign, err := q.CreateCampaign(context.Background(), db.CreateCampaignInput{PublicID: "camp_http", OrganizationID: org.ID, CreatedBy: owner.ID, Name: "HTTP Campaign", Slug: "http-campaign", Language: "en", PrivacyPreset: "strict"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	viewer := seedNonOwner(t, application, "explicitviewer", "explicit viewer long password")
+	if _, err = application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, viewer.ID, db.Now(), owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	loaded, _ := q.GetCampaignByPublicID(context.Background(), org.PublicID, campaign.PublicID)
+	if err = q.SetCampaignMember(context.Background(), loaded, viewer.PublicID, "viewer", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	viewerLogin := login(t, application, viewer.Username, "explicit viewer long password")
+	base := "/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID
+	request := httptest.NewRequest(http.MethodGet, base, nil)
+	request.AddCookie(viewerLogin.session)
+	response := httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("explicit viewer detail=%d", response.Code)
+	}
+	for _, path := range []string{base + "/settings", base + "/privacy", base + "/access"} {
+		request = httptest.NewRequest(http.MethodGet, path, nil)
+		request.AddCookie(viewerLogin.session)
+		response = httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != http.StatusForbidden {
+			t.Fatalf("viewer accessed %s: %d", path, response.Code)
+		}
+	}
+
+	ownerLogin := login(t, application, owner.Username, password)
+	csrfCookie, token, privacyBody := csrfPage(t, application, base+"/privacy?lang=de", ownerLogin.session)
+	if !strings.Contains(privacyBody, "speichert niemals IP-Adressen") || strings.Contains(privacyBody, "https://cdn") {
+		t.Fatalf("German privacy page missing policy or contains CDN: %s", privacyBody)
+	}
+	privacy := formPost(application, base+"/privacy", url.Values{
+		"csrf_token": {token}, "collect_install_token": {"on"}, "count_raw_visits": {"on"},
+		"count_unique_token_visits": {"on"}, "collect_coarse_browser": {"on"},
+		"public_language_default": {"es"}, "show_privacy_notice": {"on"},
+	}, ownerLogin.session, csrfCookie)
+	if privacy.Code != http.StatusSeeOther {
+		t.Fatalf("privacy update=%d %s", privacy.Code, privacy.Body.String())
+	}
+	var hashToken, coarseBrowser int
+	if err := application.Database.QueryRow(`SELECT hash_install_token,collect_coarse_browser FROM campaign_settings WHERE campaign_id=?`, campaign.ID).Scan(&hashToken, &coarseBrowser); err != nil || hashToken != 1 || coarseBrowser != 1 {
+		t.Fatalf("privacy settings not safely stored: hash=%d browser=%d err=%v", hashToken, coarseBrowser, err)
+	}
+	status := formPost(application, base+"/status", url.Values{"csrf_token": {token}, "status": {"archived"}}, ownerLogin.session, csrfCookie)
+	if status.Code != http.StatusSeeOther {
+		t.Fatalf("archive=%d", status.Code)
+	}
+	request = httptest.NewRequest(http.MethodGet, base+"/settings", nil)
+	request.AddCookie(ownerLogin.session)
+	response = httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("archived settings remained writable: %d", response.Code)
+	}
+}
+
+func TestInstanceCampaignModerationAndTranslations(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	orgs, _ := q.ListOrganizationsForUser(context.Background(), owner.ID)
+	org := orgs[0]
+	campaign, err := q.CreateCampaign(context.Background(), db.CreateCampaignInput{PublicID: "camp_moderate", OrganizationID: org.ID, CreatedBy: owner.ID, Name: "Moderate Me", Slug: "moderate-me", Language: "es", PrivacyPreset: "balanced"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerLogin := login(t, application, owner.Username, password)
+	csrfCookie, token, body := csrfPage(t, application, "/instance/campaigns?lang=es", ownerLogin.session)
+	if !strings.Contains(body, "Moderación de campañas") || strings.Contains(body, "https://cdn") {
+		t.Fatalf("Spanish campaign admin page invalid")
+	}
+	disabled := formPost(application, "/instance/campaigns/status", url.Values{"csrf_token": {token}, "public_id": {campaign.PublicID}, "disabled": {"true"}}, ownerLogin.session, csrfCookie)
+	if disabled.Code != http.StatusSeeOther {
+		t.Fatalf("disable campaign=%d", disabled.Code)
+	}
+	var disabledAt any
+	if err := application.Database.QueryRow(`SELECT disabled_at FROM campaigns WHERE public_id=?`, campaign.PublicID).Scan(&disabledAt); err != nil || disabledAt == nil {
+		t.Fatalf("campaign not disabled: %v %v", disabledAt, err)
+	}
+	var auditCount int
+	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM audit_log WHERE action='campaign_disabled' AND target_id=?`, campaign.PublicID).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("campaign disable not audited: %d %v", auditCount, err)
+	}
+	enabled := formPost(application, "/instance/campaigns/status", url.Values{"csrf_token": {token}, "public_id": {campaign.PublicID}, "disabled": {"false"}}, ownerLogin.session, csrfCookie)
+	if enabled.Code != http.StatusSeeOther {
+		t.Fatalf("enable campaign=%d", enabled.Code)
+	}
+	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM audit_log WHERE action='campaign_enabled' AND target_id=?`, campaign.PublicID).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("campaign enable not audited: %d %v", auditCount, err)
+	}
+	normal := seedNonOwner(t, application, "campaignnormal", "campaign normal long password")
+	normalLogin := login(t, application, normal.Username, "campaign normal long password")
+	request := httptest.NewRequest(http.MethodGet, "/instance/campaigns", nil)
+	request.AddCookie(normalLogin.session)
+	response := httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("normal user campaign admin access=%d", response.Code)
+	}
+}

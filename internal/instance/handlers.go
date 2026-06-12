@@ -68,6 +68,29 @@ func (h *Handler) OrganizationStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, "/instance/organizations", 303)
 }
+func (h *Handler) Campaigns(w http.ResponseWriter, r *http.Request) {
+	u, ok := h.authorize(w, r)
+	if !ok {
+		return
+	}
+	campaigns, err := h.queries.ListInstanceCampaigns(r.Context())
+	if err != nil {
+		http.Error(w, "load campaigns", http.StatusInternalServerError)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.InstanceCampaigns(h.cfg.InstanceName, u, campaigns))
+}
+func (h *Handler) CampaignStatus(w http.ResponseWriter, r *http.Request) {
+	u, ok := h.authorize(w, r)
+	if !ok {
+		return
+	}
+	if err := h.queries.SetCampaignDisabled(r.Context(), r.FormValue("public_id"), r.FormValue("disabled") == "true", u.ID); err != nil {
+		http.Error(w, "action failed", http.StatusUnprocessableEntity)
+		return
+	}
+	http.Redirect(w, r, "/instance/campaigns", http.StatusSeeOther)
+}
 func (h *Handler) Limits(w http.ResponseWriter, r *http.Request) {
 	u, ok := h.authorize(w, r)
 	if !ok {

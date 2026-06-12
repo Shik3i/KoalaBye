@@ -26,7 +26,11 @@ Users are global identities. Organizations are tenant boundaries, connected thro
 
 Organization URLs use random public IDs rather than integer primary keys. Owners control all organization settings and owner memberships. Admins can manage non-owner members and invite codes. Members and viewers have read access in this phase. An organization cannot lose its final owner. Disabled users and organizations are denied normal access.
 
-Future campaigns belong to organizations. Campaign permissions must be derived from active membership and checked in handlers, not inferred from URLs or navigation visibility.
+Campaigns belong to exactly one organization and use random public IDs in management URLs. Slugs are unique only within their organization. All campaigns, including archived and instance-disabled campaigns, count toward the organization's campaign safety limit because the MVP does not delete them.
+
+Organization owners and admins receive implicit campaign-owner rights. Explicit campaign roles are `owner`, `editor`, `analyst`, and `viewer`; only existing organization members may receive them. Creation adds the creator as an explicit campaign owner, and the final explicit owner cannot be removed. Permission functions distinguish viewing, basic editing, privacy changes, access management, and archival and deny by default.
+
+Campaign status transitions are `draft -> active`, `active -> paused`, `paused -> active`, and any non-archived state to `archived`. Archived campaigns are read-only. Instance-disabled campaigns remain visible to authorized users but reject normal writes.
 
 ## Registration and Invites
 
@@ -36,9 +40,15 @@ Manual invite codes are long random bearer values. Only their SHA-256 hashes are
 
 ## Safety Limits
 
-Instance defaults seed per-organization limits. Organization and active-invite limits are enforced now; member limits are enforced when invites are accepted. Campaign, visit, and submission limits are stored for the future modules that own those operations. These are abuse-prevention controls for free instances, never product plans or monetization boundaries.
+Instance defaults seed per-organization limits. Organization, member, active-invite, and campaign limits are enforced now. Visit and submission limits are stored for the future modules that own those operations. These are abuse-prevention controls for free instances, never product plans or monetization boundaries.
 
 Instance Owners can adjust defaults and per-organization limits. Sensitive overrides, status changes, settings changes, and organization membership administration produce audit events.
+
+## Campaign Privacy and Links
+
+Each campaign has a privacy-settings row from creation. Strict privacy disables optional coarse referrer, browser, and operating-system data. Balanced enables those coarse fields but never IP storage or fingerprinting. The schema requires install-token hashing to remain enabled; future visit storage must use HMAC-SHA256 with the server secret and must never persist raw tokens.
+
+Future canonical public links are `/c/{campaignPublicID}`. A readable `/u/{orgSlug}/{campaignSlug}` form is also reserved. Neither public route is implemented in Phase 4, so management pages label all links and extension snippets as previews.
 
 ## First-Run Setup
 
@@ -56,15 +66,14 @@ Go tests exercise authentication, session revocation, permissions, locale resolu
 
 ## Permissions and Audit
 
-Authentication middleware loads identity. Authorization remains explicit in protected handlers through the permissions service and denies by default. The audit log records setup, bootstrap, login success/failure, logout, instance settings and limit changes, user and organization status changes, and sensitive membership administration without passwords, session tokens, or raw invite codes.
+Authentication middleware loads identity. Authorization remains explicit in protected handlers through the permissions service and denies by default. The audit log records setup, authentication, instance settings and limits, user/organization/campaign moderation, campaign creation and lifecycle, privacy changes, and membership/access administration without passwords, session tokens, raw invite codes, or future install tokens.
 
 ## Privacy Model
 
-The foundation stores account and organization data only. It has no analytics SDK, external browser asset, IP column, user-agent column, or fingerprinting code. Future public pages must remain cookie-free and collect only fields declared by the campaign owner.
+The foundation stores account, organization, campaign, role, and privacy-setting data only. It has no analytics SDK, external browser asset, IP column, user-agent column, or fingerprinting code. Future public pages must remain cookie-free and collect only fields declared by the campaign owner.
 
 ## Planned Modules
 
-- Campaigns and campaign roles
 - Form builder
 - Public uninstall and survey pages
 - Privacy-preserving visit counting

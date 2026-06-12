@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/koalastuff/koalabye/internal/auth"
+	"github.com/koalastuff/koalabye/internal/campaigns"
 	"github.com/koalastuff/koalabye/internal/config"
 	"github.com/koalastuff/koalabye/internal/dashboard"
 	"github.com/koalastuff/koalabye/internal/db"
@@ -34,6 +35,7 @@ func Routes(
 	dashboardHandler *dashboard.Handler,
 	instanceHandler *instance.Handler,
 	organizationsHandler *organizations.Handler,
+	campaignsHandler *campaigns.Handler,
 	registrationHandler *registration.Handler,
 ) http.Handler {
 	r := chi.NewRouter()
@@ -138,6 +140,18 @@ func Routes(
 		protected.Get("/app/orgs/{orgPublicID}/invites", organizationsHandler.Invites)
 		protected.Post("/app/orgs/{orgPublicID}/invites", organizationsHandler.CreateInvite)
 		protected.Post("/app/orgs/{orgPublicID}/invites/{invitePublicID}/revoke", organizationsHandler.RevokeInvite)
+		protected.Get("/app/orgs/{orgPublicID}/campaigns", campaignsHandler.List)
+		protected.Get("/app/orgs/{orgPublicID}/campaigns/new", campaignsHandler.New)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns", campaignsHandler.Create)
+		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}", campaignsHandler.Detail)
+		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/settings", campaignsHandler.Settings)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/settings", campaignsHandler.SettingsPost)
+		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/privacy", campaignsHandler.Privacy)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/privacy", campaignsHandler.PrivacyPost)
+		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/access", campaignsHandler.Access)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/access", campaignsHandler.AccessPost)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/access/{userPublicID}/remove", campaignsHandler.AccessRemove)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/status", campaignsHandler.Status)
 		protected.Get("/instance", instanceHandler.Get)
 		protected.Get("/instance/users", instanceHandler.Users)
 		protected.Post("/instance/users/status", instanceHandler.UserStatus)
@@ -145,6 +159,8 @@ func Routes(
 		protected.Post("/instance/organizations/status", instanceHandler.OrganizationStatus)
 		protected.Get("/instance/organizations/limits", instanceHandler.Limits)
 		protected.Post("/instance/organizations/limits", instanceHandler.LimitsPost)
+		protected.Get("/instance/campaigns", instanceHandler.Campaigns)
+		protected.Post("/instance/campaigns/status", instanceHandler.CampaignStatus)
 		protected.Get("/instance/settings", instanceHandler.Settings)
 		protected.Post("/instance/settings", instanceHandler.SettingsPost)
 		protected.Get("/instance/audit", instanceHandler.Audit)

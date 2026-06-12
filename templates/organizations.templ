@@ -50,7 +50,7 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 			}
 		</section>
 		<section class="grid two">
-			<article class="panel"><h2>{ tr(ctx, "org.future_campaigns") }</h2><p>{ tr(ctx, "org.future_campaigns_text") }</p></article>
+			<a class="panel card-link" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") }><h2>{ tr(ctx, "campaign.title") }</h2><p>{ tr(ctx, "campaign.list.description") }</p></a>
 			<article class="panel"><h2>{ tr(ctx, "limits.title") }</h2><p>{ tr(ctx, "limits.explanation") }</p><dl class="stats"><dt>{ tr(ctx, "limits.members") }</dt><dd>{ fmt.Sprint(limits.MaxMembers) }</dd><dt>{ tr(ctx, "limits.invites") }</dt><dd>{ fmt.Sprint(limits.MaxActiveInvites) }</dd><dt>{ tr(ctx, "limits.campaigns") }</dt><dd>{ fmt.Sprint(limits.MaxCampaigns) }</dd></dl></article>
 		</section>
 		<section class="panel">

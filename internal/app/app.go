@@ -10,6 +10,7 @@ import (
 
 	"github.com/koalastuff/koalabye/internal/audit"
 	"github.com/koalastuff/koalabye/internal/auth"
+	"github.com/koalastuff/koalabye/internal/campaigns"
 	"github.com/koalastuff/koalabye/internal/config"
 	"github.com/koalastuff/koalabye/internal/dashboard"
 	"github.com/koalastuff/koalabye/internal/db"
@@ -64,8 +65,9 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 	dashboardHandler := dashboard.New(cfg, queries, permissionService)
 	instanceHandler := instance.New(cfg, queries, permissionService)
 	organizationsHandler := organizations.New(cfg, queries, csrf, permissionService)
+	campaignsHandler := campaigns.New(cfg, queries, permissionService)
 	registrationHandler := registration.New(cfg, queries, sessions, csrf)
-	handler := Routes(cfg, database, queries, sessions, csrf, catalog, setupHandler, authHandler, dashboardHandler, instanceHandler, organizationsHandler, registrationHandler)
+	handler := Routes(cfg, database, queries, sessions, csrf, catalog, setupHandler, authHandler, dashboardHandler, instanceHandler, organizationsHandler, campaignsHandler, registrationHandler)
 
 	return &App{Config: cfg, Database: database, Handler: handler}, nil
 }

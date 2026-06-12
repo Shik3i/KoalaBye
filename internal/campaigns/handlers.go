@@ -1,0 +1,316 @@
+package campaigns
+
+import (
+	"database/sql"
+	"errors"
+	"net/http"
+	"regexp"
+	"strings"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/koalastuff/koalabye/internal/auth"
+	"github.com/koalastuff/koalabye/internal/config"
+	"github.com/koalastuff/koalabye/internal/db"
+	"github.com/koalastuff/koalabye/internal/i18n"
+	"github.com/koalastuff/koalabye/internal/ids"
+	"github.com/koalastuff/koalabye/internal/permissions"
+	"github.com/koalastuff/koalabye/internal/web"
+	"github.com/koalastuff/koalabye/templates"
+)
+
+var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+
+type Handler struct {
+	cfg         config.Config
+	q           *db.Querier
+	permissions *permissions.Service
+}
+
+func New(cfg config.Config, q *db.Querier, p *permissions.Service) *Handler {
+	return &Handler{cfg: cfg, q: q, permissions: p}
+}
+
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	user, _ := auth.UserFromContext(r.Context())
+	org, role, instanceOwner, ok := h.organization(r, user.ID)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	items, err := h.q.ListCampaignsForUser(r.Context(), org.ID, user.ID)
+	if instanceOwner {
+		items, err = h.q.ListInstanceCampaigns(r.Context())
+		if err == nil {
+			filtered := items[:0]
+			for _, item := range items {
+				if item.OrganizationID == org.ID {
+					filtered = append(filtered, item)
+				}
+			}
+			items = filtered
+		}
+	}
+	if err != nil {
+		http.Error(w, "load campaigns", http.StatusInternalServerError)
+		return
+	}
+	limits, _ := h.q.GetOrganizationLimits(r.Context(), org.ID)
+	count, _ := h.q.CountCampaigns(r.Context(), org.ID)
+	canCreate := (role == "owner" || role == "admin") && count < limits.MaxCampaigns
+	web.Render(w, r, http.StatusOK, templates.CampaignList(h.cfg.InstanceName, user, org, items, limits, count, canCreate))
+}
+
+func (h *Handler) New(w http.ResponseWriter, r *http.Request) {
+	user, _ := auth.UserFromContext(r.Context())
+	org, role, _, ok := h.organization(r, user.ID)
+	if !ok || (role != "owner" && role != "admin") {
+		h.forbidden(w, r)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignNew(h.cfg.InstanceName, user, org, "", db.PrivacyPreset("strict")))
+}
+
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+	user, _ := auth.UserFromContext(r.Context())
+	org, role, _, ok := h.organization(r, user.ID)
+	if !ok || (role != "owner" && role != "admin") {
+		h.forbidden(w, r)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	slug := strings.TrimSpace(strings.ToLower(r.FormValue("slug")))
+	description := strings.TrimSpace(r.FormValue("description"))
+	language := validLanguage(r.FormValue("public_language_default"))
+	preset := r.FormValue("privacy_preset")
+	if name == "" || len(name) > 120 || len(slug) < 2 || len(slug) > 80 || !slugPattern.MatchString(slug) || (preset != "strict" && preset != "balanced") {
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.invalid", db.PrivacyPreset("strict")))
+		return
+	}
+	publicID, err := ids.New("camp")
+	if err != nil {
+		http.Error(w, "create campaign", http.StatusInternalServerError)
+		return
+	}
+	campaign, err := h.q.CreateCampaign(r.Context(), db.CreateCampaignInput{
+		PublicID: publicID, OrganizationID: org.ID, CreatedBy: user.ID, Name: name,
+		Slug: slug, Description: description, Language: language, PrivacyPreset: preset,
+	})
+	if errors.Is(err, db.ErrLimitReached) {
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.limit", db.PrivacyPreset(preset)))
+		return
+	}
+	if err != nil {
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.slug", db.PrivacyPreset(preset)))
+		return
+	}
+	http.Redirect(w, r, campaignURL(org.PublicID, campaign.PublicID), http.StatusSeeOther)
+}
+
+func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
+	user, campaign, role, ok := h.campaign(r, permissionView)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	settings, err := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	if err != nil {
+		http.Error(w, "load settings", http.StatusInternalServerError)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, role, strings.TrimRight(h.cfg.BaseURL, "/")))
+}
+
+func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, ""))
+}
+
+func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	slug := strings.TrimSpace(strings.ToLower(r.FormValue("slug")))
+	if name == "" || len(name) > 120 || len(slug) < 2 || len(slug) > 80 || !slugPattern.MatchString(slug) {
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, "campaign.error.invalid"))
+		return
+	}
+	campaign.Name, campaign.Slug = name, slug
+	campaign.Description = nullableString(strings.TrimSpace(r.FormValue("description")))
+	campaign.PublicLinkEnabled = r.FormValue("public_link_enabled") == "on"
+	if err := h.q.UpdateCampaign(r.Context(), campaign, user.ID); err != nil {
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, "campaign.error.slug"))
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID), http.StatusSeeOther)
+}
+
+func (h *Handler) Privacy(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionPrivacy)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusOK, templates.CampaignPrivacy(h.cfg.InstanceName, user, campaign, settings))
+}
+
+func (h *Handler) PrivacyPost(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionPrivacy)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	settings := db.CampaignSettings{
+		CollectInstallToken: r.FormValue("collect_install_token") == "on", HashInstallToken: true,
+		CountRawVisits: r.FormValue("count_raw_visits") == "on", CountUniqueTokenVisits: r.FormValue("count_unique_token_visits") == "on",
+		CollectReferrerDomain: r.FormValue("collect_referrer_domain") == "on", CollectCoarseBrowser: r.FormValue("collect_coarse_browser") == "on",
+		CollectCoarseOS: r.FormValue("collect_coarse_os") == "on", PublicLanguageDefault: validLanguage(r.FormValue("public_language_default")),
+		ShowPrivacyNotice: r.FormValue("show_privacy_notice") == "on",
+	}
+	if err := h.q.UpdateCampaignPrivacy(r.Context(), campaign, settings, user.ID); err != nil {
+		http.Error(w, "privacy update denied", http.StatusUnprocessableEntity)
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/privacy", http.StatusSeeOther)
+}
+
+func (h *Handler) Access(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionAccess)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	members, _ := h.q.ListCampaignAccess(r.Context(), campaign.ID, campaign.OrganizationID)
+	web.Render(w, r, http.StatusOK, templates.CampaignAccess(h.cfg.InstanceName, user, campaign, members, ""))
+}
+
+func (h *Handler) AccessPost(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionAccess)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	err := h.q.SetCampaignMember(r.Context(), campaign, r.FormValue("user_public_id"), r.FormValue("role"), user.ID)
+	if err != nil {
+		members, _ := h.q.ListCampaignAccess(r.Context(), campaign.ID, campaign.OrganizationID)
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignAccess(h.cfg.InstanceName, user, campaign, members, campaignAccessError(err)))
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/access", http.StatusSeeOther)
+}
+
+func (h *Handler) AccessRemove(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionAccess)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	err := h.q.RemoveCampaignMember(r.Context(), campaign, chi.URLParam(r, "userPublicID"), user.ID)
+	if err != nil {
+		members, _ := h.q.ListCampaignAccess(r.Context(), campaign.ID, campaign.OrganizationID)
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignAccess(h.cfg.InstanceName, user, campaign, members, campaignAccessError(err)))
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/access", http.StatusSeeOther)
+}
+
+func (h *Handler) Status(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionArchive)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	if err := h.q.ChangeCampaignStatus(r.Context(), campaign, r.FormValue("status"), user.ID); err != nil {
+		http.Error(w, "invalid status transition", http.StatusUnprocessableEntity)
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID), http.StatusSeeOther)
+}
+
+type permissionKind int
+
+const (
+	permissionView permissionKind = iota
+	permissionEdit
+	permissionPrivacy
+	permissionAccess
+	permissionArchive
+)
+
+func (h *Handler) campaign(r *http.Request, permission permissionKind) (db.User, db.Campaign, string, bool) {
+	user, _ := auth.UserFromContext(r.Context())
+	campaign, err := h.q.GetCampaignByPublicID(r.Context(), chi.URLParam(r, "orgPublicID"), chi.URLParam(r, "campaignPublicID"))
+	if err != nil {
+		return user, campaign, "", false
+	}
+	role, err := h.permissions.CampaignRole(r.Context(), user.ID, campaign.ID)
+	if err != nil {
+		return user, campaign, "", false
+	}
+	allowed := false
+	switch permission {
+	case permissionView:
+		allowed, _ = h.permissions.CanViewCampaign(r.Context(), user.ID, campaign.ID)
+	case permissionEdit:
+		allowed, _ = h.permissions.CanEditCampaign(r.Context(), user.ID, campaign.ID)
+	case permissionPrivacy:
+		allowed, _ = h.permissions.CanChangeCampaignPrivacy(r.Context(), user.ID, campaign.ID)
+	case permissionAccess:
+		allowed, _ = h.permissions.CanManageCampaignAccess(r.Context(), user.ID, campaign.ID)
+	case permissionArchive:
+		allowed, _ = h.permissions.CanArchiveCampaign(r.Context(), user.ID, campaign.ID)
+	}
+	if permission != permissionView && (campaign.Status == "archived" || campaign.DisabledAt.Valid) {
+		allowed = false
+	}
+	return user, campaign, role, allowed
+}
+
+func (h *Handler) organization(r *http.Request, userID int64) (db.Organization, string, bool, bool) {
+	org, err := h.q.GetOrganizationByPublicID(r.Context(), chi.URLParam(r, "orgPublicID"))
+	if err != nil || org.DisabledAt.Valid {
+		return org, "", false, false
+	}
+	instanceOwner, _ := h.permissions.IsInstanceOwner(r.Context(), userID)
+	role, err := h.q.OrganizationRole(r.Context(), userID, org.ID)
+	if instanceOwner {
+		return org, role, true, true
+	}
+	return org, role, false, err == nil
+}
+
+func (h *Handler) forbidden(w http.ResponseWriter, r *http.Request) {
+	web.Render(w, r, http.StatusForbidden, templates.ErrorPage(h.cfg.InstanceName, http.StatusForbidden, i18n.T(r.Context(), "error.forbidden.title"), i18n.T(r.Context(), "error.forbidden.message")))
+}
+
+func campaignURL(orgPublicID, campaignPublicID string) string {
+	return "/app/orgs/" + orgPublicID + "/campaigns/" + campaignPublicID
+}
+
+func validLanguage(value string) string {
+	if value == "de" || value == "es" {
+		return value
+	}
+	return "en"
+}
+
+func nullableString(value string) sql.NullString {
+	return sql.NullString{String: value, Valid: value != ""}
+}
+
+func campaignAccessError(err error) string {
+	if errors.Is(err, db.ErrLastOwner) {
+		return "campaign.access.error.last_owner"
+	}
+	if errors.Is(err, db.ErrCampaignArchived) {
+		return "campaign.error.archived"
+	}
+	return "campaign.access.error.member"
+}

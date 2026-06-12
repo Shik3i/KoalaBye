@@ -22,6 +22,8 @@ These rules apply to human contributors and coding agents.
 - Deny access by default when identity, role, or tenancy is uncertain.
 - Never store raw invite codes. Show a newly generated invite only once and store its hash.
 - Preserve at least one owner per organization and one active Instance Owner per instance.
+- Preserve at least one explicit owner per campaign. Organization owners and admins retain documented implicit campaign-owner access.
+- Future install-token processing must use HMAC-SHA256 and must never store raw tokens.
 
 ## Engineering
 
@@ -67,4 +69,5 @@ These rules apply to human contributors and coding agents.
 - Before adding a query, update sqlc and commit the generated output.
 - Before changing architecture, update `docs/ARCHITECTURE.md`.
 - Audit sensitive Instance Owner overrides, status changes, role changes, and safety-limit changes.
+- Campaign routes use public IDs, enforce organization-scoped slugs, and keep archived or disabled records counted against safety limits.
 - Do not add external CDNs, mandatory email, billing, analytics, or external services unless explicitly requested.

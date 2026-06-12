@@ -1,0 +1,231 @@
+package templates
+
+import (
+	"context"
+	"github.com/koalastuff/koalabye/internal/db"
+)
+
+templ CampaignNav(campaign db.Campaign) {
+	<nav class="subnav">
+		<a href={ templ.SafeURL(campaignPath(campaign)) }>{ tr(ctx, "campaign.overview") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/settings") }>{ tr(ctx, "campaign.settings") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/privacy") }>{ tr(ctx, "campaign.privacy.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/access") }>{ tr(ctx, "campaign.access.title") }</a>
+	</nav>
+}
+
+templ CampaignList(instanceName string, user db.User, org db.Organization, campaigns []db.Campaign, limits db.OrganizationLimits, count int64, canCreate bool) {
+	@Layout(tr(ctx, "campaign.title"), instanceName, &user) {
+		<section class="page-heading">
+			<div><div class="eyebrow">{ org.Name }</div><h1>{ tr(ctx, "campaign.title") }</h1><p class="muted">{ tr(ctx, "campaign.list.description") }</p></div>
+			if canCreate {
+				<a class="button" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/new") }>{ tr(ctx, "campaign.create") }</a>
+			}
+		</section>
+		if count >= limits.MaxCampaigns {
+			<div class="notice">{ tr(ctx, "campaign.limit.message") }</div>
+		}
+		<div class="grid two">
+			for _, campaign := range campaigns {
+				<a class="panel card-link" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID) }>
+					<h2>{ campaign.Name }</h2>
+					<p>{ campaign.Description.String }</p>
+					<div class="stats"><span class="badge">{ tr(ctx, "campaign.status." + campaign.Status) }</span><span>{ campaign.Slug }</span></div>
+				</a>
+			}
+			if len(campaigns) == 0 {
+				<div class="panel"><p>{ tr(ctx, "campaign.empty") }</p></div>
+			}
+		</div>
+		<p class="muted">{ tr(ctx, "campaign.limit.usage", count, limits.MaxCampaigns) }</p>
+	}
+}
+
+templ CampaignNew(instanceName string, user db.User, org db.Organization, errorKey string, defaults db.CampaignSettings) {
+	@Layout(tr(ctx, "campaign.new.title"), instanceName, &user) {
+		<section class="auth-shell wide">
+			<div class="eyebrow">{ org.Name }</div>
+			<h1>{ tr(ctx, "campaign.new.title") }</h1>
+			if errorKey != "" {
+				<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
+			}
+			<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") } class="panel form-stack">
+				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+				<label>{ tr(ctx, "campaign.name") }<input name="name" required maxlength="120"/></label>
+				<label>{ tr(ctx, "campaign.slug") }<input name="slug" required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
+				<label>{ tr(ctx, "campaign.description") }<textarea name="description" maxlength="1000"></textarea></label>
+				<label>
+					{ tr(ctx, "campaign.language") }@languageSelect(defaults.PublicLanguageDefault)
+				</label>
+				<label>{ tr(ctx, "campaign.privacy.preset") }<select name="privacy_preset"><option value="strict">{ tr(ctx, "campaign.privacy.strict") }</option><option value="balanced">{ tr(ctx, "campaign.privacy.balanced") }</option></select></label>
+				<p class="muted">{ tr(ctx, "campaign.privacy.preset_help") }</p>
+				<button type="submit">{ tr(ctx, "campaign.create") }</button>
+			</form>
+		</section>
+	}
+}
+
+templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, role, baseURL string) {
+	@Layout(campaign.Name, instanceName, &user) {
+		@CampaignNav(campaign)
+		<section class="page-heading">
+			<div><div class="eyebrow">{ campaign.OrganizationName }</div><h1>{ campaign.Name }</h1><p class="muted">{ campaign.Description.String }</p></div>
+			<span class="badge">{ tr(ctx, "campaign.status." + campaign.Status) }</span>
+		</section>
+		if campaign.DisabledAt.Valid {
+			<div class="alert">{ tr(ctx, "campaign.disabled") }</div>
+		}
+		if campaign.Status == "archived" {
+			<div class="notice">{ tr(ctx, "campaign.archived.read_only") }</div>
+		}
+		<section class="grid two">
+			<article class="panel">
+				<h2>{ tr(ctx, "campaign.public_link") }</h2>
+				<p>{ tr(ctx, "campaign.public_link.preview") }</p>
+				<code>{ baseURL + "/c/" + campaign.PublicID }</code>
+				<p><code>{ baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug }</code></p>
+				if campaign.PublicLinkEnabled {
+					<span class="badge">{ tr(ctx, "common.enabled") }</span>
+				} else {
+					<span class="badge quiet">{ tr(ctx, "common.disabled") }</span>
+				}
+				<p class="muted">{ tr(ctx, "campaign.public_link.future") }</p>
+			</article>
+			<article class="panel">
+				<h2>{ tr(ctx, "campaign.privacy.title") }</h2>
+				<p>{ privacySummary(ctx, settings) }</p>
+				<ul><li>{ tr(ctx, "campaign.privacy.no_ip") }</li><li>{ tr(ctx, "campaign.privacy.no_fingerprint") }</li><li>{ tr(ctx, "campaign.privacy.no_raw_token") }</li><li>{ tr(ctx, "campaign.privacy.cookie_free") }</li></ul>
+			</article>
+		</section>
+		<section class="panel">
+			<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
+			<pre><code>{ `chrome.runtime.setUninstallURL("` + baseURL + `/c/` + campaign.PublicID + `?t=" + token);` }</code></pre>
+			<p class="muted">{ tr(ctx, "campaign.snippet.future") }</p>
+		</section>
+		<section class="grid three">
+			for _, key := range []string{"form", "public_page", "visits", "responses", "analytics", "export"} {
+				<article class="panel"><h2>{ tr(ctx, "campaign.future." + key) }</h2><span class="badge quiet">{ tr(ctx, "campaign.future.label") }</span></article>
+			}
+		</section>
+		if campaign.Status != "archived" && role == "owner" {
+			<section class="panel">
+				<h2>{ tr(ctx, "campaign.lifecycle") }</h2>
+				<div class="actions">
+					if campaign.Status == "draft" || campaign.Status == "paused" {
+						@statusForm(campaign, "active", "campaign.activate")
+					}
+					if campaign.Status == "active" {
+						@statusForm(campaign, "paused", "campaign.pause")
+					}
+					@statusForm(campaign, "archived", "campaign.archive")
+				</div>
+			</section>
+		}
+	}
+}
+
+templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, errorKey string) {
+	@Layout(tr(ctx, "campaign.settings"), instanceName, &user) {
+		@CampaignNav(campaign)
+		<section class="auth-shell wide">
+			<h1>{ tr(ctx, "campaign.settings") }</h1>
+			if errorKey != "" {
+				<div class="alert">{ tr(ctx, errorKey) }</div>
+			}
+			<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/settings") } class="panel form-stack">
+				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+				<label>{ tr(ctx, "campaign.name") }<input name="name" value={ campaign.Name } required maxlength="120"/></label>
+				<label>{ tr(ctx, "campaign.slug") }<input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
+				<label>{ tr(ctx, "campaign.description") }<textarea name="description" maxlength="1000">{ campaign.Description.String }</textarea></label>
+				<label class="check"><input type="checkbox" name="public_link_enabled" checked?={ campaign.PublicLinkEnabled }/>{ tr(ctx, "campaign.public_link.enable") }</label>
+				<button type="submit">{ tr(ctx, "common.save") }</button>
+			</form>
+		</section>
+	}
+}
+
+templ CampaignPrivacy(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings) {
+	@Layout(tr(ctx, "campaign.privacy.title"), instanceName, &user) {
+		@CampaignNav(campaign)
+		<section class="page-heading"><div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "campaign.privacy.title") }</h1></div></section>
+		<div class="notice"><strong>{ tr(ctx, "campaign.privacy.promise") }</strong><p>{ tr(ctx, "campaign.privacy.promise_text") }</p></div>
+		<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/privacy") } class="panel form-stack">
+			<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+			@campaignCheck("collect_install_token", "campaign.privacy.install_token", settings.CollectInstallToken)
+			@campaignCheck("count_raw_visits", "campaign.privacy.raw_visits", settings.CountRawVisits)
+			@campaignCheck("count_unique_token_visits", "campaign.privacy.unique_visits", settings.CountUniqueTokenVisits)
+			@campaignCheck("collect_referrer_domain", "campaign.privacy.referrer", settings.CollectReferrerDomain)
+			@campaignCheck("collect_coarse_browser", "campaign.privacy.browser", settings.CollectCoarseBrowser)
+			@campaignCheck("collect_coarse_os", "campaign.privacy.os", settings.CollectCoarseOS)
+			<label>
+				{ tr(ctx, "campaign.language") }@languageSelect(settings.PublicLanguageDefault)
+			</label>
+			@campaignCheck("show_privacy_notice", "campaign.privacy.notice", settings.ShowPrivacyNotice)
+			<p class="muted">{ tr(ctx, "campaign.privacy.hash_locked") }</p>
+			<button type="submit">{ tr(ctx, "common.save") }</button>
+		</form>
+	}
+}
+
+templ CampaignAccess(instanceName string, user db.User, campaign db.Campaign, members []db.CampaignMember, errorKey string) {
+	@Layout(tr(ctx, "campaign.access.title"), instanceName, &user) {
+		@CampaignNav(campaign)
+		<section class="page-heading"><div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "campaign.access.title") }</h1><p>{ tr(ctx, "campaign.access.implicit") }</p></div></section>
+		if errorKey != "" {
+			<div class="alert">{ tr(ctx, errorKey) }</div>
+		}
+		<section class="panel table-wrap">
+			<table>
+				<thead><tr><th>{ tr(ctx, "auth.login.username") }</th><th>{ tr(ctx, "campaign.access.org_role") }</th><th>{ tr(ctx, "campaign.access.role") }</th><th></th></tr></thead>
+				<tbody>
+					for _, member := range members {
+						<tr>
+							<td>{ member.DisplayName } <span class="muted">({ member.Username })</span></td>
+							<td>{ tr(ctx, "role." + member.OrgRole) }</td>
+							<td>
+								if member.Role.Valid {
+									{ tr(ctx, "campaign.role." + member.Role.String) }
+								} else {
+									<span class="muted">{ tr(ctx, "campaign.access.none") }</span>
+								}
+							</td>
+							<td>
+								<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access") }>
+									<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="user_public_id" value={ member.PublicID }/>
+									<select name="role" aria-label={ tr(ctx, "campaign.access.role") }><option value="viewer">{ tr(ctx, "campaign.role.viewer") }</option><option value="analyst">{ tr(ctx, "campaign.role.analyst") }</option><option value="editor">{ tr(ctx, "campaign.role.editor") }</option><option value="owner">{ tr(ctx, "campaign.role.owner") }</option></select>
+									<button class="link-button" type="submit">{ tr(ctx, "campaign.access.grant") }</button>
+								</form>
+								if member.Role.Valid {
+									<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access/" + member.PublicID + "/remove") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit">{ tr(ctx, "members.remove") }</button></form>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</section>
+	}
+}
+
+templ statusForm(campaign db.Campaign, status, key string) {
+	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/status") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="status" value={ status }/><button type="submit">{ tr(ctx, key) }</button></form>
+}
+
+templ campaignCheck(name, key string, checked bool) {
+	<label class="check"><input type="checkbox" name={ name } checked?={ checked }/>{ tr(ctx, key) }</label>
+}
+
+templ languageSelect(selected string) {
+	<select name="public_language_default"><option value="en" selected?={ selected == "en" }>{ tr(ctx, "language.en") }</option><option value="de" selected?={ selected == "de" }>{ tr(ctx, "language.de") }</option><option value="es" selected?={ selected == "es" }>{ tr(ctx, "language.es") }</option></select>
+}
+
+func campaignPath(campaign db.Campaign) string {
+	return "/app/orgs/" + campaign.OrganizationPublicID + "/campaigns/" + campaign.PublicID
+}
+
+func privacySummary(ctx context.Context, settings db.CampaignSettings) string {
+	if settings.CollectReferrerDomain || settings.CollectCoarseBrowser || settings.CollectCoarseOS {
+		return tr(ctx, "campaign.privacy.balanced_summary")
+	}
+	return tr(ctx, "campaign.privacy.strict_summary")
+}

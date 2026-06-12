@@ -33,6 +33,8 @@ Every change should be reviewed for data minimization, tenant isolation, authori
 
 Organization actions must preserve role boundaries and the final-owner invariant. Instance Owner overrides, status changes, settings changes, and safety-limit changes require audit events. Invite implementations must store only hashes and must not introduce email as a requirement.
 
+Campaign changes must preserve organization tenancy, explicit-owner invariants, documented implicit organization access, and lifecycle transition rules. Campaign slugs are organization-scoped; URLs use public IDs. Privacy changes must never add IP storage, fingerprinting, or raw install-token persistence.
+
 KoalaBye is 100% free forever. Safety limits are operational abuse-prevention controls, not plans. Do not add billing, subscription, payment, premium, or upgrade concepts to code, copy, schema, or documentation.
 
 ## Translations

@@ -2,7 +2,7 @@
 
 KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform for uninstall feedback and lightweight anonymous surveys. It is designed for browser extensions, apps, and small developer tools that need honest feedback without tracking people.
 
-> **Status:** early foundation. Authentication, first-run setup, organizations, permissions, audit logging, and deployment packaging are present. Campaigns and public survey pages are intentionally not implemented yet.
+> **Status:** early foundation. Authentication, organizations, campaign management, permissions, privacy settings, audit logging, and deployment packaging are present. Public survey pages and response collection are intentionally not implemented yet.
 
 ## Principles
 
@@ -73,10 +73,18 @@ Users may belong to multiple organizations with `owner`, `admin`, `member`, or `
 
 Invite codes require no email. KoalaBye stores only a hash, displays the raw code once after creation, and enforces its role, expiry, use count, member limit, and revocation state. Instance Owners manage users, organizations, registration settings, safety limits, and audit events under `/instance`.
 
+## Campaigns
+
+A campaign is one uninstall-feedback or feedback-collection target inside an organization. Campaigns use stable public IDs and organization-scoped readable slugs. Their lifecycle is `draft`, `active`, `paused`, then `archived`; archived campaigns remain visible, count toward safety limits, and are read-only.
+
+Organization owners and admins have implicit campaign-owner access. Other organization members receive an explicit `owner`, `editor`, `analyst`, or `viewer` campaign role. Every campaign retains at least one explicit owner.
+
+Campaign privacy defaults are strict. Optional coarse referrer, browser-family, and operating-system-family settings can be enabled with the Balanced preset. Neither preset stores IP addresses, fingerprints visitors, or permits raw install-token storage. Future public links will use `/c/{campaignPublicID}` with `/u/{orgSlug}/{campaignSlug}` as a readable form; they are previews only in this phase.
+
 The optional bootstrap admin variables may create the first owner only when no owner exists. They never overwrite users and the password is never logged.
 
 ## Roadmap
 
-The next layers are campaigns, a form builder, cookie-free public uninstall pages, privacy-preserving visit counts, response storage, exports, and aggregate analytics. Passkeys and optional email may follow. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
+The next layers are a form builder, cookie-free public uninstall pages, privacy-preserving visit counts, response storage, exports, and aggregate analytics. Passkeys and optional email may follow. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
 See [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).
