@@ -377,7 +377,7 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, brand
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\" class=\"panel form-stack\" style=\"margin-bottom: 24px;\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\" class=\"panel form-stack mb-24\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -403,7 +403,7 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, brand
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</h2><div style=\"display:flex; gap:12px;\"><select name=\"preset_id\" style=\"flex:1;\"><option value=\"uninstall\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</h2><div class=\"flex-gap-12\"><select name=\"preset_id\" class=\"flex-1\"><option value=\"uninstall\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -611,14 +611,14 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, brand
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<section class=\"panel public-card\" style=\"padding:0; overflow:hidden;\"><h2 style=\"padding: 16px 24px 0;\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<section class=\"panel public-card p-0 overflow-hidden\"><h2 class=\"p-16-24-0\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "form.preview"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 87, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 87, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -628,7 +628,7 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, brand
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var39 = []any{bodyClass(&branding)}
+			var templ_7745c5c3_Var39 = []any{bodyClass(&branding) + " preview-body-container-static"}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var39...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -646,7 +646,7 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, brand
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "\" style=\"min-height: 400px; padding: 24px; background-color: var(--paper);\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -669,7 +669,7 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, brand
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "<div class=\"public-main\" style=\"transform: scale(0.85); transform-origin: top left; width: 117.64%;\"><form class=\"public-form public-card panel\" style=\"margin: 0;\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "<div class=\"public-main preview-main-scaled\"><form class=\"public-form public-card panel m-0\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -677,7 +677,7 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, brand
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<button class=\"primary\" style=\"margin-top: 20px; opacity:0.8;\" disabled>Submit</button></form></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<button class=\"primary mt-20 opacity-80\" disabled>Submit</button></form></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

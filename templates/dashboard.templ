@@ -39,7 +39,7 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 						<p>{ tr(ctx, "dashboard.no_campaigns") }</p>
 						<p class="muted">{ tr(ctx, "dashboard.campaign_explanation") }</p>
 						if len(organizations) > 0 {
-							<p class="muted" style="font-size: 0.9rem; margin-top: 12px;">{ tr(ctx, "dashboard.create_campaign_instruction") }</p>
+							<p class="muted mt-12 text-sm">{ tr(ctx, "dashboard.create_campaign_instruction") }</p>
 						} else {
 							if canCreate {
 								<a class="button" href="/app/orgs/new">{ tr(ctx, "org.create") }</a>
@@ -54,7 +54,7 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 									<a href={ templ.SafeURL("/app/orgs/" + campaign.OrganizationPublicID + "/campaigns/" + campaign.PublicID) }>
 										<strong>{ campaign.Name }</strong>
 									</a>
-									<span class="muted" style="font-size: 0.8rem; margin-left: auto; margin-right: 12px;">{ campaign.OrganizationName }</span>
+									<span class="muted text-xs ml-auto mr-12">{ campaign.OrganizationName }</span>
 									<span class={ "badge status-" + campaign.Status }>{ tr(ctx, "campaign.status." + campaign.Status) }</span>
 								</li>
 							}

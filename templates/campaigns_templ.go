@@ -2291,7 +2291,7 @@ func CampaignDetail(instanceName string, user db.User, campaign db.Campaign, set
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 182, "</summary><div style=\"padding-top: 12px;\"><ul class=\"checklist-list\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 182, "</summary><div class=\"pt-12\"><ul class=\"checklist-list\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -2315,14 +2315,14 @@ func CampaignDetail(instanceName string, user db.User, campaign db.Campaign, set
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 183, "</ul><p class=\"muted\" style=\"margin-top: 12px; font-size: 0.85rem;\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 183, "</ul><p class=\"muted mt-12 text-sm\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var159 string
 				templ_7745c5c3_Var159, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "campaign.checklist.derived"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/campaigns.templ`, Line: 211, Col: 108}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/campaigns.templ`, Line: 211, Col: 76}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var159))
 				if templ_7745c5c3_Err != nil {
@@ -2341,7 +2341,7 @@ func CampaignDetail(instanceName string, user db.User, campaign db.Campaign, set
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 185, "</summary><div style=\"padding-top: 12px;\"><p>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 185, "</summary><div class=\"pt-12\"><p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -2432,14 +2432,14 @@ func CampaignDetail(instanceName string, user db.User, campaign db.Campaign, set
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 192, "</code></pre></div><p class=\"muted\" style=\"margin-top: 12px; margin-bottom: 6px;\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 192, "</code></pre></div><p class=\"muted my-12-6\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var168 string
 				templ_7745c5c3_Var168, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "campaign.snippet.firefox"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/campaigns.templ`, Line: 221, Col: 107}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/campaigns.templ`, Line: 221, Col: 69}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var168))
 				if templ_7745c5c3_Err != nil {
@@ -3270,11 +3270,11 @@ func CampaignBrandingForm(instanceName string, user db.User, campaign db.Campaig
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 259, "</button></form></div><div><section class=\"panel public-card\" style=\"padding:0; overflow:hidden;\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 259, "</button></form></div><div><section class=\"panel public-card p-0 overflow-hidden\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var221 = []any{bodyClass(&branding)}
+			var templ_7745c5c3_Var221 = []any{bodyClass(&branding) + " preview-body-container"}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var221...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -3292,7 +3292,7 @@ func CampaignBrandingForm(instanceName string, user db.User, campaign db.Campaig
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 261, "\" style=\"min-height: 400px; padding: 24px; transition: all 0.2s; background-color: var(--paper);\"><div class=\"public-main\" style=\"transform: scale(0.85); transform-origin: top left; width: 117.64%;\"><div class=\"public-header\" style=\"padding:0;\"><div class=\"public-brand\"><span class=\"brand-logo\" aria-hidden=\"true\">🐨</span> <span id=\"preview-brand-name\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 261, "\"><div class=\"public-main preview-main-scaled\"><div class=\"public-header p-0\"><div class=\"public-brand\"><span class=\"brand-logo\" aria-hidden=\"true\">🐨</span> <span id=\"preview-brand-name\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -3305,7 +3305,7 @@ func CampaignBrandingForm(instanceName string, user db.User, campaign db.Campaig
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 262, "</span></div></div><div class=\"public-hero\" style=\"padding-top: 20px;\"><h1 style=\"font-size: 2.2rem; margin-bottom: 8px;\">We're sorry to see you go</h1><p>Please take a moment to tell us why you are uninstalling.</p></div><div class=\"public-card panel\" style=\"margin-top: 20px;\"><fieldset class=\"public-field\" style=\"border:0; padding:0;\"><legend style=\"font-weight:750;\">Why are you uninstalling?</legend> <label class=\"choice\" style=\"display:flex; gap:8px; margin-top:8px;\"><input type=\"radio\" disabled> Missing features</label> <label class=\"choice\" style=\"display:flex; gap:8px; margin-top:8px;\"><input type=\"radio\" checked disabled> Too many bugs</label></fieldset><button class=\"primary\" style=\"margin-top: 20px; opacity:0.8;\" disabled>Submit Feedback</button></div></div></div></section><script>\r\n\t\t\t\t\tdocument.addEventListener(\"DOMContentLoaded\", () => {\r\n\t\t\t\t\t\tconst form = document.getElementById(\"branding-form\");\r\n\t\t\t\t\t\tconst previewBody = document.getElementById(\"preview-body\");\r\n\t\t\t\t\t\tconst brandNameInput = form.querySelector('[name=\"brand_name\"]');\r\n\t\t\t\t\t\tconst previewBrandName = document.getElementById(\"preview-brand-name\");\r\n\t\t\t\t\t\t\r\n\t\t\t\t\t\tfunction updatePreview() {\r\n\t\t\t\t\t\t\tconst accent = form.querySelector('[name=\"accent_preset\"]').value || \"default\";\r\n\t\t\t\t\t\t\tconst theme = form.querySelector('[name=\"background_style\"]').value || \"theme-default\";\r\n\t\t\t\t\t\t\tpreviewBody.className = \"public-body accent-\" + accent + \" \" + theme;\r\n\t\t\t\t\t\t\tpreviewBrandName.textContent = brandNameInput.value || \"KoalaBye\";\r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\r\n\t\t\t\t\t\tform.addEventListener(\"input\", updatePreview);\r\n\t\t\t\t\t\tform.addEventListener(\"change\", updatePreview);\r\n\t\t\t\t\t\tupdatePreview();\r\n\t\t\t\t\t});\r\n\t\t\t\t</script></div></section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 262, "</span></div></div><div class=\"public-hero pt-20\"><h1 class=\"preview-h1\">We're sorry to see you go</h1><p>Please take a moment to tell us why you are uninstalling.</p></div><div class=\"public-card panel mt-20\"><fieldset class=\"public-field border-0 p-0\"><legend class=\"font-bold-750\">Why are you uninstalling?</legend> <label class=\"choice flex-gap-8-mt-8\"><input type=\"radio\" disabled> Missing features</label> <label class=\"choice flex-gap-8-mt-8\"><input type=\"radio\" checked disabled> Too many bugs</label></fieldset><button class=\"primary mt-20 opacity-80\" disabled>Submit Feedback</button></div></div></div></section><script>\r\n\t\t\t\t\tdocument.addEventListener(\"DOMContentLoaded\", () => {\r\n\t\t\t\t\t\tconst form = document.getElementById(\"branding-form\");\r\n\t\t\t\t\t\tconst previewBody = document.getElementById(\"preview-body\");\r\n\t\t\t\t\t\tconst brandNameInput = form.querySelector('[name=\"brand_name\"]');\r\n\t\t\t\t\t\tconst previewBrandName = document.getElementById(\"preview-brand-name\");\r\n\t\t\t\t\t\t\r\n\t\t\t\t\t\tfunction updatePreview() {\r\n\t\t\t\t\t\t\tconst accent = form.querySelector('[name=\"accent_preset\"]').value || \"default\";\r\n\t\t\t\t\t\t\tconst theme = form.querySelector('[name=\"background_style\"]').value || \"theme-default\";\r\n\t\t\t\t\t\t\tpreviewBody.className = \"public-body accent-\" + accent + \" \" + theme;\r\n\t\t\t\t\t\t\tpreviewBrandName.textContent = brandNameInput.value || \"KoalaBye\";\r\n\t\t\t\t\t\t}\r\n\t\t\t\t\t\t\r\n\t\t\t\t\t\tform.addEventListener(\"input\", updatePreview);\r\n\t\t\t\t\t\tform.addEventListener(\"change\", updatePreview);\r\n\t\t\t\t\t\tupdatePreview();\r\n\t\t\t\t\t});\r\n\t\t\t\t</script></div></section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -3893,7 +3893,7 @@ func CampaignAccess(instanceName string, user db.User, campaign db.Campaign, mem
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 306, "</td><td><div class=\"heading-actions\" style=\"justify-content: flex-start; gap: 8px;\"><form class=\"control-switcher\" method=\"post\" action=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 306, "</td><td><div class=\"heading-actions justify-start gap-8\"><form class=\"control-switcher\" method=\"post\" action=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -4054,14 +4054,14 @@ func CampaignAccess(instanceName string, user db.User, campaign db.Campaign, mem
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 319, "\"><button class=\"compact-button\" style=\"background: var(--danger);\" type=\"submit\" data-tooltip=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 319, "\"><button class=\"compact-button bg-danger\" type=\"submit\" data-tooltip=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var270 string
 					templ_7745c5c3_Var270, templ_7745c5c3_Err = templ.ResolveAttributeValue(tr(ctx, "tooltip.btn.remove"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/campaigns.templ`, Line: 419, Col: 337}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/campaigns.templ`, Line: 419, Col: 312}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var270)
 					if templ_7745c5c3_Err != nil {
@@ -4074,7 +4074,7 @@ func CampaignAccess(instanceName string, user db.User, campaign db.Campaign, mem
 					var templ_7745c5c3_Var271 string
 					templ_7745c5c3_Var271, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "members.remove"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/campaigns.templ`, Line: 419, Col: 367}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/campaigns.templ`, Line: 419, Col: 342}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var271))
 					if templ_7745c5c3_Err != nil {

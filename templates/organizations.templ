@@ -62,16 +62,16 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 				<h2>{ tr(ctx, "campaign.title") }</h2>
 				if len(campaigns) == 0 {
 					<p>{ tr(ctx, "campaign.empty_explanation") }</p>
-					<ul class="clean-list" style="margin-bottom: 16px;">
-						<li style="border-top: none; padding: 4px 0;"><span style="color: var(--green);">✓</span> { tr(ctx, "campaign.example.chrome") }</li>
-						<li style="border-top: none; padding: 4px 0;"><span style="color: var(--green);">✓</span> { tr(ctx, "campaign.example.firefox") }</li>
-						<li style="border-top: none; padding: 4px 0;"><span style="color: var(--green);">✓</span> { tr(ctx, "campaign.example.cancellation") }</li>
+					<ul class="clean-list mb-16">
+						<li class="border-t-0 py-4"><span class="text-green">✓</span> { tr(ctx, "campaign.example.chrome") }</li>
+						<li class="border-t-0 py-4"><span class="text-green">✓</span> { tr(ctx, "campaign.example.firefox") }</li>
+						<li class="border-t-0 py-4"><span class="text-green">✓</span> { tr(ctx, "campaign.example.cancellation") }</li>
 					</ul>
 					if canManage && int64(len(campaigns)) < limits.MaxCampaigns {
 						<a class="button" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/new") }>{ tr(ctx, "campaign.create") }</a>
 					}
 				} else {
-					<ul class="clean-list" style="margin-bottom: 16px;">
+					<ul class="clean-list mb-16">
 						for _, campaign := range campaigns {
 							<li>
 								<a href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID) }>
@@ -81,7 +81,7 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 							</li>
 						}
 					</ul>
-					<div style="display: flex; gap: 16px; align-items: center;">
+					<div class="flex gap-16 items-center">
 						if canManage && int64(len(campaigns)) < limits.MaxCampaigns {
 							<a class="button secondary compact-button" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/new") }>{ tr(ctx, "campaign.create") }</a>
 						}
@@ -119,9 +119,9 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 								<td>{ tr(ctx, "role." + member.Role) }</td>
 								<td>
 									if canManage {
-										<div class="heading-actions" style="justify-content: flex-start; gap: 8px;">
+										<div class="heading-actions justify-start gap-8">
 											<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/members/role") } class="control-switcher"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="user_id" value={ fmt.Sprint(member.UserID) }/><select name="role" aria-label={ tr(ctx, "members.role") }><option value={ member.Role }>{ tr(ctx, "role." + member.Role) }</option><option value="viewer">{ tr(ctx, "role.viewer") }</option><option value="member">{ tr(ctx, "role.member") }</option><option value="admin">{ tr(ctx, "role.admin") }</option><option value="owner">{ tr(ctx, "role.owner") }</option></select><button class="compact-button" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button></form>
-											<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/members/remove") } class="inline-form"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="user_id" value={ fmt.Sprint(member.UserID) }/><button class="compact-button" style="background: var(--danger);" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "members.remove") }</button></form>
+											<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/members/remove") } class="inline-form"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="user_id" value={ fmt.Sprint(member.UserID) }/><button class="compact-button bg-danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "members.remove") }</button></form>
 										</div>
 									}
 								</td>

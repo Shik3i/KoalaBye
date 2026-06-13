@@ -53,11 +53,11 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, bran
 			</div>
 			<div>
 				if canEdit {
-					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/presets") } class="panel form-stack" style="margin-bottom: 24px;">
+					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/presets") } class="panel form-stack mb-24">
 						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 						<h2>{ tr(ctx, "form.preset.load") }</h2>
-						<div style="display:flex; gap:12px;">
-							<select name="preset_id" style="flex:1;">
+						<div class="flex-gap-12">
+							<select name="preset_id" class="flex-1">
 								<option value="uninstall">{ tr(ctx, "form.preset.uninstall") }</option>
 								<option value="feedback">{ tr(ctx, "form.preset.feedback") }</option>
 								<option value="bug">{ tr(ctx, "form.preset.bug") }</option>
@@ -83,16 +83,16 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, bran
 						<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.add") }>{ tr(ctx, "form.add") }</button>
 					</form>
 				}
-				<section class="panel public-card" style="padding:0; overflow:hidden;">
-					<h2 style="padding: 16px 24px 0;">{ tr(ctx, "form.preview") }</h2>
-					<div id="preview-body" class={ bodyClass(&branding) } style="min-height: 400px; padding: 24px; background-color: var(--paper);">
+				<section class="panel public-card p-0 overflow-hidden">
+					<h2 class="p-16-24-0">{ tr(ctx, "form.preview") }</h2>
+					<div id="preview-body" class={ bodyClass(&branding) + " preview-body-container-static" }>
 						if len(fields) == 0 {
 							<p>{ tr(ctx, "public.form.placeholder") }</p>
 						} else {
-							<div class="public-main" style="transform: scale(0.85); transform-origin: top left; width: 117.64%;">
-								<form class="public-form public-card panel" style="margin: 0;">
+							<div class="public-main preview-main-scaled">
+								<form class="public-form public-card panel m-0">
 									@PublicFields(fields, false)
-									<button class="primary" style="margin-top: 20px; opacity:0.8;" disabled>Submit</button>
+									<button class="primary mt-20 opacity-80" disabled>Submit</button>
 								</form>
 							</div>
 						}

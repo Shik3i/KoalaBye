@@ -200,7 +200,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				<h2>{ tr(ctx, "campaign.onboarding.title") }</h2>
 				<details class="integration-details">
 					<summary>{ tr(ctx, "campaign.checklist.title.collapsed") }</summary>
-					<div style="padding-top: 12px;">
+					<div class="pt-12">
 						<ul class="checklist-list">
 							@checklistItem(true, "campaign.checklist.privacy", campaignPath(campaign)+"/privacy")
 							@checklistItem(fieldCount > 0, "campaign.checklist.form", campaignPath(campaign)+"/form")
@@ -208,17 +208,17 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 							@checklistItem(campaign.PublicLinkEnabled, "campaign.checklist.uninstall_url", "#extension-integration")
 							@checklistItem(campaign.Status == "active" && campaign.PublicLinkEnabled && fieldCount > 0, "campaign.checklist.test", baseURL+"/c/"+campaign.PublicID)
 						</ul>
-						<p class="muted" style="margin-top: 12px; font-size: 0.85rem;">{ tr(ctx, "campaign.checklist.derived") }</p>
+						<p class="muted mt-12 text-sm">{ tr(ctx, "campaign.checklist.derived") }</p>
 					</div>
 				</details>
 				<details class="integration-details" id="extension-integration">
 					<summary>{ tr(ctx, "campaign.snippet.title.collapsed") }</summary>
-					<div style="padding-top: 12px;">
+					<div class="pt-12">
 						<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
 						<details class="integration-details">
 							<summary>{ tr(ctx, "campaign.snippet.chrome") }</summary>
 							<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="chrome-snippet" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.chrome") }><code id="chrome-snippet">{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
-							<p class="muted" style="margin-top: 12px; margin-bottom: 6px;">{ tr(ctx, "campaign.snippet.firefox") }</p>
+							<p class="muted my-12-6">{ tr(ctx, "campaign.snippet.firefox") }</p>
 							<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="firefox-snippet" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.firefox") }><code id="firefox-snippet">{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
 						</details>
 						<details class="integration-details">
@@ -302,23 +302,23 @@ templ CampaignBrandingForm(instanceName string, user db.User, campaign db.Campai
 				</form>
 			</div>
 			<div>
-				<section class="panel public-card" style="padding:0; overflow:hidden;">
-					<div id="preview-body" class={ bodyClass(&branding) } style="min-height: 400px; padding: 24px; transition: all 0.2s; background-color: var(--paper);">
-						<div class="public-main" style="transform: scale(0.85); transform-origin: top left; width: 117.64%;">
-							<div class="public-header" style="padding:0;">
+				<section class="panel public-card p-0 overflow-hidden">
+					<div id="preview-body" class={ bodyClass(&branding) + " preview-body-container" }>
+						<div class="public-main preview-main-scaled">
+							<div class="public-header p-0">
 								<div class="public-brand"><span class="brand-logo" aria-hidden="true">🐨</span> <span id="preview-brand-name">{ branding.BrandName.String }</span></div>
 							</div>
-							<div class="public-hero" style="padding-top: 20px;">
-								<h1 style="font-size: 2.2rem; margin-bottom: 8px;">We're sorry to see you go</h1>
+							<div class="public-hero pt-20">
+								<h1 class="preview-h1">We're sorry to see you go</h1>
 								<p>Please take a moment to tell us why you are uninstalling.</p>
 							</div>
-							<div class="public-card panel" style="margin-top: 20px;">
-								<fieldset class="public-field" style="border:0; padding:0;">
-									<legend style="font-weight:750;">Why are you uninstalling?</legend>
-									<label class="choice" style="display:flex; gap:8px; margin-top:8px;"><input type="radio" disabled/> Missing features</label>
-									<label class="choice" style="display:flex; gap:8px; margin-top:8px;"><input type="radio" checked disabled/> Too many bugs</label>
+							<div class="public-card panel mt-20">
+								<fieldset class="public-field border-0 p-0">
+									<legend class="font-bold-750">Why are you uninstalling?</legend>
+									<label class="choice flex-gap-8-mt-8"><input type="radio" disabled/> Missing features</label>
+									<label class="choice flex-gap-8-mt-8"><input type="radio" checked disabled/> Too many bugs</label>
 								</fieldset>
-								<button class="primary" style="margin-top: 20px; opacity:0.8;" disabled>Submit Feedback</button>
+								<button class="primary mt-20 opacity-80" disabled>Submit Feedback</button>
 							</div>
 						</div>
 					</div>
@@ -409,14 +409,14 @@ templ CampaignAccess(instanceName string, user db.User, campaign db.Campaign, me
 								}
 							</td>
 							<td>
-								<div class="heading-actions" style="justify-content: flex-start; gap: 8px;">
+								<div class="heading-actions justify-start gap-8">
 									<form class="control-switcher" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access") }>
 										<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="user_public_id" value={ member.PublicID }/>
 										<select name="role" aria-label={ tr(ctx, "campaign.access.role") }><option value="viewer">{ tr(ctx, "campaign.role.viewer") }</option><option value="analyst">{ tr(ctx, "campaign.role.analyst") }</option><option value="editor">{ tr(ctx, "campaign.role.editor") }</option><option value="owner">{ tr(ctx, "campaign.role.owner") }</option></select>
 										<button class="compact-button" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.grant") }>{ tr(ctx, "campaign.access.grant") }</button>
 									</form>
 									if member.Role.Valid {
-										<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access/" + member.PublicID + "/remove") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="compact-button" style="background: var(--danger);" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "members.remove") }</button></form>
+										<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access/" + member.PublicID + "/remove") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="compact-button bg-danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "members.remove") }</button></form>
 									}
 								</div>
 							</td>
