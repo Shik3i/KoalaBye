@@ -751,7 +751,7 @@ func CampaignNew(instanceName string, user db.User, org db.Organization, errorKe
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "\">i</span></div><input name=\"slug\" required minlength=\"2\" maxlength=\"80\" pattern=\"[a-z0-9]+(-[a-z0-9]+)*\"></label> <label><div class=\"field-header\"><span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "\">i</span></div><input name=\"slug\" required minlength=\"2\" maxlength=\"80\" pattern=\"[A-Za-z0-9]+(-[A-Za-z0-9]+)*\"></label> <label><div class=\"field-header\"><span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -2145,7 +2145,7 @@ func CampaignSettings(instanceName string, user db.User, campaign db.Campaign, e
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 166, "\" required minlength=\"2\" maxlength=\"80\" pattern=\"[a-z0-9]+(-[a-z0-9]+)*\"></label> <label><div class=\"field-header\"><span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 166, "\" required minlength=\"2\" maxlength=\"80\" pattern=\"[A-Za-z0-9]+(-[A-Za-z0-9]+)*\"></label> <label><div class=\"field-header\"><span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -3660,12 +3660,12 @@ func checklistItem(done bool, key, href string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if done {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 286, "âœ“")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 286, "✓")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 287, "â—‹")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 287, "○")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

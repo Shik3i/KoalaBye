@@ -68,7 +68,7 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 			<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") } class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 				<label><div class="field-header"><span>{ tr(ctx, "campaign.name") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_name") }>i</span></div><input name="name" required maxlength="120"/></label>
-				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" required minlength="2" maxlength="80" pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*"/></label>
 				<label><div class="field-header"><span>{ tr(ctx, "campaign.description") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_desc") }>i</span></div><textarea name="description" maxlength="1000"></textarea></label>
 				<label>
 					<div class="field-header"><span>{ tr(ctx, "campaign.language") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_lang") }>i</span></div>@languageSelect(defaults.PublicLanguageDefault)
@@ -179,7 +179,7 @@ templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, 
 			<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/settings") } class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 				<label><div class="field-header"><span>{ tr(ctx, "campaign.name") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_name") }>i</span></div><input name="name" value={ campaign.Name } required maxlength="120"/></label>
-				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*"/></label>
 				<label><div class="field-header"><span>{ tr(ctx, "campaign.description") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_desc") }>i</span></div><textarea name="description" maxlength="1000">{ campaign.Description.String }</textarea></label>
 				<label class="check"><input type="checkbox" name="public_link_enabled" checked?={ campaign.PublicLinkEnabled }/>{ tr(ctx, "campaign.public_link.enable") }</label>
 				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
@@ -320,9 +320,9 @@ templ checklistItem(done bool, key, href string) {
 	<li>
 		<span class={ templ.KV("checklist-status", true), templ.KV("done", done) } aria-hidden="true">
 			if done {
-				âœ“
+				✓
 			} else {
-				â—‹
+				○
 			}
 		</span>
 		<a href={ templ.SafeURL(href) }>{ tr(ctx, key) }</a>

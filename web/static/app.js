@@ -38,5 +38,29 @@ document.documentElement.classList.add("js");
                 el.form.submit();
             });
         });
+
+        document.querySelectorAll("input[name='name']").forEach(function(nameInput) {
+            var form = nameInput.closest("form");
+            if (!form) return;
+            var slugInput = form.querySelector("input[name='slug']");
+            if (!slugInput) return;
+
+            var autoGenerate = slugInput.value === "";
+
+            nameInput.addEventListener("input", function() {
+                if (autoGenerate) {
+                    var val = nameInput.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+                    slugInput.value = val;
+                }
+            });
+
+            slugInput.addEventListener("input", function() {
+                autoGenerate = false;
+                var start = this.selectionStart;
+                var end = this.selectionEnd;
+                this.value = this.value.toLowerCase();
+                this.setSelectionRange(start, end);
+            });
+        });
     });
 })();
