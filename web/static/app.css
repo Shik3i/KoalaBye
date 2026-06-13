@@ -301,6 +301,7 @@ html[data-theme="dark"] .badge.quiet { background: #29342e; }
 .theme-toggle { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px; cursor: pointer; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; min-height: 34px; width: 34px; transition: background 0.15s, border-color 0.15s; }
 .theme-toggle:hover { background: var(--line); }
 .theme-toggle svg { width: 18px; height: 18px; }
+.theme-toggle .sun { display: block; }
 .theme-toggle .moon { display: none; }
 html[data-theme="dark"] .theme-toggle .sun { display: none; }
 html[data-theme="dark"] .theme-toggle .moon { display: block; }
