@@ -462,7 +462,7 @@ func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
 		}
 	}
 	csp := response.Header().Get("Content-Security-Policy")
-	if !strings.Contains(csp, "default-src 'self'") || !strings.Contains(csp, "script-src 'self'") || !strings.Contains(csp, "style-src 'self'") {
+	if !strings.Contains(csp, "default-src 'self'") || !strings.Contains(csp, "script-src 'self'") || !strings.Contains(csp, "style-src 'self' 'unsafe-inline'") {
 		t.Fatalf("missing restrictive CSP: %q", csp)
 	}
 	if strings.Contains(response.Body.String(), "https://") || strings.Contains(response.Body.String(), "http://") {
