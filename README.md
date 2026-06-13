@@ -82,7 +82,7 @@ Go, chi, templ, SQLite, sqlc, goose, server-rendered HTML, and locally vendored 
 
 The application UI supports English (`en`), German (`de`), and Spanish (`es`). English is the default and fallback language. Locale selection follows `?lang=xx`, the `koalabye_lang` cookie, `Accept-Language`, then English. The language switcher preserves the current path.
 
-Legal placeholders under `/legal/privacy` and `/legal/imprint` currently support English and German only. Spanish requests clearly fall back to English. **These are placeholders and must be reviewed/replaced before running a public official instance.**
+The privacy and legal-notice pages under `/legal/privacy` and `/legal/imprint` describe KoalaBye's actual data processing and private, non-commercial project status in English and German. Spanish requests clearly fall back to English.
 
 ## Docker Quick Start
 

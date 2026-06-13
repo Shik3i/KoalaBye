@@ -28,4 +28,4 @@ For local HTTP-only testing, use `KOALABYE_SECURE_COOKIES=false`. Do not carry t
 12. Enable URL context, visit with `platform=chrome&utm_campaign=uninstall`, and confirm unknown or scheme-bearing values are ignored.
 13. Confirm public responses set no cookies and that text is stored only after final submission.
 
-Legal pages are placeholders and Spanish intentionally falls back to English. Replace the legal content before a public production deployment.
+Review the bundled privacy and legal-notice pages against the deployment's actual hosting and jurisdiction. Spanish intentionally falls back to English.

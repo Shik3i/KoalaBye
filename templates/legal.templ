@@ -3,9 +3,6 @@ package templates
 templ Legal(instanceName, page string, settings map[string]string) {
 	@Layout(tr(ctx, "legal."+page+".page_title"), instanceName, nil) {
 		<section class="auth-shell legal-page">
-			if settings["instance_legal_pages_are_placeholders"] == "true" || settings["instance_legal_pages_are_placeholders"] == "" {
-				<div class="eyebrow notice warning">{ tr(ctx, "legal.placeholder_warning") }</div>
-			}
 			<h1>{ tr(ctx, "legal." + page + ".title") }</h1>
 			if localeFromContext(ctx).LegalFallbackUsed {
 				<div class="notice" role="note">{ tr(ctx, "legal.language_notice") }</div>
@@ -31,14 +28,21 @@ templ Legal(instanceName, page string, settings map[string]string) {
 					for _, section := range []string{
 						"operator",
 						"purpose",
+						"legal_basis",
 						"account_data",
+						"form_starts",
 						"feedback_data",
 						"optional_diagnostics",
 						"url_context",
 						"partial_responses",
 						"not_collected",
 						"storage",
+						"recipients",
+						"transfers",
 						"retention",
+						"rights",
+						"complaints",
+						"security",
 						"self_hosting",
 						"campaign_owner",
 						"contact",
@@ -47,6 +51,11 @@ templ Legal(instanceName, page string, settings map[string]string) {
 						<p>{ tr(ctx, "legal.privacy.section." + section + ".text") }</p>
 					}
 					<div class="notice warning"><strong>{ tr(ctx, "legal.privacy.principles") }</strong></div>
+				} else {
+					for _, section := range []string{"status", "contact", "liability", "copyright", "disputes"} {
+						<h2>{ tr(ctx, "legal.imprint.section." + section + ".title") }</h2>
+						<p>{ tr(ctx, "legal.imprint.section." + section + ".text") }</p>
+					}
 				}
 			</div>
 		</section>

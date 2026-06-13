@@ -17,6 +17,7 @@
 ### Privacy
 - A form start is stored once per anonymous visit after the first form interaction; no field value, draft, cookie, IP address, or new visitor identifier is collected.
 - Diagnostic filters and export columns remain restricted by the campaign's enabled collection settings.
+- Privacy and legal-notice pages now cover the project's actual processing, legal bases, recipients, retention, data-subject rights, security, and private non-commercial status without invented operator data.
 
 ### Accessibility
 - Added keyboard-operable global search, explicit current-page navigation, accessible table alternatives for charts, and improved mobile overflow behavior.

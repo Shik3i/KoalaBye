@@ -142,12 +142,11 @@ func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	values := map[string]string{
-		"registration_enabled":                  boolString(r.FormValue("registration_enabled") == "on"),
-		"invite_only":                           boolString(r.FormValue("invite_only") == "on"),
-		"invite_registration_enabled":           boolString(r.FormValue("invite_registration_enabled") == "on"),
-		"instance_name":                         strings.TrimSpace(r.FormValue("instance_name")),
-		"instance_operator_name":                strings.TrimSpace(r.FormValue("instance_operator_name")),
-		"instance_legal_pages_are_placeholders": boolString(r.FormValue("instance_legal_pages_are_placeholders") == "on"),
+		"registration_enabled":        boolString(r.FormValue("registration_enabled") == "on"),
+		"invite_only":                 boolString(r.FormValue("invite_only") == "on"),
+		"invite_registration_enabled": boolString(r.FormValue("invite_registration_enabled") == "on"),
+		"instance_name":               strings.TrimSpace(r.FormValue("instance_name")),
+		"instance_operator_name":      strings.TrimSpace(r.FormValue("instance_operator_name")),
 	}
 	for _, key := range []string{"instance_operator_url", "instance_legal_notice_url", "instance_privacy_policy_url", "instance_source_url", "instance_contact_url", "instance_support_url"} {
 		value, valid := safeURL(r.FormValue(key))

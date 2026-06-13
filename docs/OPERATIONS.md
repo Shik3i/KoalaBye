@@ -13,7 +13,7 @@ Source builds use Go 1.26.4. Run `make check` before deployment, or use `go run 
 5. Keep `KOALABYE_REGISTRATION_ENABLED=false` for a private instance.
 6. Start KoalaBye and Caddy with the production Compose example.
 7. Open `/setup`; the first account becomes the Instance Owner. There are no default credentials.
-8. Replace the legal placeholders before any public production launch.
+8. Review privacy and legal-notice pages whenever hosting, jurisdiction, or the non-commercial project status changes.
 
 ## Routine Checks
 

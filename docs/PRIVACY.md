@@ -73,4 +73,4 @@ Authorized CSV and JSON exports can include sanitized URL context attached to th
 
 ## Retention and Responsibility
 
-Campaign owners can configure manual retention thresholds and hard-delete visits or responses. Automated scheduling is not implemented. Operators must protect the SQLite database and backups, choose suitable retention periods, replace the bundled legal placeholders, and ensure campaign questions and URL parameters do not request unnecessary personal data.
+Campaign owners can configure manual retention thresholds and hard-delete visits or responses. Automated scheduling is not implemented. Operators must protect the SQLite database and backups, choose suitable retention periods, review disclosures when changing the deployment, and ensure campaign questions and URL parameters do not request unnecessary personal data.

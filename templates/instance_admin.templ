@@ -121,7 +121,6 @@ templ InstanceSettings(instanceName string, user db.User, settings map[string]st
 				<label>{ tr(ctx, "instance.legal.contact_url") }<input type="url" name="instance_contact_url" value={ settings["instance_contact_url"] }/></label>
 				<label>{ tr(ctx, "instance.legal.support_url") }<input type="url" name="instance_support_url" value={ settings["instance_support_url"] }/></label>
 				<label>{ tr(ctx, "instance.legal.source_url") }<input type="url" name="instance_source_url" value={ settings["instance_source_url"] }/></label>
-				@checkInput("instance_legal_pages_are_placeholders", "instance.legal.placeholders", settings["instance_legal_pages_are_placeholders"] == "true" || settings["instance_legal_pages_are_placeholders"] == "")
 				<button data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
 			</form>
 		</section>
