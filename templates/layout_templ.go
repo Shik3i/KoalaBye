@@ -609,7 +609,7 @@ func Layout(title string, instanceName string, user *db.User) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<span class=\"sep\" aria-hidden=\"true\">·</span> <span class=\"site-footer__version\"><a href=\"https://github.com/Shik3i/KoalaBye\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"View repository on GitHub\">Build: <code>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<span class=\"sep\" aria-hidden=\"true\">·</span> <span class=\"site-footer__version\"><a href=\"https://github.com/Shik3i/KoalaBye\" class=\"flex items-center gap-8\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"View repository on GitHub\">Build: <code>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

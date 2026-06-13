@@ -4,7 +4,9 @@ templ Legal(instanceName, page string, settings map[string]string) {
 	@Layout(tr(ctx, "legal."+page+".page_title"), instanceName, nil) {
 		<section class="auth-shell legal-page">
 			if settings["instance_legal_pages_are_placeholders"] == "true" || settings["instance_legal_pages_are_placeholders"] == "" {
-				<div class="eyebrow notice warning">{ tr(ctx, "legal.placeholder_warning") }</div>
+				if tr(ctx, "legal.placeholder_warning") != "" {
+					<div class="eyebrow notice warning">{ tr(ctx, "legal.placeholder_warning") }</div>
+				}
 			}
 			<h1>{ tr(ctx, "legal." + page + ".title") }</h1>
 			if localeFromContext(ctx).LegalFallbackUsed {
@@ -26,7 +28,7 @@ templ Legal(instanceName, page string, settings map[string]string) {
 				if settings["instance_operator_name"] != "" || settings["instance_operator_url"] != "" || settings["instance_contact_url"] != "" || settings["instance_source_url"] != "" {
 					<hr/>
 				}
-				<p>{ tr(ctx, "legal." + page + ".text") }</p>
+				<p class="whitespace-pre-wrap">{ tr(ctx, "legal." + page + ".text") }</p>
 				if page == "privacy" {
 					for _, section := range []string{
 						"operator",
