@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- transparent setting-driven public collection notices
+- opt-in allowlisted URL context with sanitized export support
+- structured privacy documentation and operator legal placeholders
+
+### Privacy
+- partial responses, text drafts, browser major version, device class, and UTC offset remain uncollected
+- raw query strings, unknown URL parameters, IP addresses, raw user agents, and raw install tokens remain unstored
+
 ## v0.1.0 - Experimental initial release
 
 ### Added

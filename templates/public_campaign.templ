@@ -77,14 +77,15 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 			<h1>{ tr(ctx, "public.heading") }</h1>
 			<p class="lede">{ tr(ctx, "public.intro") }</p>
 		</section>
-		if settings.ShowPrivacyNotice {
-			<section class="panel public-card">
-				<h2>{ tr(ctx, "public.privacy.title") }</h2>
-				<p>{ tr(ctx, "public.privacy.text") }</p>
-				<p>{ tr(ctx, "public.privacy.free_text") }</p>
-				<p class="muted">{ publicCollectionSummary(ctx, settings) }</p>
-			</section>
-		}
+		<section class="panel public-card">
+			<h2>{ tr(ctx, "public.privacy.title") }</h2>
+			<p>{ tr(ctx, "public.privacy.text") }</p>
+			<p>{ publicCollectionSummary(ctx, settings) }</p>
+			if settings.CollectURLContext {
+				<p>{ tr(ctx, "public.privacy.url_context") }</p>
+			}
+			<p class="muted">{ tr(ctx, "public.privacy.free_text") }</p>
+		</section>
 		<section class="panel public-card">
 			if len(fields) == 0 {
 				<h2>{ tr(ctx, "public.form.title") }</h2>
@@ -138,7 +139,7 @@ templ PublicCampaignUnavailable(instanceName string, quota bool) {
 }
 
 func publicCollectionSummary(ctx context.Context, settings db.CampaignSettings) string {
-	if settings.CollectReferrerDomain || settings.CollectCoarseBrowser || settings.CollectCoarseOS {
+	if settings.CollectReferrerDomain || settings.CollectCoarseBrowser || settings.CollectCoarseOS || settings.CollectURLContext {
 		return tr(ctx, "public.privacy.balanced")
 	}
 	return tr(ctx, "public.privacy.strict")

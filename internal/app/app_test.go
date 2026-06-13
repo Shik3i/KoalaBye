@@ -1045,11 +1045,11 @@ func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
 	t.Parallel()
 	application := testApp(t)
 	_, org, campaign := seedActivePublicCampaign(t, application, "camp_public", "public-campaign", "es")
-	if _, err := application.Database.Exec(`UPDATE campaign_settings SET collect_referrer_domain=1,collect_coarse_browser=1,collect_coarse_os=1 WHERE campaign_id=?`, campaign.ID); err != nil {
+	if _, err := application.Database.Exec(`UPDATE campaign_settings SET collect_referrer_domain=1,collect_coarse_browser=1,collect_coarse_os=1,collect_url_context=1 WHERE campaign_id=?`, campaign.ID); err != nil {
 		t.Fatal(err)
 	}
 	rawToken := "opaque-install-token"
-	request := httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID+"?t="+rawToken, nil)
+	request := httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID+"?t="+rawToken+"&platform=chrome&utm_campaign=uninstall&email=person@example.com&source=javascript:alert", nil)
 	request.Header.Set("Referer", "https://Example.COM/private/path?secret=value")
 	request.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0) AppleWebKit Chrome/124.0 Safari/537.36")
 	response := httptest.NewRecorder()
@@ -1067,8 +1067,8 @@ func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
 	mac := hmac.New(sha256.New, []byte(application.Config.Secret))
 	_, _ = mac.Write([]byte(rawToken))
 	expectedHash := hex.EncodeToString(mac.Sum(nil))
-	var storedHash, referrer, browser, os string
-	if err := application.Database.QueryRow(`SELECT install_token_hash,referrer_domain,coarse_browser,coarse_os FROM campaign_visits ORDER BY id LIMIT 1`).Scan(&storedHash, &referrer, &browser, &os); err != nil {
+	var storedHash, referrer, browser, os, contextJSON string
+	if err := application.Database.QueryRow(`SELECT install_token_hash,referrer_domain,coarse_browser,coarse_os,context_json FROM campaign_visits ORDER BY id LIMIT 1`).Scan(&storedHash, &referrer, &browser, &os, &contextJSON); err != nil {
 		t.Fatal(err)
 	}
 	if storedHash != expectedHash || storedHash == rawToken {
@@ -1076,6 +1076,9 @@ func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
 	}
 	if referrer != "example.com" || browser != "Chrome" || os != "Windows" {
 		t.Fatalf("coarse metadata incorrect: referrer=%q browser=%q os=%q", referrer, browser, os)
+	}
+	if contextJSON != `{"platform":"chrome","utm_campaign":"uninstall"}` {
+		t.Fatalf("URL context was not minimized: %q", contextJSON)
 	}
 	var leaked int
 	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM campaign_visits WHERE referrer_domain LIKE '%/%' OR coarse_browser LIKE '%Mozilla%' OR coarse_os LIKE '%Mozilla%'`).Scan(&leaked); err != nil || leaked != 0 {
@@ -1525,7 +1528,8 @@ func TestPhase7AnalyticsExportsRetentionAndPermissions(t *testing.T) {
 	if err := q.RecordCampaignVisit(ctx, db.RecordVisitInput{
 		PublicID: "visit_phase7", CampaignID: campaign.ID, OrganizationID: org.ID, TokenHash: "secret-hash-not-exported",
 		ReferrerDomain: "example.org", CoarseBrowser: "Firefox", CoarseOS: "Linux",
-		CountRaw: true, CountUnique: true, CollectToken: true, CreatedAt: now,
+		URLContext: map[string]string{"platform": "firefox", "utm_campaign": "uninstall"},
+		CountRaw:   true, CountUnique: true, CollectToken: true, CreatedAt: now,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1619,7 +1623,7 @@ func TestPhase7AnalyticsExportsRetentionAndPermissions(t *testing.T) {
 		if response.Code != http.StatusOK || !strings.Contains(response.Header().Get("Content-Type"), tc.contentType) || !strings.Contains(response.Header().Get("Content-Disposition"), "phase7-submissions") {
 			t.Fatalf("%s export headers failed: %d %#v", tc.path, response.Code, response.Header())
 		}
-		if !strings.Contains(body, "submission_phase7") || !strings.Contains(body, "line one") || strings.Contains(body, "secret-hash-not-exported") || strings.Contains(body, "raw-agent") || strings.Contains(body, `"campaign_id"`) {
+		if !strings.Contains(body, "submission_phase7") || !strings.Contains(body, "line one") || !strings.Contains(body, "firefox") || !strings.Contains(body, "uninstall") || strings.Contains(body, "secret-hash-not-exported") || strings.Contains(body, "raw-agent") || strings.Contains(body, `"campaign_id"`) {
 			t.Fatalf("%s export content unsafe: %s", tc.path, body)
 		}
 	}

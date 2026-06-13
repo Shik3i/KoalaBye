@@ -240,10 +240,12 @@ templ CampaignPrivacy(instanceName string, user db.User, campaign db.Campaign, s
 			@campaignCheck("collect_referrer_domain", "campaign.privacy.referrer", settings.CollectReferrerDomain)
 			@campaignCheck("collect_coarse_browser", "campaign.privacy.browser", settings.CollectCoarseBrowser)
 			@campaignCheck("collect_coarse_os", "campaign.privacy.os", settings.CollectCoarseOS)
+			@campaignCheck("collect_url_context", "campaign.privacy.url_context", settings.CollectURLContext)
+			<p class="muted">{ tr(ctx, "campaign.privacy.url_context_help") }</p>
 			<label>
 				{ tr(ctx, "campaign.language") }@languageSelect(settings.PublicLanguageDefault)
 			</label>
-			@campaignCheck("show_privacy_notice", "campaign.privacy.notice", settings.ShowPrivacyNotice)
+			<p class="muted">{ tr(ctx, "campaign.privacy.notice_always") }</p>
 			<h2>{ tr(ctx, "retention.title") }</h2>
 			@campaignCheck("retention_enabled", "retention.enabled", settings.RetentionEnabled)
 			<label>
@@ -338,7 +340,7 @@ func campaignPath(campaign db.Campaign) string {
 }
 
 func privacySummary(ctx context.Context, settings db.CampaignSettings) string {
-	if settings.CollectReferrerDomain || settings.CollectCoarseBrowser || settings.CollectCoarseOS {
+	if settings.CollectReferrerDomain || settings.CollectCoarseBrowser || settings.CollectCoarseOS || settings.CollectURLContext {
 		return tr(ctx, "campaign.privacy.balanced_summary")
 	}
 	return tr(ctx, "campaign.privacy.strict_summary")

@@ -40,11 +40,16 @@
 
 - [ ] Verify there are no external CDN, font, analytics, or script requests.
 - [ ] Verify public pages store no IP address, raw user agent, or raw install token.
+- [ ] Verify public pages always disclose enabled diagnostics and set no cookies.
+- [ ] Verify URL context accepts only allowlisted keys and never stores the raw query string.
+- [ ] Verify partial responses and text drafts are not saved before final submission.
+- [ ] Search for missing i18n markers and legal-compliance overclaims.
 - [ ] Verify HTTPS deployment uses `KOALABYE_SECURE_COOKIES=true`.
 - [ ] Verify `/healthz` and the Docker healthcheck.
 - [ ] Test a SQLite backup and restore.
 - [ ] Start against the restored database and verify expected sample data.
 - [ ] Review deployment, security, and release documentation.
+- [ ] Review `docs/PRIVACY.md` and remaining operator legal placeholders.
 
 ## Publish
 

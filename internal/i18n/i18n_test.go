@@ -3,6 +3,7 @@ package i18n
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -78,5 +79,22 @@ func TestLanguageDetection(t *testing.T) {
 				t.Fatalf("cookie presence: expected %t, got %t", test.wantCookie, foundCookie)
 			}
 		})
+	}
+}
+
+func TestPublicCampaignSwitchURLsKeepOnlySafeContext(t *testing.T) {
+	t.Parallel()
+	catalog := testCatalog(t)
+	request := httptest.NewRequest(http.MethodGet, "/c/camp?lang=de&t=raw-token&platform=chrome&utm_campaign=uninstall&email=person@example.com&source=javascript:alert", nil)
+	base := RequestLocale{Locale: German, RequestedLocale: German, catalog: catalog}
+	ctx := PublicCampaignContext(WithLocale(request.Context(), base), request, "en")
+	switchURL := FromContext(ctx).SwitchURLs[Spanish]
+	for _, forbidden := range []string{"raw-token", "email", "person", "javascript"} {
+		if strings.Contains(switchURL, forbidden) {
+			t.Fatalf("switch URL leaked %q: %s", forbidden, switchURL)
+		}
+	}
+	if !strings.Contains(switchURL, "platform=chrome") || !strings.Contains(switchURL, "utm_campaign=uninstall") || !strings.Contains(switchURL, "lang=es") {
+		t.Fatalf("switch URL lost safe context: %s", switchURL)
 	}
 }

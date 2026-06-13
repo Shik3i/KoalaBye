@@ -57,7 +57,7 @@ func TestCampaignPrivacyPresets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strict.HashInstallToken || strict.CollectReferrerDomain || strict.CollectCoarseBrowser || strict.CollectCoarseOS {
+	if !strict.HashInstallToken || strict.CollectReferrerDomain || strict.CollectCoarseBrowser || strict.CollectCoarseOS || strict.CollectURLContext {
 		t.Fatalf("strict defaults are not privacy-strict: %#v", strict)
 	}
 	balancedCampaign := createCampaignForTest(t, q, owner, org, "camp_balanced", "balanced", "balanced")
@@ -65,7 +65,7 @@ func TestCampaignPrivacyPresets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !balanced.HashInstallToken || !balanced.CollectReferrerDomain || !balanced.CollectCoarseBrowser || !balanced.CollectCoarseOS {
+	if !balanced.HashInstallToken || !balanced.CollectReferrerDomain || !balanced.CollectCoarseBrowser || !balanced.CollectCoarseOS || !balanced.CollectURLContext {
 		t.Fatalf("balanced preset missing coarse fields: %#v", balanced)
 	}
 }

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -50,6 +51,31 @@ func TestRecordCampaignVisitCountsRawAndUnique(t *testing.T) {
 	}
 	if len(uniqueFlags) != 3 || uniqueFlags[0] != 1 || uniqueFlags[1] != 0 || uniqueFlags[2] != 0 {
 		t.Fatalf("unexpected unique flags: %v", uniqueFlags)
+	}
+}
+
+func TestRecordCampaignVisitStoresOnlyStructuredURLContext(t *testing.T) {
+	t.Parallel()
+	q, owner, org := phase3DB(t)
+	campaign := createCampaignForTest(t, q, owner, org, "camp_context", "context", "balanced")
+	input := RecordVisitInput{
+		PublicID: "visit_context", CampaignID: campaign.ID, OrganizationID: org.ID,
+		CountRaw: true, CreatedAt: time.Date(2026, 6, 12, 10, 0, 0, 0, time.UTC),
+		URLContext: map[string]string{"platform": "chrome", "utm_campaign": "uninstall"},
+	}
+	if err := q.RecordCampaignVisit(context.Background(), input); err != nil {
+		t.Fatal(err)
+	}
+	var raw string
+	if err := q.RawDB().QueryRow(`SELECT context_json FROM campaign_visits WHERE public_id=?`, input.PublicID).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	var stored map[string]string
+	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored["platform"] != "chrome" || stored["utm_campaign"] != "uninstall" || len(stored) != 2 {
+		t.Fatalf("stored context=%v", stored)
 	}
 }
 

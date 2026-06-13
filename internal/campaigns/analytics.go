@@ -66,9 +66,13 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	columns, labels := exportColumns(submissions)
+	contextColumns := exportContextColumns(submissions)
 	var output bytes.Buffer
 	writer := csv.NewWriter(&output)
 	header := []string{"submission_public_id", "submitted_at", "visit_public_id", "has_install_token_hash"}
+	for _, key := range contextColumns {
+		header = append(header, "context_"+key)
+	}
 	for _, publicID := range columns {
 		header = append(header, "field_"+publicID+"_"+sanitizeExportLabel(labels[publicID]))
 	}
@@ -81,6 +85,9 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 			values[answer.FieldPublicID] = exportAnswerValue(answer.ValueJSON)
 		}
 		row := []string{submission.PublicID, submission.SubmittedAt, submission.VisitPublicID.String, strconv.FormatBool(submission.HasInstallTokenHash)}
+		for _, key := range contextColumns {
+			row = append(row, submission.URLContext[key])
+		}
 		for _, publicID := range columns {
 			row = append(row, values[publicID])
 		}
@@ -115,6 +122,7 @@ type jsonExportSubmission struct {
 	SubmittedAt         string             `json:"submitted_at"`
 	VisitPublicID       *string            `json:"visit_public_id"`
 	HasInstallTokenHash bool               `json:"has_install_token_hash"`
+	URLContext          map[string]string  `json:"url_context,omitempty"`
 	Answers             []jsonExportAnswer `json:"answers"`
 }
 
@@ -143,7 +151,7 @@ func (h *Handler) ExportJSON(w http.ResponseWriter, r *http.Request) {
 	for _, submission := range submissions {
 		item := jsonExportSubmission{
 			SubmissionPublicID: submission.PublicID, SubmittedAt: submission.SubmittedAt,
-			HasInstallTokenHash: submission.HasInstallTokenHash,
+			HasInstallTokenHash: submission.HasInstallTokenHash, URLContext: submission.URLContext,
 		}
 		if submission.VisitPublicID.Valid {
 			value := submission.VisitPublicID.String
@@ -171,6 +179,21 @@ func (h *Handler) ExportJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+safeExportFilename(campaign.Slug)+`-submissions.json"`)
 	_, _ = w.Write(output.Bytes())
+}
+
+func exportContextColumns(submissions []db.Submission) []string {
+	keys := map[string]struct{}{}
+	for _, submission := range submissions {
+		for key := range submission.URLContext {
+			keys[key] = struct{}{}
+		}
+	}
+	columns := make([]string, 0, len(keys))
+	for key := range keys {
+		columns = append(columns, key)
+	}
+	sort.Strings(columns)
+	return columns
 }
 
 func exportColumns(submissions []db.Submission) ([]string, map[string]string) {

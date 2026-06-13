@@ -43,6 +43,7 @@ type CampaignSettings struct {
 	CollectReferrerDomain  bool
 	CollectCoarseBrowser   bool
 	CollectCoarseOS        bool
+	CollectURLContext      bool
 	PublicLanguageDefault  string
 	ShowPrivacyNotice      bool
 	RetentionEnabled       bool
@@ -107,8 +108,8 @@ func (q *Querier) CreateCampaign(ctx context.Context, in CreateCampaignInput) (C
 	if in.Language == "de" || in.Language == "es" {
 		settings.PublicLanguageDefault = in.Language
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO campaign_settings(campaign_id,collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,public_language_default,show_privacy_notice,updated_at,updated_by_user_id)
-		VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, id, settings.CollectInstallToken, true, settings.CountRawVisits, settings.CountUniqueTokenVisits, settings.CollectReferrerDomain, settings.CollectCoarseBrowser, settings.CollectCoarseOS, settings.PublicLanguageDefault, settings.ShowPrivacyNotice, now, in.CreatedBy); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO campaign_settings(campaign_id,collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,collect_url_context,public_language_default,show_privacy_notice,updated_at,updated_by_user_id)
+		VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, id, settings.CollectInstallToken, true, settings.CountRawVisits, settings.CountUniqueTokenVisits, settings.CollectReferrerDomain, settings.CollectCoarseBrowser, settings.CollectCoarseOS, settings.CollectURLContext, settings.PublicLanguageDefault, true, now, in.CreatedBy); err != nil {
 		return Campaign{}, err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO campaign_members(campaign_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'owner',?,?)`, id, in.CreatedBy, now, in.CreatedBy); err != nil {
@@ -132,6 +133,7 @@ func PrivacyPreset(preset string) CampaignSettings {
 		settings.CollectReferrerDomain = true
 		settings.CollectCoarseBrowser = true
 		settings.CollectCoarseOS = true
+		settings.CollectURLContext = true
 	}
 	return settings
 }
@@ -196,8 +198,8 @@ func (q *Querier) CampaignRole(ctx context.Context, campaignID, userID int64) (s
 
 func (q *Querier) GetCampaignSettings(ctx context.Context, campaignID int64) (CampaignSettings, error) {
 	var s CampaignSettings
-	err := q.db.QueryRowContext(ctx, `SELECT collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,public_language_default,show_privacy_notice,retention_enabled,retention_days,updated_at,updated_by_user_id FROM campaign_settings WHERE campaign_id=?`, campaignID).
-		Scan(&s.CollectInstallToken, &s.HashInstallToken, &s.CountRawVisits, &s.CountUniqueTokenVisits, &s.CollectReferrerDomain, &s.CollectCoarseBrowser, &s.CollectCoarseOS, &s.PublicLanguageDefault, &s.ShowPrivacyNotice, &s.RetentionEnabled, &s.RetentionDays, &s.UpdatedAt, &s.UpdatedByUserID)
+	err := q.db.QueryRowContext(ctx, `SELECT collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,collect_url_context,public_language_default,show_privacy_notice,retention_enabled,retention_days,updated_at,updated_by_user_id FROM campaign_settings WHERE campaign_id=?`, campaignID).
+		Scan(&s.CollectInstallToken, &s.HashInstallToken, &s.CountRawVisits, &s.CountUniqueTokenVisits, &s.CollectReferrerDomain, &s.CollectCoarseBrowser, &s.CollectCoarseOS, &s.CollectURLContext, &s.PublicLanguageDefault, &s.ShowPrivacyNotice, &s.RetentionEnabled, &s.RetentionDays, &s.UpdatedAt, &s.UpdatedByUserID)
 	return s, err
 }
 
@@ -234,8 +236,8 @@ func (q *Querier) UpdateCampaignPrivacy(ctx context.Context, campaign Campaign, 
 	if s.PublicLanguageDefault != "en" && s.PublicLanguageDefault != "de" && s.PublicLanguageDefault != "es" {
 		return ErrForbidden
 	}
-	_, err := q.db.ExecContext(ctx, `UPDATE campaign_settings SET collect_install_token=?,hash_install_token=1,count_raw_visits=?,count_unique_token_visits=?,collect_referrer_domain=?,collect_coarse_browser=?,collect_coarse_os=?,public_language_default=?,show_privacy_notice=?,retention_enabled=?,retention_days=?,updated_at=?,updated_by_user_id=? WHERE campaign_id=?`,
-		s.CollectInstallToken, s.CountRawVisits, s.CountUniqueTokenVisits, s.CollectReferrerDomain, s.CollectCoarseBrowser, s.CollectCoarseOS, s.PublicLanguageDefault, s.ShowPrivacyNotice, s.RetentionEnabled, nullableInt64(s.RetentionDays), Now(), actorID, campaign.ID)
+	_, err := q.db.ExecContext(ctx, `UPDATE campaign_settings SET collect_install_token=?,hash_install_token=1,count_raw_visits=?,count_unique_token_visits=?,collect_referrer_domain=?,collect_coarse_browser=?,collect_coarse_os=?,collect_url_context=?,public_language_default=?,show_privacy_notice=1,retention_enabled=?,retention_days=?,updated_at=?,updated_by_user_id=? WHERE campaign_id=?`,
+		s.CollectInstallToken, s.CountRawVisits, s.CountUniqueTokenVisits, s.CollectReferrerDomain, s.CollectCoarseBrowser, s.CollectCoarseOS, s.CollectURLContext, s.PublicLanguageDefault, s.RetentionEnabled, nullableInt64(s.RetentionDays), Now(), actorID, campaign.ID)
 	if err != nil {
 		return err
 	}
@@ -382,7 +384,7 @@ func (q *Querier) RemoveCampaignMember(ctx context.Context, campaign Campaign, u
 func (q *Querier) ListInstanceCampaigns(ctx context.Context) ([]Campaign, error) {
 	rows, err := q.db.QueryContext(ctx, `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,NULL,
 		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner'),
-		(cs.collect_referrer_domain=1 OR cs.collect_coarse_browser=1 OR cs.collect_coarse_os=1)
+		(cs.collect_referrer_domain=1 OR cs.collect_coarse_browser=1 OR cs.collect_coarse_os=1 OR cs.collect_url_context=1)
 		FROM campaigns c JOIN organizations o ON o.id=c.organization_id JOIN users u ON u.id=c.created_by_user_id
 		JOIN campaign_settings cs ON cs.campaign_id=c.id ORDER BY c.id DESC LIMIT 100`)
 	if err != nil {

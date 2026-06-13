@@ -20,6 +20,7 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - Cookie-free public campaign pages require no session and use URL-based language selection.
 - Optional install tokens are length-bounded and HMAC-SHA256 hashed with the instance secret; raw values are never stored or rendered.
 - Referrers are reduced to hostnames and user agents to coarse browser/OS families before storage.
+- Optional URL context accepts only documented keys and validated values; unknown parameters and the raw query string are discarded.
 - Monthly visit safety limits are enforced before a visit row is inserted.
 - Public feedback bodies are capped at 128 KiB and validated against active fields and options.
 - Anonymous public submissions do not use session-bound CSRF tokens because they carry no authenticated session or ambient authority. Body limits, strict validation, a honeypot, and transactional submission quotas provide the applicable abuse controls.
@@ -29,11 +30,13 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - Response contents require organization membership plus an owner, editor, or analyst campaign role. Instance Owner status alone is insufficient.
 - Private analytics and CSV/JSON exports use the same membership boundary; export audit events contain counts and format, never answers.
 - Exports omit IP addresses, raw user agents, raw tokens, token-hash values, and internal integer IDs.
+- Exports include allowlisted URL context only when its campaign collection setting was enabled.
 - Retention and delete-all actions are CSRF-protected, owner-only, transactional hard deletions. Delete-all requires typed campaign-slug confirmation.
 - Inline SVG charts and HTML tables use only local rendering and minimized stored aggregates.
 - CSP, frame denial, MIME sniffing prevention, no-referrer, and restrictive permissions headers.
 - SQLite foreign keys, WAL mode, busy timeout, transactions, and migrations.
 - No external CDN requests, IP database storage, fingerprinting, or raw user-agent retention.
+- No hidden partial-response or text-draft autosave.
 - A non-root runtime container and persistent `/data` volume.
 - Automated tests cover setup lockout, authentication, registration policies, session revocation, tenant isolation, invite lifecycle, owner invariants, instance administration, CSRF-backed flows, security headers, translations, and migrations.
 

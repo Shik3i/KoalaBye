@@ -6,7 +6,7 @@
 - The `.env` file or equivalent secret/configuration store.
 - The Compose and reverse-proxy configuration used by the deployment.
 
-Protect backups as sensitive data. They can contain account information and free-text feedback.
+Protect backups as sensitive data. They can contain account information, free-text feedback, and optional sanitized campaign diagnostics or URL context.
 
 ## Safe SQLite Backups
 

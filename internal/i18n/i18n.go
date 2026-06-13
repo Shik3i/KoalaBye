@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -26,6 +27,21 @@ const (
 
 var Supported = []Locale{English, German, Spanish}
 var LegalSupported = []Locale{English, German}
+
+var publicContextValuePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,128}$`)
+
+var publicContextKeys = []string{
+	"app_version",
+	"extension_version",
+	"platform",
+	"source",
+	"channel",
+	"utm_source",
+	"utm_medium",
+	"utm_campaign",
+	"utm_content",
+	"utm_term",
+}
 
 //go:embed locales/*.json
 var localeFS embed.FS
@@ -188,12 +204,28 @@ func PublicCampaignContext(ctx context.Context, r *http.Request, defaultLocale s
 	current.LegalFallbackUsed = false
 	current.SwitchURLs = make(map[Locale]string, len(Supported))
 	for _, locale := range Supported {
-		query := cloneValues(r.URL.Query())
-		query.Del("t")
+		query := safePublicCampaignQuery(r.URL.Query())
 		query.Set("lang", string(locale))
 		current.SwitchURLs[locale] = r.URL.Path + "?" + query.Encode()
 	}
 	return WithLocale(ctx, current)
+}
+
+func safePublicCampaignQuery(values url.Values) url.Values {
+	safe := make(url.Values)
+	for _, key := range publicContextKeys {
+		value := strings.TrimSpace(values.Get(key))
+		lower := strings.ToLower(value)
+		if !publicContextValuePattern.MatchString(value) ||
+			strings.Contains(lower, "javascript:") ||
+			strings.Contains(lower, "data:") ||
+			strings.Contains(lower, "vbscript:") ||
+			strings.Contains(lower, "://") {
+			continue
+		}
+		safe.Set(key, value)
+	}
+	return safe
 }
 
 func IsPublicCampaignPath(path string) bool {

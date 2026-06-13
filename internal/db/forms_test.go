@@ -57,6 +57,7 @@ func TestSubmissionPrivacyLinkageSnapshotsAndQuota(t *testing.T) {
 	if err := q.RecordCampaignVisit(ctx, RecordVisitInput{
 		PublicID: "visit_submit", CampaignID: campaign.ID, OrganizationID: org.ID,
 		TokenHash: "one-way-hash", CountRaw: true, CountUnique: true, CollectToken: true, CreatedAt: at,
+		URLContext: map[string]string{"platform": "firefox"},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -74,6 +75,9 @@ func TestSubmissionPrivacyLinkageSnapshotsAndQuota(t *testing.T) {
 	}
 	if len(submission.Answers) != 1 || submission.Answers[0].FieldLabelSnapshot != "Original" || submission.Answers[0].FieldPublicID != "field_text" {
 		t.Fatalf("answer snapshot missing: %#v", submission.Answers)
+	}
+	if submission.URLContext["platform"] != "firefox" {
+		t.Fatalf("submission context missing: %#v", submission.URLContext)
 	}
 	var tokenHash string
 	if err := q.RawDB().QueryRow(`SELECT install_token_hash FROM campaign_submissions WHERE public_id=?`, input.PublicID).Scan(&tokenHash); err != nil || tokenHash != "one-way-hash" {

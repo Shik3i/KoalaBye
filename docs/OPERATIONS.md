@@ -21,6 +21,8 @@ Source builds use Go 1.26.4. Run `make check` before deployment, or use `go run 
 - `GET /version` reports only version, commit, build date, and Go version.
 - Use `docker compose logs -f koalabye` to watch startup, migration, and request errors.
 - Instance Owners can adjust organization safety limits under Instance Admin.
+- Review campaign privacy settings and public collection notices after upgrades.
+- Treat exported answers and URL context as sensitive operator data even though KoalaBye minimizes collection.
 
 ## Backups and Restores
 
@@ -37,6 +39,8 @@ Use `scripts/restore-sqlite.sh BACKUP_PATH RESTORE_PATH` only while KoalaBye is 
 5. Verify `/healthz`, `/version`, login, a private campaign, and a public submission.
 
 Never edit a migration that has shipped. Add a new forward migration for every schema change.
+
+Balanced diagnostics are per campaign. Do not add personal data to URL parameters, reverse-proxy logs, or external analytics around KoalaBye. The application itself never stores raw query strings, but operators must review proxy access-log configuration separately.
 
 Docker image builds require Docker Desktop or another running Docker daemon. If no local daemon is available, use the CI Docker job as the image-build gate. A release tag must wait for a successful Docker build somewhere.
 

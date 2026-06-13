@@ -46,17 +46,21 @@ Instance Owners can adjust defaults and per-organization limits. Sensitive overr
 
 ## Campaign Privacy and Links
 
-Each campaign has a privacy-settings row from creation. Strict privacy disables optional coarse referrer, browser, and operating-system data. Balanced enables those coarse fields but never IP storage or fingerprinting. Public pages work without JavaScript, load only local assets, require no session, and set no cookies.
+Each campaign has a privacy-settings row from creation. Strict privacy disables optional coarse referrer, browser, operating-system, and URL-context data. Balanced enables those coarse fields but never IP storage or fingerprinting. Public pages work without mandatory JavaScript, load only local assets, require no session, set no cookies, and always disclose enabled collection.
 
 Canonical public links are `/c/{campaignPublicID}`. A readable `/u/{orgSlug}/{campaignSlug}` form resolves to the same page. Only active, public-link-enabled campaigns in enabled organizations are available; every other state returns a generic response.
 
 Visits store a raw-count flag and a first-seen-token-count flag separately. Optional opaque install tokens are limited to 256 characters, HMAC-SHA256 hashed with `KOALABYE_SECRET`, and never persisted or rendered raw. Repeated hashes may be stored as raw visits but count as unique only once. Referrers are reduced to lowercase hostnames. User agents are reduced to documented browser (`Chrome`, `Firefox`, `Safari`, `Edge`, `Other`, `Unknown`) and OS (`Windows`, `macOS`, `Linux`, `Android`, `iOS`, `Other`, `Unknown`) families; raw user agents are discarded.
+
+Optional URL context is extracted from a fixed allowlist and stored as a small JSON object. Values are length- and character-limited, unknown keys are ignored, and the raw query string is never stored. Context can flow to authorized submission exports only through the existing visit link.
 
 ## Forms and Submissions
 
 Campaign forms are ordered rows in `campaign_form_fields`, with type-specific JSON limited to plain text-block bodies and textarea lengths. Checkbox and radio choices live in `campaign_form_options`. Fields and options are soft-archived; there is no raw HTML, conditional logic, multi-page state, upload, or custom JavaScript.
 
 Public submissions are capped at 128 KiB and validated against the current active form. Unknown fields are ignored. Required values, active option membership, ratings from 1 through 5, and textarea limits are enforced server-side. A hidden honeypot returns the same thank-you page without writing a submission.
+
+Partial response collection is not implemented. No field value is stored before final submission. The documented future boundary is an explicit `structured_only` mode for validated checkbox, radio, and rating values; hidden text-draft autosave remains outside the current architecture.
 
 `campaign_submissions` stores a public ID, campaign, optional visit link, optional copied HMAC install-token hash, and UTC timestamp. It has no IP or user-agent columns. Answers store field public ID, type, label snapshot, and JSON value so later form edits do not erase historical meaning. Templ escapes all labels and free text during rendering.
 
@@ -100,7 +104,7 @@ Authentication middleware loads identity. Authorization remains explicit in prot
 
 ## Privacy Model
 
-KoalaBye has no analytics SDK, external browser asset, IP column, raw user-agent column, or fingerprinting code. Public pages are cookie-free and collect only fields enabled by the campaign owner. Campaign analytics expose aggregates and local charts, never visitor profiles.
+KoalaBye has no analytics SDK, external browser asset, IP column, raw user-agent column, raw-query column, or fingerprinting code. Public pages are cookie-free, disclose enabled collection, and collect only fields enabled by the campaign owner. Campaign analytics expose aggregates and local charts, never visitor profiles.
 
 ## Planned Modules
 

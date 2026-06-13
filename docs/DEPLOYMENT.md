@@ -50,6 +50,8 @@ The image runs as the non-root `koalabye` user. `/data` must be writable by that
 
 The bundled privacy and imprint pages are explicitly placeholders, available in English and German with an English fallback for Spanish. They are not final legal advice or deploy-ready legal text. Replace them before a public production launch.
 
+Review [PRIVACY.md](PRIVACY.md) before enabling Balanced diagnostics. Campaign owners must not encode personal data in URL context parameters. Public campaign pages disclose enabled collection and remain cookie-free.
+
 ## Backups
 
 Back up the SQLite database and the deployment configuration needed to reproduce the instance. Follow [BACKUP_RESTORE.md](BACKUP_RESTORE.md). Test restores regularly; an untested backup is not release readiness.

@@ -27,6 +27,27 @@ templ Legal(instanceName, page string, settings map[string]string) {
 					<hr/>
 				}
 				<p>{ tr(ctx, "legal." + page + ".text") }</p>
+				if page == "privacy" {
+					for _, section := range []string{
+						"operator",
+						"purpose",
+						"account_data",
+						"feedback_data",
+						"optional_diagnostics",
+						"url_context",
+						"partial_responses",
+						"not_collected",
+						"storage",
+						"retention",
+						"self_hosting",
+						"campaign_owner",
+						"contact",
+					} {
+						<h2>{ tr(ctx, "legal.privacy.section." + section + ".title") }</h2>
+						<p>{ tr(ctx, "legal.privacy.section." + section + ".text") }</p>
+					}
+					<div class="notice warning"><strong>{ tr(ctx, "legal.privacy.principles") }</strong></div>
+				}
 			</div>
 		</section>
 	}

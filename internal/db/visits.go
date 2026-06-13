@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -24,6 +25,7 @@ type RecordVisitInput struct {
 	ReferrerDomain string
 	CoarseBrowser  string
 	CoarseOS       string
+	URLContext     map[string]string
 	CountRaw       bool
 	CountUnique    bool
 	CollectToken   bool
@@ -50,7 +52,7 @@ func (q *Querier) scanPublicCampaign(ctx context.Context, predicate string, args
 	query := `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,NULL,
 		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner'),
 		o.disabled_at,
-		cs.collect_install_token,cs.hash_install_token,cs.count_raw_visits,cs.count_unique_token_visits,cs.collect_referrer_domain,cs.collect_coarse_browser,cs.collect_coarse_os,cs.public_language_default,cs.show_privacy_notice,cs.retention_enabled,cs.retention_days,cs.updated_at,cs.updated_by_user_id,
+		cs.collect_install_token,cs.hash_install_token,cs.count_raw_visits,cs.count_unique_token_visits,cs.collect_referrer_domain,cs.collect_coarse_browser,cs.collect_coarse_os,cs.collect_url_context,cs.public_language_default,cs.show_privacy_notice,cs.retention_enabled,cs.retention_days,cs.updated_at,cs.updated_by_user_id,
 		cb.brand_name,cb.brand_url,cb.privacy_policy_url,cb.legal_notice_url,cb.support_url,cb.contact_url,COALESCE(cb.accent_preset, 'default'),COALESCE(cb.background_style, 'theme-default'),COALESCE(cb.show_koalabye_branding, 1)
 		FROM campaigns c
 		JOIN organizations o ON o.id=c.organization_id
@@ -70,6 +72,7 @@ func (q *Querier) scanPublicCampaign(ctx context.Context, predicate string, args
 		&result.Settings.CollectInstallToken, &result.Settings.HashInstallToken, &result.Settings.CountRawVisits,
 		&result.Settings.CountUniqueTokenVisits, &result.Settings.CollectReferrerDomain,
 		&result.Settings.CollectCoarseBrowser, &result.Settings.CollectCoarseOS,
+		&result.Settings.CollectURLContext,
 		&result.Settings.PublicLanguageDefault, &result.Settings.ShowPrivacyNotice,
 		&result.Settings.RetentionEnabled, &result.Settings.RetentionDays,
 		&result.Settings.UpdatedAt, &result.Settings.UpdatedByUserID,
@@ -94,7 +97,7 @@ func (q *Querier) RecordCampaignVisit(ctx context.Context, in RecordVisitInput) 
 		return err
 	}
 	defer tx.Rollback()
-	if !in.CountRaw && !in.CountUnique && in.ReferrerDomain == "" && in.CoarseBrowser == "" && in.CoarseOS == "" {
+	if !in.CountRaw && !in.CountUnique && in.ReferrerDomain == "" && in.CoarseBrowser == "" && in.CoarseOS == "" && len(in.URLContext) == 0 {
 		return tx.Commit()
 	}
 	createdAt := in.CreatedAt.UTC()
@@ -123,10 +126,18 @@ func (q *Querier) RecordCampaignVisit(ctx context.Context, in RecordVisitInput) 
 			unique = exists == 0
 		}
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO campaign_visits(public_id,campaign_id,install_token_hash,visit_kind,counted_as_unique_token_visit,counted_as_raw_visit,referrer_domain,coarse_browser,coarse_os,created_at)
-		VALUES(?,?,?,'public_page',?,?,?,?,?,?)`,
+	var contextJSON any
+	if len(in.URLContext) > 0 {
+		encoded, marshalErr := json.Marshal(in.URLContext)
+		if marshalErr != nil {
+			return marshalErr
+		}
+		contextJSON = string(encoded)
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO campaign_visits(public_id,campaign_id,install_token_hash,visit_kind,counted_as_unique_token_visit,counted_as_raw_visit,referrer_domain,coarse_browser,coarse_os,context_json,created_at)
+		VALUES(?,?,?,'public_page',?,?,?,?,?,?,?)`,
 		in.PublicID, in.CampaignID, tokenHash, unique, in.CountRaw, nullableText(in.ReferrerDomain),
-		nullableText(in.CoarseBrowser), nullableText(in.CoarseOS), createdAt.Format(time.RFC3339Nano))
+		nullableText(in.CoarseBrowser), nullableText(in.CoarseOS), contextJSON, createdAt.Format(time.RFC3339Nano))
 	if err != nil {
 		return err
 	}

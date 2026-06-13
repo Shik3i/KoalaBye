@@ -25,6 +25,20 @@ import (
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+var contextValuePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,128}$`)
+
+var allowedContextKeys = []string{
+	"app_version",
+	"extension_version",
+	"platform",
+	"source",
+	"channel",
+	"utm_source",
+	"utm_medium",
+	"utm_campaign",
+	"utm_content",
+	"utm_term",
+}
 
 type Handler struct {
 	cfg         config.Config
@@ -110,9 +124,30 @@ func (h *Handler) visitInput(r *http.Request, publicCampaign db.PublicCampaign) 
 	return db.RecordVisitInput{
 		CampaignID: publicCampaign.Campaign.ID, OrganizationID: publicCampaign.Campaign.OrganizationID,
 		TokenHash: tokenHash, ReferrerDomain: referrer, CoarseBrowser: browser, CoarseOS: os,
-		CountRaw: settings.CountRawVisits, CountUnique: settings.CountUniqueTokenVisits,
+		URLContext: safeURLContext(r.URL.Query(), settings.CollectURLContext),
+		CountRaw:   settings.CountRawVisits, CountUnique: settings.CountUniqueTokenVisits,
 		CollectToken: settings.CollectInstallToken, CreatedAt: time.Now().UTC(),
 	}
+}
+
+func safeURLContext(values url.Values, enabled bool) map[string]string {
+	if !enabled {
+		return nil
+	}
+	contextValues := make(map[string]string)
+	for _, key := range allowedContextKeys {
+		value := strings.TrimSpace(values.Get(key))
+		lower := strings.ToLower(value)
+		if !contextValuePattern.MatchString(value) ||
+			strings.Contains(lower, "javascript:") ||
+			strings.Contains(lower, "data:") ||
+			strings.Contains(lower, "vbscript:") ||
+			strings.Contains(lower, "://") {
+			continue
+		}
+		contextValues[key] = value
+	}
+	return contextValues
 }
 
 func hashInstallToken(secret, token string) string {
@@ -354,9 +389,9 @@ func (h *Handler) PrivacyPost(w http.ResponseWriter, r *http.Request) {
 		CollectInstallToken: r.FormValue("collect_install_token") == "on", HashInstallToken: true,
 		CountRawVisits: r.FormValue("count_raw_visits") == "on", CountUniqueTokenVisits: r.FormValue("count_unique_token_visits") == "on",
 		CollectReferrerDomain: r.FormValue("collect_referrer_domain") == "on", CollectCoarseBrowser: r.FormValue("collect_coarse_browser") == "on",
-		CollectCoarseOS: r.FormValue("collect_coarse_os") == "on", PublicLanguageDefault: validLanguage(r.FormValue("public_language_default")),
-		ShowPrivacyNotice: r.FormValue("show_privacy_notice") == "on",
-		RetentionEnabled:  r.FormValue("retention_enabled") == "on",
+		CollectCoarseOS: r.FormValue("collect_coarse_os") == "on", CollectURLContext: r.FormValue("collect_url_context") == "on",
+		PublicLanguageDefault: validLanguage(r.FormValue("public_language_default")), ShowPrivacyNotice: true,
+		RetentionEnabled: r.FormValue("retention_enabled") == "on",
 	}
 	if settings.RetentionEnabled {
 		days, err := strconv.ParseInt(r.FormValue("retention_days"), 10, 64)

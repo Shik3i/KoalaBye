@@ -2,7 +2,7 @@
 
 KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform for uninstall feedback and lightweight anonymous surveys. It is designed for browser extensions, apps, and small developer tools that need honest feedback without tracking people.
 
-> **Status:** early product. Authentication, organizations, campaigns, forms, cookie-free feedback pages, anonymous submissions, privacy-first visits, response inboxes, built-in analytics, audited CSV/JSON exports, retention controls, permissions, and deployment packaging are present.
+> **Status:** experimental while below v1.0.0. Authentication, organizations, campaigns, forms, cookie-free feedback pages, anonymous submissions, privacy-first visits, response inboxes, built-in analytics, audited CSV/JSON exports, retention controls, permissions, and deployment packaging are present.
 
 ## Current MVP Capabilities
 
@@ -24,10 +24,33 @@ Remaining planned work is limited to operational hardening such as automated ret
 - 100% free software under the MIT License.
 - Self-hosting is first-class; the same codebase can operate a public multi-user instance.
 - No external CDNs, fonts, analytics, fingerprinting, or mandatory third-party services.
-- No IP address storage in the database and no raw user-agent storage by default.
+- No IP address storage in the database and no raw user-agent storage.
 - Email is optional and is not required for the MVP.
 - The official KoalaStuff instance, if offered, is intended to remain 100% free forever.
 - Safety limits exist only to prevent abuse and accidental overload. They are not paid tiers.
+
+## Privacy Model
+
+Campaigns start in Strict mode. Balanced diagnostics are optional per campaign and remain deliberately coarse. Public pages always explain the enabled collection. KoalaBye does not add external analytics, third-party scripts, fingerprinting, public-page cookies, cross-campaign visitor profiles, or paid-tier data lock-in.
+
+| Data type | Default | Optional | Stored? | Notes |
+| --- | --- | --- | --- | --- |
+| IP address | No | No | Never | May exist transiently in the network/server stack; KoalaBye does not persist it |
+| Raw User-Agent | No | No | Never | Parsed and discarded when coarse diagnostics are enabled |
+| Browser family | No | Yes | Optional | Chrome, Firefox, Safari, Edge, Other, or Unknown |
+| Browser major version | No | No | No | Deferred; minor and patch versions are not collected |
+| OS family | No | Yes | Optional | Windows, macOS, Linux, Android, iOS, Other, or Unknown |
+| Device class | No | No | No | Deferred |
+| UTC offset | No | No | No | Deferred; exact timezone names are not collected |
+| Referrer domain | No | Yes | Optional | Hostname only, never the full URL |
+| URL context parameters | No | Yes | Optional | Validated allowlisted keys only |
+| Submitted answers | Yes | Yes | Yes | Only values submitted by the respondent |
+| Partial structured answers | No | No | No | Policy defined, endpoint not implemented |
+| Text drafts | No | No | No | Stored only on final submission |
+| Cookies on public pages | No | No | No | Public campaign pages remain cookie-free |
+| Theme preference | User action only | Yes | `localStorage` | Only after an explicit theme change |
+
+See [Privacy](docs/PRIVACY.md) and [Security](SECURITY.md) for the full trust model and operator responsibilities.
 
 ## Stack
 
@@ -94,9 +117,11 @@ A campaign is one uninstall-feedback or feedback-collection target inside an org
 
 Organization owners and admins have implicit campaign-owner access. Other organization members receive an explicit `owner`, `editor`, `analyst`, or `viewer` campaign role. Every campaign retains at least one explicit owner.
 
-Campaign privacy defaults are strict. Optional coarse referrer, browser-family, and operating-system-family settings can be enabled with the Balanced preset. Neither preset stores IP addresses, fingerprints visitors, or permits raw install-token storage.
+Campaign privacy defaults are strict. Optional coarse referrer, browser-family, operating-system-family, and allowlisted URL-context settings can be enabled with the Balanced preset. Neither preset stores IP addresses, fingerprints visitors, or permits raw install-token storage.
 
 Active campaigns may expose cookie-free public pages at `/c/{campaignPublicID}` and `/u/{orgSlug}/{campaignSlug}`. An optional opaque `?t=` install token is HMAC-SHA256 hashed with the instance secret before storage. Raw visits and first-seen token visits are separate counters. Referrers are reduced to hostnames, user agents to coarse browser/OS categories, and raw tokens, IP addresses, full referrers, and raw user agents are never stored. Monthly organization visit limits use UTC boundaries and are safety controls only.
+
+When URL context collection is enabled, public links may include `app_version`, `extension_version`, `platform`, `source`, `channel`, and `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, or `utm_term`. Unknown keys and invalid values are ignored; KoalaBye never stores the full query string. Campaign owners must not place personal data in URL parameters.
 
 Campaign pages include Chrome/Chromium and Firefox uninstall URL examples. The generated token is random, local to the extension, and optional.
 
@@ -113,4 +138,20 @@ CSV and JSON exports include public IDs, timestamps, optional visit public IDs, 
 
 Future work may add retention scheduling and richer aggregate views. Conditional forms, multi-page forms, uploads, custom JavaScript, email notifications, and AI analysis remain out of scope. Billing, paid tiers, payments, and hidden monetization are permanently out of scope.
 
-See [Deployment](docs/DEPLOYMENT.md), [Operations](docs/OPERATIONS.md), [First Deployment Test](docs/FIRST_DEPLOYMENT_TEST.md), [Backup and Restore](docs/BACKUP_RESTORE.md), [Release Checklist](docs/RELEASE_CHECKLIST.md), [Versioning](docs/VERSIONING.md), [Architecture](docs/ARCHITECTURE.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).
+Partial-response autosave is not implemented. KoalaBye does not silently save checkbox, radio, rating, textarea, or text drafts before final submission. A future `structured_only` mode may save validated non-text choices after an explicit campaign opt-in and public warning, but text draft autosave remains off by default.
+
+## Release Verification
+
+Published container images can be checked with GitHub Artifact Attestations:
+
+```bash
+gh attestation verify oci://ghcr.io/<owner>/koalabye:<version> --repo <owner>/KoalaBye
+```
+
+Replace `<owner>` and `<version>` with the published repository owner and release tag. See [Versioning](docs/VERSIONING.md) and the [Release Checklist](docs/RELEASE_CHECKLIST.md).
+
+## License
+
+KoalaBye is free software under the [MIT License](LICENSE).
+
+See [Deployment](docs/DEPLOYMENT.md), [Operations](docs/OPERATIONS.md), [First Deployment Test](docs/FIRST_DEPLOYMENT_TEST.md), [Backup and Restore](docs/BACKUP_RESTORE.md), [Release Checklist](docs/RELEASE_CHECKLIST.md), [Versioning](docs/VERSIONING.md), [Architecture](docs/ARCHITECTURE.md), [Privacy](docs/PRIVACY.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).

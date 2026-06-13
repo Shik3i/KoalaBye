@@ -98,6 +98,7 @@ type CampaignSetting struct {
 	UpdatedByUserID        interface{} `json:"updated_by_user_id"`
 	RetentionEnabled       int64       `json:"retention_enabled"`
 	RetentionDays          interface{} `json:"retention_days"`
+	CollectUrlContext      int64       `json:"collect_url_context"`
 }
 
 type CampaignSubmission struct {
@@ -131,6 +132,7 @@ type CampaignVisit struct {
 	CoarseBrowser             interface{} `json:"coarse_browser"`
 	CoarseOs                  interface{} `json:"coarse_os"`
 	CreatedAt                 string      `json:"created_at"`
+	ContextJson               interface{} `json:"context_json"`
 }
 
 type InstanceRole struct {

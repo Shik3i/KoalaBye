@@ -27,7 +27,7 @@
 
 - True theme toggle (persisted choice) and more robust design presets.
 - Full automated data retention jobs (background workers).
-- Adding real generated legal texts or cookie banner configurations for public hosted instances.
+- Adding final operator legal texts or consent-management configuration for public hosted instances.
 
 ## Release Readiness Checklist
 

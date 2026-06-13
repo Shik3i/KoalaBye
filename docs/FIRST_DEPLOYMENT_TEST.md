@@ -24,5 +24,8 @@ For local HTTP-only testing, use `KOALABYE_SECURE_COOKIES=false`. Do not carry t
 8. Run a backup and restore into a fresh path or volume.
 9. Start against the restored database and verify `/healthz`, `/version`, and test data.
 10. Check key pages at 360px in English, German, and Spanish.
+11. Confirm Strict pages say optional coarse diagnostics are disabled.
+12. Enable URL context, visit with `platform=chrome&utm_campaign=uninstall`, and confirm unknown or scheme-bearing values are ignored.
+13. Confirm public responses set no cookies and that text is stored only after final submission.
 
 Legal pages are placeholders and Spanish intentionally falls back to English. Replace the legal content before a public production deployment.

@@ -304,6 +304,7 @@ type Submission struct {
 	HasInstallTokenHash bool
 	SubmittedAt         string
 	AnswerSummary       string
+	URLContext          map[string]string
 	Answers             []SubmissionAnswer
 }
 
@@ -327,7 +328,7 @@ func (q *Querier) SubmissionStats(ctx context.Context, campaignID int64, now tim
 }
 
 func (q *Querier) ListSubmissions(ctx context.Context, campaignID int64) ([]Submission, error) {
-	rows, err := q.db.QueryContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,
+	rows, err := q.db.QueryContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,v.context_json,
 		COALESCE((SELECT a.field_label_snapshot FROM campaign_submission_answers a WHERE a.submission_id=s.id ORDER BY a.id LIMIT 1),'')
 		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? ORDER BY s.id DESC LIMIT 100`, campaignID)
 	if err != nil {
@@ -337,8 +338,12 @@ func (q *Querier) ListSubmissions(ctx context.Context, campaignID int64) ([]Subm
 	var submissions []Submission
 	for rows.Next() {
 		var submission Submission
-		if err := rows.Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.AnswerSummary); err != nil {
+		var contextJSON sql.NullString
+		if err := rows.Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &contextJSON, &submission.AnswerSummary); err != nil {
 			return nil, err
+		}
+		if contextJSON.Valid {
+			_ = json.Unmarshal([]byte(contextJSON.String), &submission.URLContext)
 		}
 		submissions = append(submissions, submission)
 	}
@@ -347,11 +352,15 @@ func (q *Querier) ListSubmissions(ctx context.Context, campaignID int64) ([]Subm
 
 func (q *Querier) GetSubmission(ctx context.Context, campaignID int64, publicID string) (Submission, error) {
 	var submission Submission
-	err := q.db.QueryRowContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,''
+	var contextJSON sql.NullString
+	err := q.db.QueryRowContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,v.context_json,''
 		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? AND s.public_id=?`, campaignID, publicID).
-		Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.AnswerSummary)
+		Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &contextJSON, &submission.AnswerSummary)
 	if err != nil {
 		return submission, err
+	}
+	if contextJSON.Valid {
+		_ = json.Unmarshal([]byte(contextJSON.String), &submission.URLContext)
 	}
 	rows, err := q.db.QueryContext(ctx, `SELECT field_public_id,field_type,field_label_snapshot,value_json FROM campaign_submission_answers WHERE submission_id=? ORDER BY id`, submission.ID)
 	if err != nil {
