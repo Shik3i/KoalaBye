@@ -462,6 +462,9 @@ func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
 		}
 	}
 	csp := response.Header().Get("Content-Security-Policy")
+	if strings.Contains(csp, "unsafe-inline") {
+		t.Fatalf("SECURITY VIOLATION: CSP contains forbidden 'unsafe-inline' directive: %q", csp)
+	}
 	if !strings.Contains(csp, "default-src 'self'") || !strings.Contains(csp, "script-src 'self'") || !strings.Contains(csp, "style-src 'self' 'sha256-bsV5JivYxvGywDAZ22EZJKBFip65Ng9xoJVLbBg7bdo='") {
 		t.Fatalf("missing restrictive CSP: %q", csp)
 	}
