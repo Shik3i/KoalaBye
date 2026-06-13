@@ -58,6 +58,8 @@ button, input, select, textarea { font: inherit; }
 .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; box-shadow: var(--shadow); }
+.page > .panel, .public-page > .panel { margin-bottom: 24px; }
+:not(.grid) > .panel + .panel { margin-top: 24px; }
 .panel h2 { margin: 0 0 10px; font-size: 1.1rem; }
 .panel p { color: var(--muted); }
 .admin-card .button { margin-top: 8px; }
@@ -71,7 +73,7 @@ button, input, select, textarea { font: inherit; }
 .form-stack input:focus, .form-stack select:focus, .form-stack textarea:focus { border-color: var(--green); }
 .form-stack .check { display: flex; grid-template-columns: none; align-items: center; gap: 10px; }
 .form-stack .check input { width: auto; }
-.alert { margin-top: 20px; background: var(--danger-soft); border: 1px solid #f0c5bb; color: var(--danger); padding: 12px 14px; border-radius: 10px; }
+.alert { margin: 20px 0; background: var(--danger-soft); border: 1px solid #f0c5bb; color: var(--danger); padding: 12px 14px; border-radius: 10px; }
 .success { margin: 20px 0; background: var(--green-soft); border: 1px solid #b9ddc5; color: var(--green-dark); padding: 12px 14px; border-radius: 10px; overflow-wrap: anywhere; }
 .notice { margin: 20px 0; background: #eef5ff; border: 1px solid #c8d9ee; color: #294a6b; padding: 12px 14px; border-radius: 10px; }
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 50px 0 28px; }
@@ -118,7 +120,7 @@ th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-s
 .field-heading h2 { margin-top: 8px; }
 .form-field-card { margin-bottom: 16px; }
 .actions.compact { display: flex; gap: 14px; margin-top: 16px; }
-.public-field { border: 0; border-top: 1px solid var(--line); padding: 18px 0 0; margin: 0; }
+.public-field { border: 0; border-top: 1px solid var(--line); padding: 20px 0; margin: 0; }
 .public-field legend { font-weight: 750; padding: 0 8px 0 0; }
 .public-field textarea { width: 100%; min-height: 120px; border: 1px solid #cbd4ca; border-radius: 9px; padding: 11px 12px; }
 .choice { min-height: 44px; display: flex; align-items: center; gap: 8px; margin: 4px 0; }
@@ -278,4 +280,41 @@ html[data-theme="dark"] .theme-toggle .moon { display: block; }
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) .theme-toggle .sun { display: none; }
   html:not([data-theme="light"]) .theme-toggle .moon { display: block; }
+}
+
+/* Collapsible Integration Details */
+details.integration-details {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  transition: border-color 0.15s ease;
+}
+details.integration-details summary {
+  padding: 14px 18px;
+  font-weight: 750;
+  font-size: 0.95rem;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  display: list-item;
+}
+details.integration-details summary:hover {
+  background: var(--line);
+  border-radius: 9px;
+}
+details.integration-details[open] summary {
+  border-bottom: 1px solid var(--line);
+  border-radius: 9px 9px 0 0;
+  background: var(--panel);
+}
+details.integration-details > *:not(summary) {
+  padding: 18px;
+  margin: 0;
+}
+details.integration-details > p {
+  margin: 0 0 12px;
+}
+details.integration-details .code-block {
+  margin-bottom: 12px;
 }

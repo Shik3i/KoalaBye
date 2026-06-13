@@ -73,6 +73,17 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 				<label>
 					<div class="field-header"><span>{ tr(ctx, "campaign.language") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_lang") }>i</span></div>@languageSelect(defaults.PublicLanguageDefault)
 				</label>
+				<label>
+					<div class="field-header"><span>{ tr(ctx, "campaign.preset") }</span></div>
+					<select name="form_preset">
+						<option value="none">{ tr(ctx, "campaign.preset.none") }</option>
+						<option value="uninstall">{ tr(ctx, "campaign.preset.uninstall") }</option>
+						<option value="bug_report">{ tr(ctx, "campaign.preset.bug_report") }</option>
+						<option value="feature_feedback">{ tr(ctx, "campaign.preset.feature_feedback") }</option>
+						<option value="satisfaction">{ tr(ctx, "campaign.preset.satisfaction") }</option>
+					</select>
+				</label>
+				<p class="muted">{ tr(ctx, "campaign.preset.help") }</p>
 				<label><div class="field-header"><span>{ tr(ctx, "campaign.privacy.preset") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_privacy") }>i</span></div><select name="privacy_preset"><option value="strict">{ tr(ctx, "campaign.privacy.strict") }</option><option value="balanced">{ tr(ctx, "campaign.privacy.balanced") }</option></select></label>
 				<p class="muted">{ tr(ctx, "campaign.privacy.preset_help") }</p>
 				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.create") }>{ tr(ctx, "campaign.create") }</button>
@@ -142,13 +153,17 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 		<section class="panel" id="extension-integration">
 			<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
 			<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
-			<h3>{ tr(ctx, "campaign.snippet.chrome") }</h3>
-			<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="chrome-snippet" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.chrome") }><code id="chrome-snippet">{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
-			<p class="muted">{ tr(ctx, "campaign.snippet.firefox") }</p>
-			<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="firefox-snippet" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.firefox") }><code id="firefox-snippet">{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
-			<h3>{ tr(ctx, "campaign.snippet.no_token.title") }</h3>
-			<p>{ tr(ctx, "campaign.snippet.no_token.text") }</p>
-			<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.no_token.title") }><code>{ chromeNoTokenSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
+			<details class="integration-details">
+				<summary>{ tr(ctx, "campaign.snippet.chrome") }</summary>
+				<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="chrome-snippet" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.chrome") }><code id="chrome-snippet">{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
+				<p class="muted">{ tr(ctx, "campaign.snippet.firefox") }</p>
+				<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="firefox-snippet" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.firefox") }><code id="firefox-snippet">{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
+			</details>
+			<details class="integration-details">
+				<summary>{ tr(ctx, "campaign.snippet.no_token.title") }</summary>
+				<p>{ tr(ctx, "campaign.snippet.no_token.text") }</p>
+				<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.no_token.title") }><code>{ chromeNoTokenSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
+			</details>
 		</section>
 		<section class="panel"><h2>{ tr(ctx, "analytics.title") }</h2><p>{ tr(ctx, "analytics.description") }</p><a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.open") }</a></section>
 		if campaign.Status != "archived" && role == "owner" {

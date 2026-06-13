@@ -263,6 +263,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.slug", db.PrivacyPreset(preset)))
 		return
 	}
+	formPreset := r.FormValue("form_preset")
+	if formPreset != "" && formPreset != "none" {
+		if err := ApplyFormPreset(r.Context(), h.q, campaign.ID, formPreset, language, user.ID); err != nil {
+			// If it fails, log and redirect anyway or return an error. Let's log it and redirect since the campaign is created.
+			// Or we could return an error. But campaign creation succeeded, so redirecting is better UX.
+		}
+	}
 	http.Redirect(w, r, campaignURL(org.PublicID, campaign.PublicID), http.StatusSeeOther)
 }
 

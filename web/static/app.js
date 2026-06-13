@@ -62,5 +62,38 @@ document.documentElement.classList.add("js");
                 this.setSelectionRange(start, end);
             });
         });
+
+        // Auto-submit public forms on choice selection (radio/rating) if all fields are answered
+        var publicForm = document.querySelector(".public-page form");
+        if (publicForm) {
+            var inputs = publicForm.querySelectorAll("input[name^='field_'], textarea[name^='field_']");
+            var fieldNames = new Set();
+            inputs.forEach(function(el) {
+                fieldNames.add(el.name);
+            });
+
+            publicForm.querySelectorAll("input[type='radio']").forEach(function(radio) {
+                radio.addEventListener("change", function() {
+                    var allAnswered = true;
+                    fieldNames.forEach(function(name) {
+                        var fieldInputs = publicForm.querySelectorAll("[name='" + name + "']");
+                        var isAnswered = false;
+                        fieldInputs.forEach(function(fInput) {
+                            if (fInput.type === "radio" || fInput.type === "checkbox") {
+                                if (fInput.checked) isAnswered = true;
+                            } else if (fInput.value.trim() !== "") {
+                                isAnswered = true;
+                            }
+                        });
+                        if (!isAnswered) {
+                            allAnswered = false;
+                        }
+                    });
+                    if (allAnswered) {
+                        publicForm.submit();
+                    }
+                });
+            });
+        }
     });
 })();
