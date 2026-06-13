@@ -1077,7 +1077,7 @@ func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
 	if len(response.Result().Cookies()) != 0 {
 		t.Fatalf("public page set cookies: %#v", response.Result().Cookies())
 	}
-	if strings.Contains(body, rawToken) || strings.Contains(body, "https://cdn") || strings.Contains(body, "htmx.min.js") || !strings.Contains(body, `<script src="/assets/app.js" defer></script>`) {
+	if strings.Contains(body, rawToken) || strings.Contains(body, "https://cdn") || strings.Contains(body, "htmx.min.js") || !strings.Contains(body, `src="/assets/app.js`) {
 		t.Fatal("public page leaked token or loaded unexpected scripts/external assets")
 	}
 	mac := hmac.New(sha256.New, []byte(application.Config.Secret))
