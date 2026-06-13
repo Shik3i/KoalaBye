@@ -12,7 +12,11 @@ templ Instance(instanceName string, user db.User, registrationEnabled string, ev
 		<section class="grid three">
 			<article class="panel"><h2>{ tr(ctx, "instance.overview") }</h2><p>{ instanceName }</p><span class="badge">{ tr(ctx, "common.healthy") }</span></article>
 			<article class="panel"><h2>{ tr(ctx, "instance.registration") }</h2><p>{ tr(ctx, "instance.registration_status", translatedBoolean(ctx, registrationEnabled)) }</p><a href="/instance/settings">{ tr(ctx, "instance.settings") }</a></article>
-			<article class="panel"><h2>{ tr(ctx, "instance.administration") }</h2><p>{ tr(ctx, "instance.administration_text") }</p><a href="/instance/users">{ tr(ctx, "instance.users") }</a></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.users") }</h2><p>{ tr(ctx, "instance.administration_text") }</p><a href="/instance/users">{ tr(ctx, "instance.users") }</a></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.organizations") }</h2><p>{ tr(ctx, "limits.explanation") }</p><a href="/instance/organizations">{ tr(ctx, "instance.organizations") }</a></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.campaigns") }</h2><p>{ tr(ctx, "instance.campaigns_description") }</p><a href="/instance/campaigns">{ tr(ctx, "instance.campaigns") }</a></article>
+			<article class="panel"><h2>{ tr(ctx, "limits.title") }</h2><p>{ tr(ctx, "instance.safety_limits_text") }</p><a href="/instance/settings">{ tr(ctx, "instance.settings") }</a></article>
+			<article class="panel"><h2>{ tr(ctx, "instance.audit") }</h2><p>{ tr(ctx, "instance.audit_description") }</p><a href="/instance/audit">{ tr(ctx, "instance.audit") }</a></article>
 		</section>
 		<section class="panel checklist">
 			<h2>{ tr(ctx, "instance.checklist.title") }</h2>

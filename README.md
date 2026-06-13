@@ -1,8 +1,30 @@
 # KoalaBye
 
+[![CI](https://github.com/Shik3i/KoalaBye/actions/workflows/ci.yml/badge.svg)](https://github.com/Shik3i/KoalaBye/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Shik3i/KoalaBye)](https://github.com/Shik3i/KoalaBye/releases)
+[![Go](https://img.shields.io/github/go-mod/go-version/Shik3i/KoalaBye)](go.mod)
+[![License](https://img.shields.io/github/license/Shik3i/KoalaBye)](LICENSE)
+![Privacy](https://img.shields.io/badge/privacy-no%20tracking-176b4d)
+
 KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform for uninstall feedback and lightweight anonymous surveys. It is designed for browser extensions, apps, and small developer tools that need honest feedback without tracking people.
 
 > **Status:** experimental while below v1.0.0. Authentication, organizations, campaigns, forms, cookie-free feedback pages, anonymous submissions, privacy-first visits, response inboxes, built-in analytics, audited CSV/JSON exports, retention controls, permissions, and deployment packaging are present.
+
+## Preview
+
+> Screenshot placeholder: the polished authenticated dashboard will be captured for the first stable release.
+
+## Quick Start
+
+```bash
+git clone https://github.com/Shik3i/KoalaBye.git
+cd KoalaBye
+cp .env.example .env
+# Replace KOALABYE_SECRET in .env with: openssl rand -base64 48
+docker compose -f docker-compose.example.yml up --build
+```
+
+Open <http://localhost:8080/setup>. The first account becomes the global Instance Owner; KoalaBye ships with no default credentials.
 
 ## Current MVP Capabilities
 
@@ -153,5 +175,7 @@ Replace `<owner>` and `<version>` with the published repository owner and releas
 ## License
 
 KoalaBye is free software under the [MIT License](LICENSE).
+
+Locally served visual assets and third-party dependency notes are documented in [Attributions](ATTRIBUTIONS.md).
 
 See [Deployment](docs/DEPLOYMENT.md), [Operations](docs/OPERATIONS.md), [First Deployment Test](docs/FIRST_DEPLOYMENT_TEST.md), [Backup and Restore](docs/BACKUP_RESTORE.md), [Release Checklist](docs/RELEASE_CHECKLIST.md), [Versioning](docs/VERSIONING.md), [Architecture](docs/ARCHITECTURE.md), [Privacy](docs/PRIVACY.md), [Guidelines](docs/GUIDELINES.md), [Security](SECURITY.md), and [Contributing](CONTRIBUTING.md).

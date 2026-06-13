@@ -35,6 +35,8 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 						}
 						if field.Required {
 							<span class="badge">{ tr(ctx, "form.required") }</span>
+						} else {
+							<span class="badge quiet">{ tr(ctx, "form.optional") }</span>
 						}
 						if canEdit {
 							<div class="actions compact">

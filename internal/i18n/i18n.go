@@ -28,6 +28,39 @@ const (
 var Supported = []Locale{English, German, Spanish}
 var LegalSupported = []Locale{English, German}
 
+type Language struct {
+	Code        Locale
+	EnglishName string
+	NativeName  string
+	FlagAsset   string
+	Enabled     bool
+}
+
+var Languages = []Language{
+	{Code: English, EnglishName: "English", NativeName: "English", FlagAsset: "/assets/flags/gb.svg", Enabled: true},
+	{Code: German, EnglishName: "German", NativeName: "Deutsch", FlagAsset: "/assets/flags/de.svg", Enabled: true},
+	{Code: Spanish, EnglishName: "Spanish", NativeName: "Español", FlagAsset: "/assets/flags/es.svg", Enabled: true},
+}
+
+func EnabledLanguages() []Language {
+	languages := make([]Language, 0, len(Languages))
+	for _, language := range Languages {
+		if language.Enabled {
+			languages = append(languages, language)
+		}
+	}
+	return languages
+}
+
+func LanguageByCode(code Locale) Language {
+	for _, language := range Languages {
+		if language.Code == code {
+			return language
+		}
+	}
+	return Languages[0]
+}
+
 var publicContextValuePattern = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,128}$`)
 
 var publicContextKeys = []string{

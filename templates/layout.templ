@@ -3,12 +3,13 @@ package templates
 import "github.com/koalastuff/koalabye/internal/db"
 
 templ LanguageSelector() {
-	<form method="get" class="control-switcher">
+	<form method="get" class="control-switcher language-switcher">
+		<img class="language-flag" src={ currentLanguage(ctx).FlagAsset } alt=""/>
 		<label>
 			<span class="visually-hidden">{ tr(ctx, "language.label") }</span>
 			<select name="lang" aria-label={ tr(ctx, "language.label") }>
 				for _, language := range supportedLanguages() {
-					<option value={ string(language) } selected?={ languageCurrent(ctx, language) == "page" }>{ tr(ctx, "language." + string(language)) }</option>
+					<option value={ string(language.Code) } selected?={ languageCurrent(ctx, language.Code) == "page" }>{ language.NativeName }</option>
 				}
 			</select>
 		</label>
@@ -45,17 +46,23 @@ templ Layout(title string, instanceName string, user *db.User) {
 				<a class="brand" href="/">{ instanceName }</a>
 				<div class="header-actions">
 					if user != nil {
-						<nav aria-label={ tr(ctx, "nav.aria") }>
-							<a href="/app">{ tr(ctx, "nav.dashboard") }</a>
-							<a href="/app/orgs">{ tr(ctx, "nav.organizations") }</a>
-							if instanceAdmin(ctx) {
-								<a href="/instance">{ tr(ctx, "nav.instance_admin") }</a>
-							}
-							<form method="post" action="/logout" class="inline-form">
-								<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-								<button class="link-button" type="submit">{ tr(ctx, "common.logout") }</button>
-							</form>
-						</nav>
+						<details class="nav-menu" open>
+							<summary>{ tr(ctx, "nav.menu") }</summary>
+							<nav aria-label={ tr(ctx, "nav.aria") }>
+								<a href="/app">{ tr(ctx, "nav.dashboard") }</a>
+								<a href="/app/orgs">{ tr(ctx, "nav.organizations") }</a>
+								if instanceAdmin(ctx) {
+									<a class="admin-link" href="/instance">{ tr(ctx, "nav.instance_admin") }</a>
+								}
+								if url := instanceSourceURL(ctx); url != "" {
+									<a href={ templ.SafeURL(url) }>{ tr(ctx, "instance.legal.source") }</a>
+								}
+								<form method="post" action="/logout" class="inline-form">
+									<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+									<button class="link-button" type="submit">{ tr(ctx, "common.logout") }</button>
+								</form>
+							</nav>
+						</details>
 					}
 					@LanguageSelector()
 					@ThemeSelector()

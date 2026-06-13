@@ -30,5 +30,17 @@ document.documentElement.classList.add("js");
                 });
             });
         });
+
+        document.querySelectorAll("[data-copy-target]").forEach(function(button) {
+            button.addEventListener("click", function() {
+                var target = document.getElementById(button.getAttribute("data-copy-target"));
+                if (!target || !navigator.clipboard) return;
+                navigator.clipboard.writeText(target.textContent).then(function() {
+                    var original = button.textContent;
+                    button.textContent = button.getAttribute("data-copy-label") || original;
+                    window.setTimeout(function() { button.textContent = original; }, 1600);
+                });
+            });
+        });
     });
 })();

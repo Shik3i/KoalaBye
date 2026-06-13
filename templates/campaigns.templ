@@ -86,7 +86,12 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 		@CampaignNav(campaign)
 		<section class="page-heading">
 			<div><div class="eyebrow">{ campaign.OrganizationName }</div><h1>{ campaign.Name }</h1><p class="muted">{ campaign.Description.String }</p></div>
-			<span class="badge">{ tr(ctx, "campaign.status." + campaign.Status) }</span>
+			<div class="heading-actions">
+				<span class={ "badge status-" + campaign.Status }>{ tr(ctx, "campaign.status." + campaign.Status) }</span>
+				if campaign.PublicLinkEnabled {
+					<a class="button secondary" href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }>{ tr(ctx, "campaign.preview") }</a>
+				}
+			</div>
 		</section>
 		if campaign.DisabledAt.Valid {
 			<div class="alert" role="alert">{ tr(ctx, "campaign.disabled") }</div>
@@ -109,7 +114,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<article class="panel">
 				<h2>{ tr(ctx, "campaign.public_link") }</h2>
 				<p>{ tr(ctx, "campaign.public_link.working") }</p>
-				<a href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }><code>{ baseURL + "/c/" + campaign.PublicID }</code></a>
+				<div class="copy-row"><a href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }><code id="campaign-public-url">{ baseURL + "/c/" + campaign.PublicID }</code></a><button class="button secondary copy-button" type="button" data-copy-target="campaign-public-url" data-copy-label={ tr(ctx, "copy.copied") }>{ tr(ctx, "copy.action") }</button></div>
 				<p><a href={ templ.SafeURL(baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug) }><code>{ baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug }</code></a></p>
 				if campaign.PublicLinkEnabled {
 					<span class="badge">{ tr(ctx, "common.enabled") }</span>
@@ -138,9 +143,9 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
 			<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
 			<h3>{ tr(ctx, "campaign.snippet.chrome") }</h3>
-			<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.chrome") }><code>{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
+			<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="chrome-snippet" data-copy-label={ tr(ctx, "copy.copied") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.chrome") }><code id="chrome-snippet">{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
 			<p class="muted">{ tr(ctx, "campaign.snippet.firefox") }</p>
-			<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.firefox") }><code>{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
+			<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="firefox-snippet" data-copy-label={ tr(ctx, "copy.copied") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.firefox") }><code id="firefox-snippet">{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
 			<h3>{ tr(ctx, "campaign.snippet.no_token.title") }</h3>
 			<p>{ tr(ctx, "campaign.snippet.no_token.text") }</p>
 			<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.no_token.title") }><code>{ chromeNoTokenSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
@@ -332,7 +337,11 @@ templ checklistItem(done bool, key, href string) {
 }
 
 templ languageSelect(selected string) {
-	<select name="public_language_default"><option value="en" selected?={ selected == "en" }>{ tr(ctx, "language.en") }</option><option value="de" selected?={ selected == "de" }>{ tr(ctx, "language.de") }</option><option value="es" selected?={ selected == "es" }>{ tr(ctx, "language.es") }</option></select>
+	<select name="public_language_default">
+		for _, language := range supportedLanguages() {
+			<option value={ string(language.Code) } selected?={ selected == string(language.Code) }>{ language.NativeName }</option>
+		}
+	</select>
 }
 
 func campaignPath(campaign db.Campaign) string {

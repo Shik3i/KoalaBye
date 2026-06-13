@@ -40,8 +40,12 @@ func languageCurrent(ctx context.Context, locale i18n.Locale) string {
 	return "false"
 }
 
-func supportedLanguages() []i18n.Locale {
-	return i18n.Supported
+func supportedLanguages() []i18n.Language {
+	return i18n.EnabledLanguages()
+}
+
+func currentLanguage(ctx context.Context) i18n.Language {
+	return i18n.LanguageByCode(i18n.FromContext(ctx).Locale)
 }
 
 func instanceSourceURL(ctx context.Context) string {

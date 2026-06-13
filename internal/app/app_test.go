@@ -475,6 +475,14 @@ func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
 	if assetResponse.Code != http.StatusOK || !strings.Contains(assetResponse.Body.String(), ":root") {
 		t.Fatalf("local CSS asset was not served")
 	}
+	for _, flag := range []string{"gb.svg", "de.svg", "es.svg"} {
+		flagRequest := httptest.NewRequest(http.MethodGet, "/assets/flags/"+flag, nil)
+		flagResponse := httptest.NewRecorder()
+		application.Handler.ServeHTTP(flagResponse, flagRequest)
+		if flagResponse.Code != http.StatusOK || !strings.Contains(flagResponse.Body.String(), "<svg") {
+			t.Fatalf("local flag asset %s was not served", flag)
+		}
+	}
 }
 
 func csrfPage(t *testing.T, application *App, target string, cookies ...*http.Cookie) (*http.Cookie, string, string) {
@@ -696,7 +704,7 @@ func TestSharedControlsAdminNavigationAndSourceLink(t *testing.T) {
 
 	landing := httptest.NewRecorder()
 	application.Handler.ServeHTTP(landing, httptest.NewRequest(http.MethodGet, "/", nil))
-	if body := landing.Body.String(); !strings.Contains(body, `<select name="lang"`) || !strings.Contains(body, `data-theme-selector`) {
+	if body := landing.Body.String(); !strings.Contains(body, `<select name="lang"`) || !strings.Contains(body, `data-theme-selector`) || !strings.Contains(body, `/assets/flags/gb.svg`) {
 		t.Fatalf("landing is missing shared controls: %s", body)
 	}
 	if strings.Contains(landing.Body.String(), "English Deutsch Español") {
@@ -709,8 +717,11 @@ func TestSharedControlsAdminNavigationAndSourceLink(t *testing.T) {
 	ownerResponse := httptest.NewRecorder()
 	application.Handler.ServeHTTP(ownerResponse, ownerRequest)
 	ownerBody := ownerResponse.Body.String()
-	if !strings.Contains(ownerBody, `href="/instance">Admin</a>`) || !strings.Contains(ownerBody, `<select name="lang"`) || !strings.Contains(ownerBody, `data-theme-selector`) {
+	if !strings.Contains(ownerBody, `href="/instance">Admin</a>`) && !strings.Contains(ownerBody, `href="/instance"`) {
 		t.Fatalf("owner dashboard is missing admin navigation or shared controls: %s", ownerBody)
+	}
+	if !strings.Contains(ownerBody, `<details class="nav-menu" open>`) || !strings.Contains(ownerBody, `<select name="lang"`) || !strings.Contains(ownerBody, `data-theme-selector`) {
+		t.Fatalf("owner dashboard is missing responsive navigation or shared controls: %s", ownerBody)
 	}
 
 	normalLogin := login(t, application, normal.Username, "navigation user password")
@@ -718,7 +729,7 @@ func TestSharedControlsAdminNavigationAndSourceLink(t *testing.T) {
 	normalRequest.AddCookie(normalLogin.session)
 	normalResponse := httptest.NewRecorder()
 	application.Handler.ServeHTTP(normalResponse, normalRequest)
-	if strings.Contains(normalResponse.Body.String(), `href="/instance">Admin</a>`) {
+	if strings.Contains(normalResponse.Body.String(), `href="/instance"`) {
 		t.Fatal("regular user saw instance admin navigation")
 	}
 
@@ -1222,6 +1233,9 @@ func TestCampaignReadinessGuidanceRendersInSupportedLocales(t *testing.T) {
 		if strings.Contains(body, "test-token-123") || !strings.Contains(body, "chrome.runtime.setUninstallURL") {
 			t.Fatalf("campaign integration example unsafe or missing for %s", tc.locale)
 		}
+		if !strings.Contains(body, `data-copy-target="campaign-public-url"`) || !strings.Contains(body, `data-copy-target="chrome-snippet"`) || !strings.Contains(body, `status-active`) {
+			t.Fatalf("campaign quality-of-life controls missing for %s", tc.locale)
+		}
 	}
 }
 
@@ -1231,6 +1245,8 @@ func TestReleaseReadinessDocumentsExistAndAreLinked(t *testing.T) {
 		"../../docs/DEPLOYMENT.md",
 		"../../docs/BACKUP_RESTORE.md",
 		"../../docs/RELEASE_CHECKLIST.md",
+		"../../docs/releases/v0.1.3.md",
+		"../../ATTRIBUTIONS.md",
 	} {
 		content, err := os.ReadFile(path)
 		if err != nil || len(content) < 200 {
@@ -1241,7 +1257,7 @@ func TestReleaseReadinessDocumentsExistAndAreLinked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, link := range []string{"docs/DEPLOYMENT.md", "docs/BACKUP_RESTORE.md", "docs/RELEASE_CHECKLIST.md"} {
+	for _, link := range []string{"docs/DEPLOYMENT.md", "docs/BACKUP_RESTORE.md", "docs/RELEASE_CHECKLIST.md", "ATTRIBUTIONS.md"} {
 		if !strings.Contains(string(readme), link) {
 			t.Fatalf("README does not link %s", link)
 		}

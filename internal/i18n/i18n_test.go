@@ -30,6 +30,19 @@ func TestCatalogParityAndFallback(t *testing.T) {
 	}
 }
 
+func TestEnabledLanguageRegistry(t *testing.T) {
+	t.Parallel()
+	languages := EnabledLanguages()
+	if len(languages) != len(Supported) {
+		t.Fatalf("enabled languages=%d supported=%d", len(languages), len(Supported))
+	}
+	for _, language := range languages {
+		if language.Code == "" || language.EnglishName == "" || language.NativeName == "" || language.FlagAsset == "" {
+			t.Fatalf("incomplete language registry entry: %#v", language)
+		}
+	}
+}
+
 func TestLanguageDetection(t *testing.T) {
 	t.Parallel()
 	catalog := testCatalog(t)
