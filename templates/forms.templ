@@ -8,7 +8,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/db"
 )
 
-templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fields []db.FormField, canEdit bool, errorKey string) {
+templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, branding db.CampaignBranding, fields []db.FormField, canEdit bool, errorKey string) {
 	@Layout(tr(ctx, "form.title"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
@@ -53,6 +53,19 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 			</div>
 			<div>
 				if canEdit {
+					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/presets") } class="panel form-stack" style="margin-bottom: 24px;">
+						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+						<h2>{ tr(ctx, "form.preset.load") }</h2>
+						<div style="display:flex; gap:12px;">
+							<select name="preset_id" style="flex:1;">
+								<option value="uninstall">{ tr(ctx, "form.preset.uninstall") }</option>
+								<option value="feedback">{ tr(ctx, "form.preset.feedback") }</option>
+								<option value="bug">{ tr(ctx, "form.preset.bug") }</option>
+							</select>
+							<button type="submit" class="secondary">{ tr(ctx, "form.preset.load") }</button>
+						</div>
+					</form>
+
 					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields") } class="panel form-stack">
 						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 						<h2>{ tr(ctx, "form.add") }</h2>
@@ -70,13 +83,20 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 						<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.add") }>{ tr(ctx, "form.add") }</button>
 					</form>
 				}
-				<section class="panel public-card">
-					<h2>{ tr(ctx, "form.preview") }</h2>
-					if len(fields) == 0 {
-						<p>{ tr(ctx, "public.form.placeholder") }</p>
-					} else {
-						@PublicFields(fields, false)
-					}
+				<section class="panel public-card" style="padding:0; overflow:hidden;">
+					<h2 style="padding: 16px 24px 0;">{ tr(ctx, "form.preview") }</h2>
+					<div id="preview-body" class={ bodyClass(&branding) } style="min-height: 400px; padding: 24px; background-color: var(--paper);">
+						if len(fields) == 0 {
+							<p>{ tr(ctx, "public.form.placeholder") }</p>
+						} else {
+							<div class="public-main" style="transform: scale(0.85); transform-origin: top left; width: 117.64%;">
+								<form class="public-form public-card panel" style="margin: 0;">
+									@PublicFields(fields, false)
+									<button class="primary" style="margin-top: 20px; opacity:0.8;" disabled>Submit</button>
+								</form>
+							</div>
+						}
+					</div>
 				</section>
 			</div>
 		</section>

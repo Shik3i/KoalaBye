@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/koalastuff/koalabye/migrations"
@@ -43,7 +44,11 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 	return database, nil
 }
 
+var migrateMu sync.Mutex
+
 func Migrate(database *sql.DB) error {
+	migrateMu.Lock()
+	defer migrateMu.Unlock()
 	goose.SetBaseFS(migrations.FS)
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return fmt.Errorf("set migration dialect: %w", err)

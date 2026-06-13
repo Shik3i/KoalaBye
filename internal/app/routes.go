@@ -181,6 +181,7 @@ func Routes(
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/access/{userPublicID}/remove", campaignsHandler.AccessRemove)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/status", campaignsHandler.Status)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form", campaignsHandler.Form)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/presets", campaignsHandler.FormFieldLoadPreset)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/fields", campaignsHandler.FormFieldCreate)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/fields/{fieldPublicID}/edit", campaignsHandler.FormFieldEdit)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/fields/{fieldPublicID}", campaignsHandler.FormFieldUpdate)

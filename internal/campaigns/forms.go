@@ -29,12 +29,13 @@ func (h *Handler) Form(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fields, err := h.q.ListFormFields(r.Context(), campaign.ID, false)
+	branding, _ := h.q.GetCampaignBranding(r.Context(), campaign.ID)
 	if err != nil {
 		http.Error(w, "load form", http.StatusInternalServerError)
 		return
 	}
 	canEdit := (role == "owner" || role == "editor") && campaign.Status != "archived" && !campaign.DisabledAt.Valid
-	web.Render(w, r, http.StatusOK, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, canEdit, ""))
+	web.Render(w, r, http.StatusOK, templates.CampaignForm(h.cfg.InstanceName, user, campaign, branding, fields, canEdit, ""))
 }
 
 func (h *Handler) FormFieldCreate(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +54,59 @@ func (h *Handler) FormFieldCreate(w http.ResponseWriter, r *http.Request) {
 	if err := h.q.CreateFormField(r.Context(), input, user.ID); err != nil {
 		h.renderFormError(w, r, user, campaign, "form.error.save")
 		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
+}
+
+func (h *Handler) FormFieldLoadPreset(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	preset := r.FormValue("preset_id")
+	ctx := r.Context()
+
+	var fields []db.SaveFormFieldInput
+	var options [][]db.FormOption
+
+	switch preset {
+	case "uninstall":
+		f1, _ := ids.New("field")
+		fields = append(fields, db.SaveFormFieldInput{CampaignID: campaign.ID, PublicID: f1, Label: i18n.T(ctx, "preset.uninstall.reason.label"), FieldType: "radio_group", Required: true})
+		o1, _ := ids.New("option"); o2, _ := ids.New("option"); o3, _ := ids.New("option"); o4, _ := ids.New("option")
+		options = append(options, []db.FormOption{
+			{PublicID: o1, Label: i18n.T(ctx, "preset.uninstall.reason.opt1"), Value: "missing-features"},
+			{PublicID: o2, Label: i18n.T(ctx, "preset.uninstall.reason.opt2"), Value: "bugs"},
+			{PublicID: o3, Label: i18n.T(ctx, "preset.uninstall.reason.opt3"), Value: "expensive"},
+			{PublicID: o4, Label: i18n.T(ctx, "preset.uninstall.reason.opt4"), Value: "other"},
+		})
+		f2, _ := ids.New("field")
+		fields = append(fields, db.SaveFormFieldInput{CampaignID: campaign.ID, PublicID: f2, Label: i18n.T(ctx, "preset.uninstall.details.label"), FieldType: "textarea", Required: false})
+		options = append(options, nil)
+	case "feedback":
+		f1, _ := ids.New("field")
+		fields = append(fields, db.SaveFormFieldInput{CampaignID: campaign.ID, PublicID: f1, Label: i18n.T(ctx, "preset.feedback.rating.label"), FieldType: "rating_1_5", Required: true})
+		options = append(options, nil)
+		f2, _ := ids.New("field")
+		fields = append(fields, db.SaveFormFieldInput{CampaignID: campaign.ID, PublicID: f2, Label: i18n.T(ctx, "preset.feedback.details.label"), FieldType: "textarea", Required: false})
+		options = append(options, nil)
+	case "bug":
+		f1, _ := ids.New("field")
+		fields = append(fields, db.SaveFormFieldInput{CampaignID: campaign.ID, PublicID: f1, Label: i18n.T(ctx, "preset.bug.details.label"), FieldType: "textarea", Required: true})
+		options = append(options, nil)
+	}
+
+	for i, input := range fields {
+		_ = h.q.CreateFormField(ctx, input, user.ID)
+		if len(options[i]) > 0 {
+			field, err := h.q.GetFormField(ctx, campaign.ID, input.PublicID)
+			if err == nil {
+				for _, opt := range options[i] {
+					_ = h.q.CreateFormOption(ctx, campaign.ID, field.ID, opt.PublicID, opt.Label, opt.Value, user.ID)
+				}
+			}
+		}
 	}
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
 }
@@ -203,7 +257,8 @@ func formFieldInput(r *http.Request, requireType bool) (db.SaveFormFieldInput, s
 
 func (h *Handler) renderFormError(w http.ResponseWriter, r *http.Request, user db.User, campaign db.Campaign, key string) {
 	fields, _ := h.q.ListFormFields(r.Context(), campaign.ID, false)
-	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, true, key))
+	branding, _ := h.q.GetCampaignBranding(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignForm(h.cfg.InstanceName, user, campaign, branding, fields, true, key))
 }
 
 func (h *Handler) PublicSubmitByID(w http.ResponseWriter, r *http.Request) {

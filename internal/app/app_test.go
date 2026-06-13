@@ -468,8 +468,9 @@ func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
 	if !strings.Contains(csp, "default-src 'self'") || !strings.Contains(csp, "script-src 'self'") || !strings.Contains(csp, "style-src 'self' 'sha256-bsV5JivYxvGywDAZ22EZJKBFip65Ng9xoJVLbBg7bdo='") {
 		t.Fatalf("missing restrictive CSP: %q", csp)
 	}
-	if strings.Contains(response.Body.String(), "https://") || strings.Contains(response.Body.String(), "http://") {
-		t.Fatal("rendered HTML contains an external URL")
+	body := response.Body.String()
+	if strings.Contains(body, `<script src="http`) || strings.Contains(body, `<link rel="stylesheet" href="http`) || strings.Contains(body, `<img src="http`) {
+		t.Fatal("rendered HTML contains an external asset URL")
 	}
 
 	assetRequest := httptest.NewRequest(http.MethodGet, "/assets/app.css", nil)
@@ -751,7 +752,7 @@ func TestSharedControlsAdminNavigationAndSourceLink(t *testing.T) {
 	}
 	withoutSource := httptest.NewRecorder()
 	application.Handler.ServeHTTP(withoutSource, httptest.NewRequest(http.MethodGet, "/", nil))
-	if strings.Contains(withoutSource.Body.String(), "github.com/Shik3i/KoalaBye") {
+	if strings.Contains(withoutSource.Body.String(), "ref=release&amp;view=source") {
 		t.Fatal("empty source URL still rendered a source link")
 	}
 }
@@ -836,8 +837,9 @@ func TestNewRoutesRenderGermanAndSpanishWithoutExternalCDN(t *testing.T) {
 		if !strings.Contains(strings.ToLower(response.Body.String()), strings.ToLower(tc.text)) {
 			t.Fatalf("%s missing translation", tc.path)
 		}
-		if strings.Contains(response.Body.String(), "https://") || strings.Contains(response.Body.String(), "http://") {
-			t.Fatalf("%s contains external link", tc.path)
+		body := response.Body.String()
+		if strings.Contains(body, `<script src="http`) || strings.Contains(body, `<link rel="stylesheet" href="http`) || strings.Contains(body, `<img src="http`) {
+			t.Fatalf("%s contains external asset link", tc.path)
 		}
 	}
 }

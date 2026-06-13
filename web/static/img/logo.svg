@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Ears -->
+  <circle cx="24" cy="40" r="20" fill="#a0aec0" />
+  <circle cx="24" cy="40" r="10" fill="#cbd5e1" />
+  <circle cx="104" cy="40" r="20" fill="#a0aec0" />
+  <circle cx="104" cy="40" r="10" fill="#cbd5e1" />
+  <!-- Head -->
+  <circle cx="64" cy="64" r="48" fill="#cbd5e1" />
+  <!-- Eyes -->
+  <circle cx="44" cy="56" r="6" fill="#1e293b" />
+  <circle cx="84" cy="56" r="6" fill="#1e293b" />
+  <!-- Nose -->
+  <ellipse cx="64" cy="72" rx="12" ry="16" fill="#1e293b" />
+  <ellipse cx="64" cy="66" rx="6" ry="4" fill="#334155" /> <!-- highlight -->
+  <!-- Waving hand / Bye -->
+  <path d="M100 100 Q120 80, 115 65 Q110 50, 95 75 Z" fill="#cbd5e1" />
+  <!-- Little lines for motion -->
+  <line x1="110" y1="50" x2="118" y2="42" stroke="#64748b" stroke-width="3" stroke-linecap="round" />
+  <line x1="120" y1="60" x2="128" y2="56" stroke="#64748b" stroke-width="3" stroke-linecap="round" />
+</svg>
