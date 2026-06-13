@@ -129,7 +129,7 @@
   "legal.privacy.section.contact.text": "Privacy contact: admin@koalastuff.net.",
   "legal.imprint.page_title": "Legal notice",
   "legal.imprint.title": "Legal notice",
-  "legal.imprint.text": "This project is a private, non-commercial open-source hobby project. Therefore, according to § 5 DDG (Germany), there is no obligation to provide a full legal imprint with a physical address.\\n\\nContact: admin@koalastuff.net",
+  "legal.imprint.text": "This website is operated as a purely private, non-commercial hobby project. According to § 5 of the German Digital Services Act (DDG), a comprehensive imprint including a physical address is only required for commercially operated websites. Since this platform generates no revenue, displays no advertisements, and serves exclusively for personal, open-source development purposes, it is exempt from this requirement.\n\nLiability for Content:\nThe content of these pages was created with the greatest care. However, we cannot guarantee the accuracy, completeness, or topicality of the content. As a service provider, we are responsible for our own content on these pages under general laws.\n\nCopyright:\nThe content and works created by the site operators on these pages are subject to copyright law. Duplication, processing, distribution, or any form of commercialization of such material beyond the scope of the copyright law shall require the prior written consent of its respective author or creator.\n\nContact: admin@koalastuff.net",
   "legal.placeholder": "Legal placeholder",
   "legal.language_notice": "Legal pages are currently available in English and German only. English is shown as the fallback.",
   "legal.privacy.link": "Privacy",
