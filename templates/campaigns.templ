@@ -67,15 +67,15 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 			}
 			<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") } class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-				<label>{ tr(ctx, "campaign.name") }<input name="name" required maxlength="120"/></label>
-				<label>{ tr(ctx, "campaign.slug") }<input name="slug" required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
-				<label>{ tr(ctx, "campaign.description") }<textarea name="description" maxlength="1000"></textarea></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.name") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_name") }>i</span></div><input name="name" required maxlength="120"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.description") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_desc") }>i</span></div><textarea name="description" maxlength="1000"></textarea></label>
 				<label>
-					{ tr(ctx, "campaign.language") }@languageSelect(defaults.PublicLanguageDefault)
+					<div class="field-header"><span>{ tr(ctx, "campaign.language") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_lang") }>i</span></div>@languageSelect(defaults.PublicLanguageDefault)
 				</label>
-				<label>{ tr(ctx, "campaign.privacy.preset") }<select name="privacy_preset"><option value="strict">{ tr(ctx, "campaign.privacy.strict") }</option><option value="balanced">{ tr(ctx, "campaign.privacy.balanced") }</option></select></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.privacy.preset") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_privacy") }>i</span></div><select name="privacy_preset"><option value="strict">{ tr(ctx, "campaign.privacy.strict") }</option><option value="balanced">{ tr(ctx, "campaign.privacy.balanced") }</option></select></label>
 				<p class="muted">{ tr(ctx, "campaign.privacy.preset_help") }</p>
-				<button type="submit">{ tr(ctx, "campaign.create") }</button>
+				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.create") }>{ tr(ctx, "campaign.create") }</button>
 			</form>
 		</section>
 	}
@@ -114,7 +114,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<article class="panel">
 				<h2>{ tr(ctx, "campaign.public_link") }</h2>
 				<p>{ tr(ctx, "campaign.public_link.working") }</p>
-				<div class="copy-row"><a href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }><code id="campaign-public-url">{ baseURL + "/c/" + campaign.PublicID }</code></a><button class="button secondary copy-button" type="button" data-copy-target="campaign-public-url" data-copy-label={ tr(ctx, "copy.copied") }>{ tr(ctx, "copy.action") }</button></div>
+				<div class="copy-row"><a href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }><code id="campaign-public-url">{ baseURL + "/c/" + campaign.PublicID }</code></a><button class="button secondary copy-button" type="button" data-copy-target="campaign-public-url" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button></div>
 				<p><a href={ templ.SafeURL(baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug) }><code>{ baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug }</code></a></p>
 				if campaign.PublicLinkEnabled {
 					<span class="badge">{ tr(ctx, "common.enabled") }</span>
@@ -143,9 +143,9 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
 			<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
 			<h3>{ tr(ctx, "campaign.snippet.chrome") }</h3>
-			<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="chrome-snippet" data-copy-label={ tr(ctx, "copy.copied") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.chrome") }><code id="chrome-snippet">{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
+			<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="chrome-snippet" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.chrome") }><code id="chrome-snippet">{ chromeSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
 			<p class="muted">{ tr(ctx, "campaign.snippet.firefox") }</p>
-			<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="firefox-snippet" data-copy-label={ tr(ctx, "copy.copied") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.firefox") }><code id="firefox-snippet">{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
+			<div class="code-block"><button class="button secondary copy-button" type="button" data-copy-target="firefox-snippet" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button><pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.firefox") }><code id="firefox-snippet">{ firefoxSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre></div>
 			<h3>{ tr(ctx, "campaign.snippet.no_token.title") }</h3>
 			<p>{ tr(ctx, "campaign.snippet.no_token.text") }</p>
 			<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.no_token.title") }><code>{ chromeNoTokenSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
@@ -156,12 +156,12 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				<h2>{ tr(ctx, "campaign.lifecycle") }</h2>
 				<div class="actions">
 					if campaign.Status == "draft" || campaign.Status == "paused" {
-						@statusForm(campaign, "active", "campaign.activate")
+						@statusForm(campaign, "active", "campaign.activate", "tooltip.btn.activate")
 					}
 					if campaign.Status == "active" {
-						@statusForm(campaign, "paused", "campaign.pause")
+						@statusForm(campaign, "paused", "campaign.pause", "tooltip.btn.pause")
 					}
-					@statusForm(campaign, "archived", "campaign.archive")
+					@statusForm(campaign, "archived", "campaign.archive", "tooltip.btn.archive")
 				</div>
 			</section>
 		}
@@ -178,11 +178,11 @@ templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, 
 			}
 			<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/settings") } class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-				<label>{ tr(ctx, "campaign.name") }<input name="name" value={ campaign.Name } required maxlength="120"/></label>
-				<label>{ tr(ctx, "campaign.slug") }<input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
-				<label>{ tr(ctx, "campaign.description") }<textarea name="description" maxlength="1000">{ campaign.Description.String }</textarea></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.name") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_name") }>i</span></div><input name="name" value={ campaign.Name } required maxlength="120"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.description") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.campaign_desc") }>i</span></div><textarea name="description" maxlength="1000">{ campaign.Description.String }</textarea></label>
 				<label class="check"><input type="checkbox" name="public_link_enabled" checked?={ campaign.PublicLinkEnabled }/>{ tr(ctx, "campaign.public_link.enable") }</label>
-				<button type="submit">{ tr(ctx, "common.save") }</button>
+				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
 			</form>
 		</section>
 	}
@@ -221,7 +221,7 @@ templ CampaignBrandingForm(instanceName string, user db.User, campaign db.Campai
 					</select>
 				</label>
 				@campaignCheck("show_koalabye_branding", "campaign.branding.show_platform", branding.ShowKoalabyeBranding)
-				<button type="submit">{ tr(ctx, "common.save") }</button>
+				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
 			</form>
 		</section>
 	}
@@ -261,7 +261,7 @@ templ CampaignPrivacy(instanceName string, user db.User, campaign db.Campaign, s
 			</label>
 			<p class="muted">{ tr(ctx, "retention.help") }</p>
 			<p class="muted">{ tr(ctx, "campaign.privacy.hash_locked") }</p>
-			<button type="submit">{ tr(ctx, "common.save") }</button>
+			<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
 		</form>
 	}
 }
@@ -292,10 +292,10 @@ templ CampaignAccess(instanceName string, user db.User, campaign db.Campaign, me
 								<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access") }>
 									<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="user_public_id" value={ member.PublicID }/>
 									<select name="role" aria-label={ tr(ctx, "campaign.access.role") }><option value="viewer">{ tr(ctx, "campaign.role.viewer") }</option><option value="analyst">{ tr(ctx, "campaign.role.analyst") }</option><option value="editor">{ tr(ctx, "campaign.role.editor") }</option><option value="owner">{ tr(ctx, "campaign.role.owner") }</option></select>
-									<button class="link-button" type="submit">{ tr(ctx, "campaign.access.grant") }</button>
+									<button class="link-button" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.grant") }>{ tr(ctx, "campaign.access.grant") }</button>
 								</form>
 								if member.Role.Valid {
-									<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access/" + member.PublicID + "/remove") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit">{ tr(ctx, "members.remove") }</button></form>
+									<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access/" + member.PublicID + "/remove") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "members.remove") }</button></form>
 								}
 							</td>
 						</tr>
@@ -306,8 +306,8 @@ templ CampaignAccess(instanceName string, user db.User, campaign db.Campaign, me
 	}
 }
 
-templ statusForm(campaign db.Campaign, status, key string) {
-	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/status") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="status" value={ status }/><button type="submit">{ tr(ctx, key) }</button></form>
+templ statusForm(campaign db.Campaign, status, key, tooltip string) {
+	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/status") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="status" value={ status }/><button type="submit" data-tooltip={ tr(ctx, tooltip) }>{ tr(ctx, key) }</button></form>
 }
 
 templ campaignCheck(name, key string, checked bool) {

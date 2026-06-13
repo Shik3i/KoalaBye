@@ -15,7 +15,7 @@ templ Setup(instanceName, csrfToken, errorKey string) {
 				<label>{ tr(ctx, "setup.username") }<input name="username" autocomplete="username" required minlength="3" maxlength="40" pattern="[A-Za-z0-9_-]+"/></label>
 				<label>{ tr(ctx, "setup.password") }<input name="password" type="password" autocomplete="new-password" required minlength="12"/></label>
 				<label>{ tr(ctx, "setup.password_confirm") }<input name="password_confirm" type="password" autocomplete="new-password" required minlength="12"/></label>
-				<button type="submit">{ tr(ctx, "setup.submit") }</button>
+				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.setup") }>{ tr(ctx, "setup.submit") }</button>
 			</form>
 		</section>
 	}

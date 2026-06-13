@@ -17,7 +17,7 @@ templ Register(instanceName, inviteCode string, allowed bool, errorKey string) {
 					<label>{ tr(ctx, "register.email") }<input name="email" type="email" autocomplete="email"/></label>
 					<label>{ tr(ctx, "setup.password") }<input name="password" type="password" required minlength="12"/></label>
 					<label>{ tr(ctx, "setup.password_confirm") }<input name="password_confirm" type="password" required minlength="12"/></label>
-					<button type="submit">{ tr(ctx, "register.submit") }</button>
+					<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.register") }>{ tr(ctx, "register.submit") }</button>
 				</form>
 			}
 		</section>

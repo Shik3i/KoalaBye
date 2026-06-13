@@ -42,10 +42,7 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 							<div class="actions compact">
 								@fieldAction(campaign, field, "up", index == 0)
 								@fieldAction(campaign, field, "down", index == len(fields)-1)
-								<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/archive") } class="inline-form">
-									<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-									<button class="link-button danger" type="submit">{ tr(ctx, "common.remove") }</button>
-								</form>
+								<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/archive") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "common.remove") }</button></form>
 							</div>
 						}
 					</article>
@@ -60,17 +57,17 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 						<h2>{ tr(ctx, "form.add") }</h2>
 						<label>
-							{ tr(ctx, "form.field_type") }
+							<div class="field-header"><span>{ tr(ctx, "form.field_type") }</span><span class="info-icon" data-tooltip="The type of the field.">i</span></div>
 							<select name="field_type">
 								@fieldTypeOptions("")
 							</select>
 						</label>
-						<label>{ tr(ctx, "form.label") }<input name="label" maxlength="300" required/></label>
-						<label>{ tr(ctx, "form.help_text") }<textarea name="help_text" maxlength="1000"></textarea></label>
+						<label><div class="field-header"><span>{ tr(ctx, "form.label") }</span><span class="info-icon" data-tooltip="The main label or question text.">i</span></div><input name="label" maxlength="300" required/></label>
+						<label><div class="field-header"><span>{ tr(ctx, "form.help_text") }</span><span class="info-icon" data-tooltip="Optional descriptive text.">i</span></div><textarea name="help_text" maxlength="1000"></textarea></label>
 						<label class="check"><input type="checkbox" name="required"/>{ tr(ctx, "form.required") }</label>
-						<label>{ tr(ctx, "form.text_block.body") }<textarea name="body" maxlength="5000"></textarea></label>
-						<label>{ tr(ctx, "form.textarea.max_length") }<input type="number" name="max_length" value="1000" min="1" max="5000"/></label>
-						<button type="submit">{ tr(ctx, "form.add") }</button>
+						<label><div class="field-header"><span>{ tr(ctx, "form.text_block.body") }</span><span class="info-icon" data-tooltip="Text to display.">i</span></div><textarea name="body" maxlength="5000"></textarea></label>
+						<label><div class="field-header"><span>{ tr(ctx, "form.textarea.max_length") }</span><span class="info-icon" data-tooltip="Max characters allowed.">i</span></div><input type="number" name="max_length" value="1000" min="1" max="5000"/></label>
+						<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.add") }>{ tr(ctx, "form.add") }</button>
 					</form>
 				}
 				<section class="panel public-card">
@@ -98,16 +95,16 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 		}
 		<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID) } class="panel form-stack">
 			<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-			<label>{ tr(ctx, "form.label") }<input name="label" value={ field.Label } maxlength="300" required disabled?={ !canEdit }/></label>
-			<label>{ tr(ctx, "form.help_text") }<textarea name="help_text" maxlength="1000" disabled?={ !canEdit }>{ field.HelpText.String }</textarea></label>
+			<label><div class="field-header"><span>{ tr(ctx, "form.label") }</span><span class="info-icon" data-tooltip="The main label or question text.">i</span></div><input name="label" value={ field.Label } maxlength="300" required disabled?={ !canEdit }/></label>
+			<label><div class="field-header"><span>{ tr(ctx, "form.help_text") }</span><span class="info-icon" data-tooltip="Optional descriptive text.">i</span></div><textarea name="help_text" maxlength="1000" disabled?={ !canEdit }>{ field.HelpText.String }</textarea></label>
 			if field.FieldType != "text_block" {
 				<label class="check"><input type="checkbox" name="required" checked?={ field.Required } disabled?={ !canEdit }/>{ tr(ctx, "form.required") }</label>
 			}
 			if field.FieldType == "text_block" {
-				<label>{ tr(ctx, "form.text_block.body") }<textarea name="body" maxlength="5000" disabled?={ !canEdit }>{ field.Config().Body }</textarea></label>
+				<label><div class="field-header"><span>{ tr(ctx, "form.text_block.body") }</span><span class="info-icon" data-tooltip="Text to display.">i</span></div><textarea name="body" maxlength="5000" disabled?={ !canEdit }>{ field.Config().Body }</textarea></label>
 			}
 			if field.FieldType == "textarea" {
-				<label>{ tr(ctx, "form.textarea.max_length") }<input type="number" name="max_length" value={ fmt.Sprint(field.Config().MaxLength) } min="1" max="5000" disabled?={ !canEdit }/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "form.textarea.max_length") }</span><span class="info-icon" data-tooltip="Max characters allowed.">i</span></div><input type="number" name="max_length" value={ fmt.Sprint(field.Config().MaxLength) } min="1" max="5000" disabled?={ !canEdit }/></label>
 			}
 			if field.FieldType == "checkbox_group" || field.FieldType == "radio_group" {
 				<h2>{ tr(ctx, "form.options") }</h2>
@@ -118,7 +115,7 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 				}
 			}
 			if canEdit {
-				<button type="submit">{ tr(ctx, "common.save") }</button>
+				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
 			}
 		</form>
 		if canEdit && (field.FieldType == "checkbox_group" || field.FieldType == "radio_group") {
@@ -127,7 +124,7 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 				<h2>{ tr(ctx, "form.option.add") }</h2>
 				<label>{ tr(ctx, "form.option.label") }<input name="label" maxlength="200" required/></label>
 				<label>{ tr(ctx, "form.option.value") }<input name="value" maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" required/></label>
-				<button type="submit">{ tr(ctx, "form.option.add") }</button>
+				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.add") }>{ tr(ctx, "form.option.add") }</button>
 			</form>
 			<section class="panel">
 				<h2>{ tr(ctx, "form.options") }</h2>
@@ -135,10 +132,7 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 					if !option.ArchivedAt.Valid {
 						<div class="field-heading">
 							<span>{ option.Label } <code>{ option.Value }</code></span>
-							<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/options/" + option.PublicID + "/archive") } class="inline-form">
-								<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-								<button class="link-button danger" type="submit">{ tr(ctx, "common.remove") }</button>
-							</form>
+							<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/options/" + option.PublicID + "/archive") } class="inline-form"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "common.remove") }</button></form>
 						</div>
 					}
 				}
@@ -148,10 +142,8 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 }
 
 templ fieldAction(campaign db.Campaign, field db.FormField, direction string, disabled bool) {
-	<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/move") } class="inline-form">
-		<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-		<input type="hidden" name="direction" value={ direction }/>
-		<button class="link-button" type="submit" disabled?={ disabled }>{ tr(ctx, "form.move." + direction) }</button>
+	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/move") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="direction" value={ direction }/>
+		<button class="link-button" type="submit" disabled?={ disabled } data-tooltip={ tr(ctx, "tooltip.btn.move_" + direction) }>{ tr(ctx, "form.move." + direction) }</button>
 	</form>
 }
 

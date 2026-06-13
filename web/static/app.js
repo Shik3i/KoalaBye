@@ -7,27 +7,17 @@ document.documentElement.classList.add("js");
     }
 
     window.addEventListener("DOMContentLoaded", function() {
-        var toggles = document.querySelectorAll("[data-theme-selector]");
-        toggles.forEach(function(switcher) {
-            if (theme === "light" || theme === "dark") {
-                switcher.value = theme;
-            } else {
-                switcher.value = "system";
-            }
-
-            switcher.addEventListener("change", function() {
-                var val = switcher.value;
-                if (val === "light" || val === "dark") {
-                    localStorage.setItem("theme", val);
-                    document.documentElement.setAttribute("data-theme", val);
-                } else {
-                    localStorage.removeItem("theme");
-                    document.documentElement.removeAttribute("data-theme");
+        var toggles = document.querySelectorAll(".theme-toggle");
+        toggles.forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                var current = document.documentElement.getAttribute("data-theme");
+                var isDark = current === "dark";
+                if (!current) {
+                    isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
                 }
-                
-                toggles.forEach(function(other) {
-                    if (other !== switcher) other.value = val;
-                });
+                var val = isDark ? "light" : "dark";
+                localStorage.setItem("theme", val);
+                document.documentElement.setAttribute("data-theme", val);
             });
         });
 

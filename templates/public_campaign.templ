@@ -100,7 +100,7 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 					<input type="hidden" name="visit_public_id" value={ visitPublicID }/>
 					<div class="honeypot" aria-hidden="true"><label>{ tr(ctx, "public.form.honeypot") }<input name="website" tabindex="-1" autocomplete="off"/></label></div>
 					@PublicFields(fields, true)
-					<button type="submit">{ tr(ctx, "public.form.submit") }</button>
+					<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.submit") }>{ tr(ctx, "public.form.submit") }</button>
 				</form>
 			}
 		</section>

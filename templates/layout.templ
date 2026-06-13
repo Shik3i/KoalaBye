@@ -7,25 +7,21 @@ templ LanguageSelector() {
 		<img class="language-flag" src={ currentLanguage(ctx).FlagAsset } alt=""/>
 		<label>
 			<span class="visually-hidden">{ tr(ctx, "language.label") }</span>
-			<select name="lang" aria-label={ tr(ctx, "language.label") }>
+			<select name="lang" aria-label={ tr(ctx, "language.label") } onchange="this.form.submit()">
 				for _, language := range supportedLanguages() {
 					<option value={ string(language.Code) } selected?={ languageCurrent(ctx, language.Code) == "page" }>{ language.NativeName }</option>
 				}
 			</select>
 		</label>
-		<button type="submit" class="compact-button">{ tr(ctx, "common.apply") }</button>
+		<noscript><button type="submit" class="compact-button" data-tooltip={ tr(ctx, "tooltip.btn.apply") }>{ tr(ctx, "common.apply") }</button></noscript>
 	</form>
 }
 
 templ ThemeSelector() {
-	<label class="control-switcher theme-switcher">
-		<span class="visually-hidden">{ tr(ctx, "theme.label") }</span>
-		<select data-theme-selector aria-label={ tr(ctx, "theme.label") }>
-			<option value="system">{ tr(ctx, "theme.system") }</option>
-			<option value="light">{ tr(ctx, "theme.light") }</option>
-			<option value="dark">{ tr(ctx, "theme.dark") }</option>
-		</select>
-	</label>
+	<button type="button" class="theme-toggle" aria-label={ tr(ctx, "theme.label") } data-tooltip={ tr(ctx, "tooltip.btn.theme") }>
+		<svg class="sun" viewBox="0 0 24 24"><path d="M12 18V22M12 2V6M22 12H18M6 12H2M19.071 19.071L16.243 16.243M7.757 7.757L4.929 4.929M19.071 4.929L16.243 7.757M7.757 16.243L4.929 19.071M16 12C16 14.209 14.209 16 12 16C9.791 16 8 14.209 8 12C8 9.791 9.791 8 12 8C14.209 8 16 9.791 16 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+		<svg class="moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+	</button>
 }
 
 templ Layout(title string, instanceName string, user *db.User) {
@@ -59,7 +55,7 @@ templ Layout(title string, instanceName string, user *db.User) {
 								}
 								<form method="post" action="/logout" class="inline-form">
 									<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-									<button class="link-button" type="submit">{ tr(ctx, "common.logout") }</button>
+									<button class="link-button" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.logout") }>{ tr(ctx, "common.logout") }</button>
 								</form>
 							</nav>
 						</details>

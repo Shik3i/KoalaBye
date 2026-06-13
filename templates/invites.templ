@@ -20,7 +20,7 @@ templ OrganizationInvites(instanceName string, user db.User, org db.Organization
 				<label>{ tr(ctx, "members.role") }<select name="role"><option value="viewer">{ tr(ctx, "role.viewer") }</option><option value="member">{ tr(ctx, "role.member") }</option><option value="admin">{ tr(ctx, "role.admin") }</option></select></label>
 				<label>{ tr(ctx, "invite.max_uses") }<select name="max_uses"><option>1</option><option>5</option><option>10</option></select></label>
 				<label>{ tr(ctx, "invite.expiry") }<select name="expiry_days"><option value="1">{ tr(ctx, "invite.one_day") }</option><option value="7" selected>{ tr(ctx, "invite.seven_days") }</option><option value="30">{ tr(ctx, "invite.thirty_days") }</option></select></label>
-				<button type="submit">{ tr(ctx, "invite.create") }</button>
+				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.create") }>{ tr(ctx, "invite.create") }</button>
 			</form>
 			<article class="panel"><h2>{ tr(ctx, "limits.title") }</h2><p>{ tr(ctx, "invite.limit", fmt.Sprint(limits.MaxActiveInvites)) }</p></article>
 		</section>
@@ -37,7 +37,7 @@ templ OrganizationInvites(instanceName string, user db.User, org db.Organization
 								<td>{ invite.ExpiresAt }</td>
 								<td>
 									if !invite.RevokedAt.Valid {
-										<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/invites/" + invite.PublicID + "/revoke") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit">{ tr(ctx, "invite.revoke") }</button></form>
+										<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/invites/" + invite.PublicID + "/revoke") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.revoke") }>{ tr(ctx, "invite.revoke") }</button></form>
 									}
 								</td>
 							</tr>
@@ -62,7 +62,7 @@ templ JoinInvite(instanceName string, user *db.User, invite db.Invite, code stri
 					<h2>{ invite.OrganizationName }</h2>
 					<p>{ tr(ctx, "join.role", tr(ctx, "role." + invite.Role)) }</p>
 					if user != nil {
-						<form method="post" action={ templ.SafeURL("/join/" + code) }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button type="submit">{ tr(ctx, "join.confirm") }</button></form>
+						<form method="post" action={ templ.SafeURL("/join/" + code) }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.join") }>{ tr(ctx, "join.confirm") }</button></form>
 					} else {
 						<a class="button" href="/login">{ tr(ctx, "landing.login") }</a>
 						if canRegister {

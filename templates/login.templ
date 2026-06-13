@@ -13,7 +13,7 @@ templ Login(instanceName, csrfToken, errorKey string) {
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
 				<label>{ tr(ctx, "auth.login.username") }<input name="username" autocomplete="username" required autofocus/></label>
 				<label>{ tr(ctx, "auth.login.password") }<input name="password" type="password" autocomplete="current-password" required/></label>
-				<button type="submit">{ tr(ctx, "auth.login.submit") }</button>
+				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.login") }>{ tr(ctx, "auth.login.submit") }</button>
 			</form>
 		</section>
 	}
