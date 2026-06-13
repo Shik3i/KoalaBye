@@ -2,6 +2,8 @@ package campaigns
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 
 	"github.com/koalastuff/koalabye/internal/db"
 	"github.com/koalastuff/koalabye/internal/ids"
@@ -272,6 +274,52 @@ var presetOrder = []string{
 
 func PresetNames() []string {
 	return append([]string(nil), presetOrder...)
+}
+
+func PresetPreviews() map[string]map[string][]db.FormField {
+	previews := make(map[string]map[string][]db.FormField, len(presetOrder))
+	for _, name := range presetOrder {
+		previews[name] = make(map[string][]db.FormField, 3)
+		for _, lang := range []string{"en", "de", "es"} {
+			previews[name][lang] = presetPreview(name, lang)
+		}
+	}
+	return previews
+}
+
+func presetPreview(name, lang string) []db.FormField {
+	preset, ok := presets[name]
+	if !ok {
+		return nil
+	}
+	fields := make([]db.FormField, 0, len(preset))
+	for fieldIndex, item := range preset {
+		label := item.label[lang]
+		if label == "" {
+			label = item.label["en"]
+		}
+		field := db.FormField{
+			PublicID:  fmt.Sprintf("preview_%d", fieldIndex),
+			FieldType: item.fieldType,
+			Label:     label,
+			Required:  item.required,
+		}
+		if item.fieldType == "textarea" {
+			field.ConfigJSON = sql.NullString{String: `{"max_length":1000}`, Valid: true}
+		}
+		for optionIndex, itemOption := range item.options {
+			optionLabel := itemOption.label[lang]
+			if optionLabel == "" {
+				optionLabel = itemOption.label["en"]
+			}
+			field.Options = append(field.Options, db.FormOption{
+				PublicID: fmt.Sprintf("preview_%d_%d", fieldIndex, optionIndex),
+				Label:    optionLabel, Value: itemOption.value, SortOrder: optionIndex + 1,
+			})
+		}
+		fields = append(fields, field)
+	}
+	return fields
 }
 
 func ApplyFormPreset(ctx context.Context, q *db.Querier, campaignID int64, presetName string, lang string, actorID int64) error {

@@ -970,7 +970,7 @@ func TestCampaignRolesPrivacyAndArchivedReadOnly(t *testing.T) {
 	if err := application.Database.QueryRow(`SELECT hash_install_token,collect_coarse_browser FROM campaign_settings WHERE campaign_id=?`, campaign.ID).Scan(&hashToken, &coarseBrowser); err != nil || hashToken != 1 || coarseBrowser != 1 {
 		t.Fatalf("privacy settings not safely stored: hash=%d browser=%d err=%v", hashToken, coarseBrowser, err)
 	}
-	status := formPost(application, base+"/status", url.Values{"csrf_token": {token}, "status": {"archived"}}, ownerLogin.session, csrfCookie)
+	status := formPost(application, base+"/status", url.Values{"csrf_token": {token}, "status": {"archived"}, "confirmed": {"yes"}}, ownerLogin.session, csrfCookie)
 	if status.Code != http.StatusSeeOther {
 		t.Fatalf("archive=%d", status.Code)
 	}
@@ -1094,6 +1094,63 @@ func seedActivePublicCampaign(t *testing.T, application *App, publicID, slug, la
 		t.Fatal(err)
 	}
 	return owner, org, loaded
+}
+
+func TestDraftPreviewRequiresEditAccessAndDoesNotRecordAnalytics(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	orgs, _ := q.ListOrganizationsForUser(context.Background(), owner.ID)
+	org := orgs[0]
+	campaign, err := q.CreateCampaign(context.Background(), db.CreateCampaignInput{
+		PublicID: "camp_draft_preview", OrganizationID: org.ID, CreatedBy: owner.ID,
+		Name: "Draft preview", Slug: "draft-preview", Language: "en", PrivacyPreset: "strict",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := q.CreateFormField(context.Background(), db.SaveFormFieldInput{
+		PublicID: "field_draft_preview", CampaignID: campaign.ID, FieldType: "textarea", Label: "Private question",
+	}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	ownerLogin := login(t, application, owner.Username, password)
+	path := "/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID + "/preview"
+	request := httptest.NewRequest(http.MethodGet, path, nil)
+	request.AddCookie(ownerLogin.session)
+	response := httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	body := response.Body.String()
+	if response.Code != http.StatusOK || !strings.Contains(body, "Private preview") || !strings.Contains(body, "Private question") || strings.Contains(body, "<form method=\"post\"") {
+		t.Fatalf("draft preview failed: %d %s", response.Code, body)
+	}
+	var visits int
+	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM campaign_visits WHERE campaign_id=?`, campaign.ID).Scan(&visits); err != nil || visits != 0 {
+		t.Fatalf("preview recorded visits: %d %v", visits, err)
+	}
+	public := httptest.NewRecorder()
+	application.Handler.ServeHTTP(public, httptest.NewRequest(http.MethodGet, "/c/"+campaign.PublicID, nil))
+	if public.Code != http.StatusNotFound {
+		t.Fatalf("draft became public: %d", public.Code)
+	}
+
+	viewer := seedNonOwner(t, application, "previewviewer", "preview viewer long password")
+	now := db.Now()
+	if _, err := application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, viewer.ID, now, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.SetCampaignMember(context.Background(), campaign, viewer.PublicID, "viewer", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	viewerLogin := login(t, application, viewer.Username, "preview viewer long password")
+	request = httptest.NewRequest(http.MethodGet, path, nil)
+	request.AddCookie(viewerLogin.session)
+	response = httptest.NewRecorder()
+	application.Handler.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("viewer preview access=%d", response.Code)
+	}
 }
 
 func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
@@ -1704,16 +1761,16 @@ func TestPhase7AnalyticsExportsRetentionAndPermissions(t *testing.T) {
 	if noCSRF.Code != http.StatusForbidden {
 		t.Fatalf("delete without CSRF=%d", noCSRF.Code)
 	}
-	wrong := formPost(application, base+"/responses/delete-all", url.Values{"csrf_token": {token}, "confirmation": {"wrong"}}, ownerLogin.session, csrfCookie)
+	wrong := formPost(application, base+"/responses/delete-all", url.Values{"csrf_token": {token}, "confirmation": {"wrong"}, "confirmed": {"yes"}}, ownerLogin.session, csrfCookie)
 	if wrong.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("wrong deletion confirmation=%d", wrong.Code)
 	}
 	analystLogin := login(t, application, analyst.Username, "phase7 analyst password")
-	analystDelete := formPost(application, base+"/visits/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}}, analystLogin.session, csrfCookie)
+	analystDelete := formPost(application, base+"/visits/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}, "confirmed": {"yes"}}, analystLogin.session, csrfCookie)
 	if analystDelete.Code != http.StatusForbidden {
 		t.Fatalf("analyst deletion=%d", analystDelete.Code)
 	}
-	deleteVisits := formPost(application, base+"/visits/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}}, ownerLogin.session, csrfCookie)
+	deleteVisits := formPost(application, base+"/visits/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}, "confirmed": {"yes"}}, ownerLogin.session, csrfCookie)
 	if deleteVisits.Code != http.StatusSeeOther {
 		t.Fatalf("visit deletion failed: %d", deleteVisits.Code)
 	}
@@ -1721,7 +1778,7 @@ func TestPhase7AnalyticsExportsRetentionAndPermissions(t *testing.T) {
 	if err := application.Database.QueryRow(`SELECT visit_id FROM campaign_submissions WHERE public_id='submission_phase7'`).Scan(&linked); err != nil || linked != nil {
 		t.Fatalf("submission not preserved/unlinked: %v %v", linked, err)
 	}
-	deleteResponses := formPost(application, base+"/responses/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}}, ownerLogin.session, csrfCookie)
+	deleteResponses := formPost(application, base+"/responses/delete-all", url.Values{"csrf_token": {token}, "confirmation": {campaign.Slug}, "confirmed": {"yes"}}, ownerLogin.session, csrfCookie)
 	if deleteResponses.Code != http.StatusSeeOther {
 		t.Fatalf("response deletion failed: %d", deleteResponses.Code)
 	}

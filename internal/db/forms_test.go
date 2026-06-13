@@ -44,6 +44,47 @@ func TestFormFieldsOrderingArchiveAndOptions(t *testing.T) {
 	}
 }
 
+func TestFormFieldReorderValidationAndDuplication(t *testing.T) {
+	t.Parallel()
+	q, owner, org := phase3DB(t)
+	campaign := createCampaignForTest(t, q, owner, org, "camp_reorder", "reorder", "strict")
+	ctx := context.Background()
+	for _, input := range []SaveFormFieldInput{
+		{PublicID: "field_a", CampaignID: campaign.ID, FieldType: "textarea", Label: "A"},
+		{PublicID: "field_b", CampaignID: campaign.ID, FieldType: "radio_group", Label: "B"},
+		{PublicID: "field_c", CampaignID: campaign.ID, FieldType: "rating_1_5", Label: "C"},
+	} {
+		if err := q.CreateFormField(ctx, input, owner.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	field, _ := q.GetFormField(ctx, campaign.ID, "field_b")
+	if err := q.CreateFormOption(ctx, campaign.ID, field.ID, "option_b", "Choice", "choice", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.ReorderFormFields(ctx, campaign.ID, []string{"field_c", "field_a", "field_b"}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.ReorderFormFields(ctx, campaign.ID, []string{"field_c", "field_c", "field_b"}, owner.ID); !errors.Is(err, ErrInvalidFieldOrder) {
+		t.Fatalf("duplicate order accepted: %v", err)
+	}
+	fields, _ := q.ListFormFields(ctx, campaign.ID, false)
+	if fields[0].PublicID != "field_c" || fields[1].PublicID != "field_a" || fields[2].PublicID != "field_b" {
+		t.Fatalf("unexpected order: %#v", fields)
+	}
+	duplicateID, err := q.DuplicateFormField(ctx, campaign.ID, "field_b", owner.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields, _ = q.ListFormFields(ctx, campaign.ID, false)
+	if len(fields) != 4 || fields[3].PublicID != duplicateID || fields[3].Label != "B" || len(fields[3].Options) != 1 || fields[3].Options[0].Value != "choice" {
+		t.Fatalf("field duplicate incomplete: %#v", fields)
+	}
+	if fields[3].Options[0].PublicID == "option_b" {
+		t.Fatal("duplicated option reused public ID")
+	}
+}
+
 func TestSubmissionPrivacyLinkageSnapshotsAndQuota(t *testing.T) {
 	t.Parallel()
 	q, owner, org := phase3DB(t)

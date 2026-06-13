@@ -8,7 +8,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/db"
 )
 
-templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fields []db.FormField, presets []string, canEdit bool, errorKey string) {
+templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fields []db.FormField, presets []string, previews map[string]map[string][]db.FormField, language string, canEdit bool, errorKey string) {
 	@Layout(tr(ctx, "form.title"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
@@ -22,30 +22,21 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 		}
 		<section class="grid two">
 			<div>
-				for index, field := range fields {
-					<article class="panel form-field-card">
-						<div class="field-heading">
-							<div><span class="badge quiet">{ tr(ctx, "form.type." + field.FieldType) }</span><h2>{ field.Label }</h2></div>
-							if canEdit {
-								<a href={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/edit") }>{ tr(ctx, "common.edit") }</a>
-							}
-						</div>
-						if field.HelpText.Valid {
-							<p>{ field.HelpText.String }</p>
+				if canEdit && len(fields) > 1 {
+					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/reorder") } data-reorder-form class="reorder-form">
+						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+						<div data-order-inputs></div>
+						<button type="submit" class="button secondary reorder-save" hidden data-reorder-save>{ tr(ctx, "form.order.save") }</button>
+					</form>
+					<div data-field-list>
+						for index, field := range fields {
+							@DraggableFormFieldCard(campaign, field, index, len(fields))
 						}
-						if field.Required {
-							<span class="badge">{ tr(ctx, "form.required") }</span>
-						} else {
-							<span class="badge quiet">{ tr(ctx, "form.optional") }</span>
-						}
-						if canEdit {
-							<div class="actions compact">
-								@fieldAction(campaign, field, "up", index == 0)
-								@fieldAction(campaign, field, "down", index == len(fields)-1)
-								<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/archive") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "common.remove") }</button></form>
-							</div>
-						}
-					</article>
+					</div>
+				} else {
+					for index, field := range fields {
+						@FormFieldCard(campaign, field, index, len(fields), canEdit)
+					}
 				}
 				if len(fields) == 0 {
 					<div class="empty-state form-empty-state">
@@ -56,7 +47,7 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 			</div>
 			<div class="form-builder-sidebar">
 				if canEdit {
-					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/preset") } class="panel form-stack" data-confirm={ tr(ctx, "form.preset.confirm") }>
+					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/preset") } class="panel form-stack">
 						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 						<div>
 							<h2>{ tr(ctx, "form.preset.title") }</h2>
@@ -65,12 +56,13 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 						<div class="preset-grid">
 							for index, preset := range presets {
 								<label class="preset-card">
-									<input type="radio" name="form_preset" value={ preset } required checked?={ index == 0 }/>
+									<input type="radio" name="form_preset" value={ preset } required checked?={ index == 0 } data-preset-radio/>
 									<strong>{ tr(ctx, "campaign.preset." + preset) }</strong>
 									<span>{ tr(ctx, "campaign.preset." + preset + ".description") }</span>
 								</label>
 							}
 						</div>
+						@PresetPreview(previews, language)
 						<button type="submit">{ tr(ctx, "form.preset.apply") }</button>
 					</form>
 					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields") } class="panel form-stack">
@@ -101,6 +93,56 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 			</div>
 		</section>
 	}
+}
+
+templ DraggableFormFieldCard(campaign db.Campaign, field db.FormField, index, fieldCount int) {
+	<article class="panel form-field-card" draggable="true" data-field-id={ field.PublicID }>
+		<div class="field-heading">
+			<div class="field-title"><button type="button" class="drag-handle" aria-label={ tr(ctx, "form.drag", field.Label) } title={ tr(ctx, "form.drag.help") }>↕</button><div><span class="badge quiet">{ tr(ctx, "form.type." + field.FieldType) }</span><h2>{ field.Label }</h2></div></div>
+			<a href={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/edit") }>{ tr(ctx, "common.edit") }</a>
+		</div>
+		if field.HelpText.Valid {
+			<p>{ field.HelpText.String }</p>
+		}
+		if field.Required {
+			<span class="badge">{ tr(ctx, "form.required") }</span>
+		} else {
+			<span class="badge quiet">{ tr(ctx, "form.optional") }</span>
+		}
+		<div class="actions compact">
+			@fieldAction(campaign, field, "up", index == 0)
+			@fieldAction(campaign, field, "down", index == fieldCount-1)
+			<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/duplicate") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button" type="submit">{ tr(ctx, "form.duplicate") }</button></form>
+			<a class="link-button danger" href={ templ.SafeURL(campaignPath(campaign) + "/confirm/archive-field?field=" + field.PublicID) }>{ tr(ctx, "common.remove") }</a>
+		</div>
+	</article>
+}
+
+templ FormFieldCard(campaign db.Campaign, field db.FormField, index, fieldCount int, canEdit bool) {
+	<article class="panel form-field-card">
+		<div class="field-heading">
+			<div><span class="badge quiet">{ tr(ctx, "form.type." + field.FieldType) }</span><h2>{ field.Label }</h2></div>
+			if canEdit {
+				<a href={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/edit") }>{ tr(ctx, "common.edit") }</a>
+			}
+		</div>
+		if field.HelpText.Valid {
+			<p>{ field.HelpText.String }</p>
+		}
+		if field.Required {
+			<span class="badge">{ tr(ctx, "form.required") }</span>
+		} else {
+			<span class="badge quiet">{ tr(ctx, "form.optional") }</span>
+		}
+		if canEdit {
+			<div class="actions compact">
+				@fieldAction(campaign, field, "up", index == 0)
+				@fieldAction(campaign, field, "down", index == fieldCount-1)
+				<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/duplicate") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button" type="submit">{ tr(ctx, "form.duplicate") }</button></form>
+				<a class="link-button danger" href={ templ.SafeURL(campaignPath(campaign) + "/confirm/archive-field?field=" + field.PublicID) }>{ tr(ctx, "common.remove") }</a>
+			</div>
+		}
+	</article>
 }
 
 templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campaign, field db.FormField, canEdit bool, errorKey string) {
@@ -152,7 +194,7 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 					if !option.ArchivedAt.Valid {
 						<div class="field-heading">
 							<span>{ option.Label } <code>{ option.Value }</code></span>
-							<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/options/" + option.PublicID + "/archive") } class="inline-form"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "common.remove") }</button></form>
+							<a class="link-button danger" href={ templ.SafeURL(campaignPath(campaign) + "/confirm/archive-option?option=" + option.PublicID) }>{ tr(ctx, "common.remove") }</a>
 						</div>
 					}
 				}

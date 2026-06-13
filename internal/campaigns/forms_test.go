@@ -39,3 +39,17 @@ func TestValidateSubmission(t *testing.T) {
 		}
 	}
 }
+
+func TestPresetPreviewsUseRequestedLanguageAndOptions(t *testing.T) {
+	previews := PresetPreviews()
+	uninstall := previews["uninstall"]["de"]
+	if len(uninstall) != 3 || uninstall[0].Label != "Warum deinstallieren Sie die Erweiterung?" {
+		t.Fatalf("unexpected German preview: %#v", uninstall)
+	}
+	if len(uninstall[0].Options) != 5 || uninstall[0].Options[0].Label != "Sie funktioniert nicht" {
+		t.Fatalf("preset options missing: %#v", uninstall[0].Options)
+	}
+	if uninstall[0].PublicID == "" || uninstall[0].Options[0].PublicID == "" {
+		t.Fatal("preview fields need stable DOM identifiers")
+	}
+}

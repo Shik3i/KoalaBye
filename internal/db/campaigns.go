@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+
+	"github.com/koalastuff/koalabye/internal/ids"
 )
 
 var (
@@ -84,6 +87,12 @@ type CreateCampaignInput struct {
 	OrganizationID, CreatedBy                                  int64
 }
 
+type DuplicateCampaignInput struct {
+	Source  Campaign
+	Name    string
+	ActorID int64
+}
+
 func (q *Querier) CreateCampaign(ctx context.Context, in CreateCampaignInput) (Campaign, error) {
 	tx, err := q.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -128,6 +137,168 @@ func (q *Querier) CreateCampaign(ctx context.Context, in CreateCampaignInput) (C
 		return Campaign{}, err
 	}
 	return Campaign{ID: id, PublicID: in.PublicID, OrganizationID: in.OrganizationID, Slug: in.Slug, Name: in.Name, Description: nullString(nullableText(in.Description)), Status: "draft", CreatedByUserID: in.CreatedBy, CreatedAt: now, UpdatedAt: now, ExplicitRole: sql.NullString{String: "owner", Valid: true}, ExplicitOwnerCount: 1}, nil
+}
+
+func (q *Querier) DuplicateCampaign(ctx context.Context, in DuplicateCampaignInput) (Campaign, error) {
+	tx, err := q.db.BeginTx(ctx, nil)
+	if err != nil {
+		return Campaign{}, err
+	}
+	defer tx.Rollback()
+	var limit, count int64
+	if err := tx.QueryRowContext(ctx, `SELECT max_campaigns FROM organization_limits WHERE organization_id=?`, in.Source.OrganizationID).Scan(&limit); err != nil {
+		return Campaign{}, err
+	}
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM campaigns WHERE organization_id=?`, in.Source.OrganizationID).Scan(&count); err != nil {
+		return Campaign{}, err
+	}
+	if count >= limit {
+		return Campaign{}, ErrLimitReached
+	}
+	publicID, err := ids.New("camp")
+	if err != nil {
+		return Campaign{}, err
+	}
+	slug, err := uniqueCampaignSlug(ctx, tx, in.Source.OrganizationID, in.Source.Slug)
+	if err != nil {
+		return Campaign{}, err
+	}
+	now := Now()
+	result, err := tx.ExecContext(ctx, `INSERT INTO campaigns(public_id,organization_id,slug,name,description,status,public_link_enabled,created_by_user_id,created_at,updated_at)
+		VALUES(?,?,?,?,?,'draft',0,?,?,?)`, publicID, in.Source.OrganizationID, slug, in.Name, nullableText(in.Source.Description.String), in.ActorID, now, now)
+	if err != nil {
+		return Campaign{}, err
+	}
+	newCampaignID, err := result.LastInsertId()
+	if err != nil {
+		return Campaign{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO campaign_settings(
+		campaign_id,collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,
+		collect_referrer_domain,collect_coarse_browser,collect_coarse_os,collect_url_context,
+		public_language_default,show_privacy_notice,retention_enabled,retention_days,updated_at,updated_by_user_id)
+		SELECT ?,collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,
+		collect_referrer_domain,collect_coarse_browser,collect_coarse_os,collect_url_context,
+		public_language_default,show_privacy_notice,retention_enabled,retention_days,?,?
+		FROM campaign_settings WHERE campaign_id=?`, newCampaignID, now, in.ActorID, in.Source.ID); err != nil {
+		return Campaign{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO campaign_branding(
+		campaign_id,brand_name,brand_url,privacy_policy_url,legal_notice_url,support_url,contact_url,
+		accent_preset,background_style,show_koalabye_branding,updated_at,updated_by_user_id)
+		SELECT ?,brand_name,brand_url,privacy_policy_url,legal_notice_url,support_url,contact_url,
+		accent_preset,background_style,show_koalabye_branding,?,?
+		FROM campaign_branding WHERE campaign_id=?`, newCampaignID, now, in.ActorID, in.Source.ID); err != nil {
+		return Campaign{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO campaign_members(campaign_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'owner',?,?)`,
+		newCampaignID, in.ActorID, now, in.ActorID); err != nil {
+		return Campaign{}, err
+	}
+	fieldRows, err := tx.QueryContext(ctx, `SELECT id,field_type,label,help_text,required,sort_order,config_json
+		FROM campaign_form_fields WHERE campaign_id=? AND archived_at IS NULL ORDER BY sort_order,id`, in.Source.ID)
+	if err != nil {
+		return Campaign{}, err
+	}
+	type fieldCopy struct {
+		id, order        int64
+		fieldType, label string
+		help, config     sql.NullString
+		required         bool
+	}
+	var fields []fieldCopy
+	for fieldRows.Next() {
+		var field fieldCopy
+		if err := fieldRows.Scan(&field.id, &field.fieldType, &field.label, &field.help, &field.required, &field.order, &field.config); err != nil {
+			fieldRows.Close()
+			return Campaign{}, err
+		}
+		fields = append(fields, field)
+	}
+	if err := fieldRows.Close(); err != nil {
+		return Campaign{}, err
+	}
+	for _, field := range fields {
+		fieldPublicID, err := ids.New("field")
+		if err != nil {
+			return Campaign{}, err
+		}
+		fieldResult, err := tx.ExecContext(ctx, `INSERT INTO campaign_form_fields(public_id,campaign_id,field_type,label,help_text,required,sort_order,config_json,created_at,updated_at)
+			VALUES(?,?,?,?,?,?,?,?,?,?)`, fieldPublicID, newCampaignID, field.fieldType, field.label, nullableText(field.help.String), field.required, field.order, nullableText(field.config.String), now, now)
+		if err != nil {
+			return Campaign{}, err
+		}
+		newFieldID, err := fieldResult.LastInsertId()
+		if err != nil {
+			return Campaign{}, err
+		}
+		optionRows, err := tx.QueryContext(ctx, `SELECT label,value,sort_order FROM campaign_form_options WHERE field_id=? AND archived_at IS NULL ORDER BY sort_order,id`, field.id)
+		if err != nil {
+			return Campaign{}, err
+		}
+		type optionCopy struct {
+			label, value string
+			order        int64
+		}
+		var options []optionCopy
+		for optionRows.Next() {
+			var option optionCopy
+			if err := optionRows.Scan(&option.label, &option.value, &option.order); err != nil {
+				optionRows.Close()
+				return Campaign{}, err
+			}
+			options = append(options, option)
+		}
+		if err := optionRows.Close(); err != nil {
+			return Campaign{}, err
+		}
+		for _, option := range options {
+			optionPublicID, err := ids.New("option")
+			if err != nil {
+				return Campaign{}, err
+			}
+			if _, err := tx.ExecContext(ctx, `INSERT INTO campaign_form_options(public_id,field_id,label,value,sort_order,created_at,updated_at) VALUES(?,?,?,?,?,?,?)`,
+				optionPublicID, newFieldID, option.label, option.value, option.order, now, now); err != nil {
+				return Campaign{}, err
+			}
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO audit_log(actor_user_id,organization_id,action,target_type,target_id,created_at) VALUES(?,?,?,?,?,?)`,
+		in.ActorID, in.Source.OrganizationID, "campaign_duplicated", "campaign", publicID, now); err != nil {
+		return Campaign{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Campaign{}, err
+	}
+	return Campaign{
+		ID: newCampaignID, PublicID: publicID, OrganizationID: in.Source.OrganizationID,
+		OrganizationPublicID: in.Source.OrganizationPublicID, OrganizationName: in.Source.OrganizationName,
+		OrganizationSlug: in.Source.OrganizationSlug, Slug: slug, Name: in.Name,
+		Description: in.Source.Description, Status: "draft", CreatedByUserID: in.ActorID,
+		CreatedAt: now, UpdatedAt: now, ExplicitRole: sql.NullString{String: "owner", Valid: true}, ExplicitOwnerCount: 1,
+	}, nil
+}
+
+func uniqueCampaignSlug(ctx context.Context, tx *sql.Tx, organizationID int64, sourceSlug string) (string, error) {
+	base := strings.Trim(strings.TrimSpace(sourceSlug)+"-copy", "-")
+	if len(base) > 72 {
+		base = strings.TrimRight(base[:72], "-")
+	}
+	for suffix := 1; suffix <= 9999; suffix++ {
+		candidate := base
+		if suffix > 1 {
+			candidate = fmt.Sprintf("%s-%d", base, suffix)
+		}
+		var exists int
+		err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM campaigns WHERE organization_id=? AND slug=?)`, organizationID, candidate).Scan(&exists)
+		if err != nil {
+			return "", err
+		}
+		if exists == 0 {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("generate unique campaign slug")
 }
 
 func PrivacyPreset(preset string) CampaignSettings {
@@ -290,6 +461,28 @@ func (q *Querier) GetCampaignRedirect(ctx context.Context, sourceCampaignID int6
 		WHERE redirect.source_campaign_id=?`, sourceCampaignID).
 		Scan(&redirect.TargetCampaignID, &redirect.TargetCampaignPublicID, &redirect.TargetCampaignName)
 	return redirect, err
+}
+
+func (q *Querier) ListCampaignRedirects(ctx context.Context, organizationID int64) (map[int64]CampaignRedirect, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT source.id,target.id,target.public_id,target.name
+		FROM campaign_redirects redirect
+		JOIN campaigns source ON source.id=redirect.source_campaign_id
+		JOIN campaigns target ON target.id=redirect.target_campaign_id
+		WHERE source.organization_id=?`, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	redirects := make(map[int64]CampaignRedirect)
+	for rows.Next() {
+		var sourceID int64
+		var redirect CampaignRedirect
+		if err := rows.Scan(&sourceID, &redirect.TargetCampaignID, &redirect.TargetCampaignPublicID, &redirect.TargetCampaignName); err != nil {
+			return nil, err
+		}
+		redirects[sourceID] = redirect
+	}
+	return redirects, rows.Err()
 }
 
 func (q *Querier) SetCampaignRedirect(ctx context.Context, source Campaign, targetPublicID string, actorID int64) error {

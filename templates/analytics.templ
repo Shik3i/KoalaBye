@@ -122,12 +122,12 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 				<p>{ tr(ctx, "deletion.confirm_help", campaign.Slug) }</p>
 				if settings.RetentionEnabled {
 					<p>{ tr(ctx, "retention.summary", settings.RetentionDays.Int64) }</p>
-					@dangerForm(campaignPath(campaign)+"/retention/delete-old", "retention.delete_old", false)
+					@dangerLink(campaignPath(campaign)+"/confirm/delete-old", "retention.delete_old")
 				} else {
 					<p>{ tr(ctx, "retention.disabled") }</p>
 				}
-				@dangerForm(campaignPath(campaign)+"/responses/delete-all", "deletion.responses", true)
-				@dangerForm(campaignPath(campaign)+"/visits/delete-all", "deletion.visits", true)
+				@dangerLink(campaignPath(campaign)+"/confirm/delete-responses", "deletion.responses")
+				@dangerLink(campaignPath(campaign)+"/confirm/delete-visits", "deletion.visits")
 			</section>
 		}
 	}
@@ -161,14 +161,10 @@ templ trendSVG(points []db.DailyTrend) {
 	<div class="chart-legend"><span class="raw">{ tr(ctx, "visits.raw_total") }</span><span class="unique">{ tr(ctx, "visits.unique_total") }</span><span class="submissions">{ tr(ctx, "submissions.total") }</span></div>
 }
 
-templ dangerForm(action, key string, confirmation bool) {
-	<form method="post" action={ templ.SafeURL(action) } class="form-stack danger-form">
-		<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-		if confirmation {
-			<label>{ tr(ctx, "deletion.confirmation") }<input name="confirmation" required/></label>
-		}
-		<button class="destructive" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, key) }</button>
-	</form>
+templ dangerLink(action, key string) {
+	<div class="danger-form">
+		<a class="button danger-button" href={ templ.SafeURL(action) }>{ tr(ctx, key) }</a>
+	</div>
 }
 
 func submissionRate(submissions, visits int64) string {

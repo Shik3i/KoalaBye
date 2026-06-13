@@ -71,6 +71,12 @@ templ Layout(title string, instanceName string, user *db.User) {
 				</div>
 			</header>
 			<main class="page" id="main-content">
+				if flash, ok := flashFromContext(ctx); ok {
+					<div class={ "toast toast-" + flash.Kind } role={ toastRole(flash.Kind) } aria-live={ toastLive(flash.Kind) } data-toast>
+						<span>{ tr(ctx, flash.Key) }</span>
+						<button type="button" class="toast-close" aria-label={ tr(ctx, "toast.dismiss") } data-toast-close>×</button>
+					</div>
+				}
 				{ children... }
 			</main>
 			<footer class="site-footer">

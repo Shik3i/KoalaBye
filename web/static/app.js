@@ -130,5 +130,83 @@ document.documentElement.classList.add("js");
                 }
             });
         });
+
+        document.querySelectorAll("[data-toast]").forEach(function(toast) {
+            var close = toast.querySelector("[data-toast-close]");
+            if (close) {
+                close.addEventListener("click", function() {
+                    toast.remove();
+                });
+            }
+            window.setTimeout(function() {
+                if (toast.isConnected) toast.remove();
+            }, 6000);
+        });
+
+        document.querySelectorAll("[data-preset-preview]").forEach(function(preview) {
+            var form = preview.closest("form");
+            if (!form) return;
+            var presetSelect = form.querySelector("[data-preset-select]");
+            var presetRadios = form.querySelectorAll("[data-preset-radio]");
+            var languageSelect = form.querySelector("select[name='public_language_default']");
+            var updatePreview = function() {
+                var preset = presetSelect ? presetSelect.value : "";
+                presetRadios.forEach(function(radio) {
+                    if (radio.checked) preset = radio.value;
+                });
+                var visibleLanguage = preview.querySelector("[data-preset-language]:not([hidden])");
+                var language = languageSelect ? languageSelect.value : (visibleLanguage ? visibleLanguage.getAttribute("data-preset-language") : "");
+                if (!language) language = "en";
+                preview.querySelectorAll("[data-preset-panel]").forEach(function(panel) {
+                    panel.hidden = panel.getAttribute("data-preset-panel") !== preset ||
+                        panel.getAttribute("data-preset-language") !== language;
+                });
+            };
+            if (presetSelect) presetSelect.addEventListener("change", updatePreview);
+            presetRadios.forEach(function(radio) {
+                radio.addEventListener("change", updatePreview);
+            });
+            if (languageSelect) languageSelect.addEventListener("change", updatePreview);
+            updatePreview();
+        });
+
+        var fieldList = document.querySelector("[data-field-list]");
+        var reorderForm = document.querySelector("[data-reorder-form]");
+        if (fieldList && reorderForm) {
+            var dragged = null;
+            var saveButton = reorderForm.querySelector("[data-reorder-save]");
+            var inputs = reorderForm.querySelector("[data-order-inputs]");
+            var syncOrder = function() {
+                inputs.textContent = "";
+                fieldList.querySelectorAll("[data-field-id]").forEach(function(card) {
+                    var input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "field_order";
+                    input.value = card.getAttribute("data-field-id");
+                    inputs.appendChild(input);
+                });
+                saveButton.hidden = false;
+            };
+            fieldList.querySelectorAll("[data-field-id]").forEach(function(card) {
+                card.addEventListener("dragstart", function(event) {
+                    dragged = card;
+                    card.classList.add("dragging");
+                    event.dataTransfer.effectAllowed = "move";
+                });
+                card.addEventListener("dragend", function() {
+                    card.classList.remove("dragging");
+                    dragged = null;
+                });
+            });
+            fieldList.addEventListener("dragover", function(event) {
+                if (!dragged) return;
+                event.preventDefault();
+                var target = event.target.closest("[data-field-id]");
+                if (!target || target === dragged) return;
+                var bounds = target.getBoundingClientRect();
+                fieldList.insertBefore(dragged, event.clientY < bounds.top + bounds.height / 2 ? target : target.nextSibling);
+                syncOrder();
+            });
+        }
     });
 })();

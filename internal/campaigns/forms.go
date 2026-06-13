@@ -34,7 +34,8 @@ func (h *Handler) Form(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	canEdit := (role == "owner" || role == "editor") && campaign.Status != "archived" && !campaign.DisabledAt.Valid
-	web.Render(w, r, http.StatusOK, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, PresetNames(), canEdit, ""))
+	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusOK, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, PresetNames(), PresetPreviews(), settings.PublicLanguageDefault, canEdit, ""))
 }
 
 func (h *Handler) FormPresetApply(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +54,7 @@ func (h *Handler) FormPresetApply(w http.ResponseWriter, r *http.Request) {
 		h.renderFormError(w, r, user, campaign, "form.error.save")
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.preset_applied")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
 }
 
@@ -73,6 +75,7 @@ func (h *Handler) FormFieldCreate(w http.ResponseWriter, r *http.Request) {
 		h.renderFormError(w, r, user, campaign, "form.error.save")
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.field_added")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
 }
 
@@ -121,6 +124,7 @@ func (h *Handler) FormFieldUpdate(w http.ResponseWriter, r *http.Request) {
 			_ = h.q.UpdateFormOption(r.Context(), campaign.ID, field.ID, option.PublicID, label, user.ID)
 		}
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.field_saved")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form/fields/"+field.PublicID+"/edit", http.StatusSeeOther)
 }
 
@@ -130,7 +134,15 @@ func (h *Handler) FormFieldArchive(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	_ = h.q.ArchiveFormField(r.Context(), campaign.ID, chi.URLParam(r, "fieldPublicID"), user.ID)
+	if !requireConfirmation(w, r) {
+		return
+	}
+	if err := h.q.ArchiveFormField(r.Context(), campaign.ID, chi.URLParam(r, "fieldPublicID"), user.ID); err != nil {
+		web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "error", "toast.form.action_failed")
+		http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
+		return
+	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.field_removed")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
 }
 
@@ -145,7 +157,45 @@ func (h *Handler) FormFieldMove(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid direction", http.StatusUnprocessableEntity)
 		return
 	}
-	_ = h.q.MoveFormField(r.Context(), campaign.ID, chi.URLParam(r, "fieldPublicID"), direction, user.ID)
+	if err := h.q.MoveFormField(r.Context(), campaign.ID, chi.URLParam(r, "fieldPublicID"), direction, user.ID); err != nil {
+		web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "error", "toast.form.action_failed")
+		http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
+		return
+	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.reordered")
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
+}
+
+func (h *Handler) FormFieldsReorder(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		h.renderFormError(w, r, user, campaign, "form.order.invalid")
+		return
+	}
+	order := r.Form["field_order"]
+	if err := h.q.ReorderFormFields(r.Context(), campaign.ID, order, user.ID); err != nil {
+		h.renderFormError(w, r, user, campaign, "form.order.invalid")
+		return
+	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.reordered")
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
+}
+
+func (h *Handler) FormFieldDuplicate(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	if _, err := h.q.DuplicateFormField(r.Context(), campaign.ID, chi.URLParam(r, "fieldPublicID"), user.ID); err != nil {
+		h.renderFormError(w, r, user, campaign, "form.error.save")
+		return
+	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.field_duplicated")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
 }
 
@@ -171,6 +221,7 @@ func (h *Handler) FormOptionCreate(w http.ResponseWriter, r *http.Request) {
 		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignFormFieldEdit(h.cfg.InstanceName, user, campaign, field, true, "form.option.error"))
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.option_added")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form/fields/"+field.PublicID+"/edit", http.StatusSeeOther)
 }
 
@@ -180,7 +231,15 @@ func (h *Handler) FormOptionArchive(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	_ = h.q.ArchiveFormOption(r.Context(), campaign.ID, chi.URLParam(r, "optionPublicID"), user.ID)
+	if !requireConfirmation(w, r) {
+		return
+	}
+	if err := h.q.ArchiveFormOption(r.Context(), campaign.ID, chi.URLParam(r, "optionPublicID"), user.ID); err != nil {
+		web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "error", "toast.form.action_failed")
+		http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
+		return
+	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.form.option_removed")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
 }
 
@@ -222,7 +281,8 @@ func formFieldInput(r *http.Request, requireType bool) (db.SaveFormFieldInput, s
 
 func (h *Handler) renderFormError(w http.ResponseWriter, r *http.Request, user db.User, campaign db.Campaign, key string) {
 	fields, _ := h.q.ListFormFields(r.Context(), campaign.ID, false)
-	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, PresetNames(), true, key))
+	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, PresetNames(), PresetPreviews(), settings.PublicLanguageDefault, true, key))
 }
 
 func (h *Handler) PublicSubmitByID(w http.ResponseWriter, r *http.Request) {

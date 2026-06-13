@@ -256,6 +256,9 @@ func (h *Handler) RetentionDeleteOld(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
+	if !requireConfirmation(w, r) {
+		return
+	}
 	settings, err := h.q.GetCampaignSettings(r.Context(), campaign.ID)
 	if err != nil || !settings.RetentionEnabled || !settings.RetentionDays.Valid {
 		h.renderAnalyticsMessage(w, r, user, campaign, role, "retention.disabled")
@@ -267,6 +270,7 @@ func (h *Handler) RetentionDeleteOld(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "delete old data", http.StatusInternalServerError)
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.retention.deleted")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/analytics", http.StatusSeeOther)
 }
 
@@ -284,6 +288,9 @@ func (h *Handler) deleteAll(w http.ResponseWriter, r *http.Request, responses bo
 		h.forbidden(w, r)
 		return
 	}
+	if !requireConfirmation(w, r) {
+		return
+	}
 	if r.FormValue("confirmation") != campaign.Slug {
 		h.renderAnalyticsMessage(w, r, user, campaign, role, "deletion.confirmation_error")
 		return
@@ -297,6 +304,11 @@ func (h *Handler) deleteAll(w http.ResponseWriter, r *http.Request, responses bo
 	if err != nil {
 		http.Error(w, "delete campaign data", http.StatusInternalServerError)
 		return
+	}
+	if responses {
+		web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.responses.deleted")
+	} else {
+		web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.visits.deleted")
 	}
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/analytics", http.StatusSeeOther)
 }

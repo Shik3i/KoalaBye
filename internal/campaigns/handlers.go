@@ -240,7 +240,8 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	limits, _ := h.q.GetOrganizationLimits(r.Context(), org.ID)
 	count, _ := h.q.CountCampaigns(r.Context(), org.ID)
 	canCreate := (role == "owner" || role == "admin") && count < limits.MaxCampaigns
-	web.Render(w, r, http.StatusOK, templates.CampaignList(h.cfg.InstanceName, user, org, items, limits, count, canCreate))
+	redirects, _ := h.q.ListCampaignRedirects(r.Context(), org.ID)
+	web.Render(w, r, http.StatusOK, templates.CampaignList(h.cfg.InstanceName, user, org, items, redirects, limits, count, canCreate))
 }
 
 func (h *Handler) New(w http.ResponseWriter, r *http.Request) {
@@ -250,7 +251,7 @@ func (h *Handler) New(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignNew(h.cfg.InstanceName, user, org, "", db.PrivacyPreset("strict")))
+	web.Render(w, r, http.StatusOK, templates.CampaignNew(h.cfg.InstanceName, user, org, "", db.PrivacyPreset("strict"), PresetPreviews()))
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -266,7 +267,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	language := validLanguage(r.FormValue("public_language_default"))
 	preset := r.FormValue("privacy_preset")
 	if name == "" || len(name) > 120 || len(slug) < 2 || len(slug) > 80 || !slugPattern.MatchString(slug) || (preset != "strict" && preset != "balanced") {
-		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.invalid", db.PrivacyPreset("strict")))
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.invalid", db.PrivacyPreset("strict"), PresetPreviews()))
 		return
 	}
 	publicID, err := ids.New("camp")
@@ -279,20 +280,22 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Slug: slug, Description: description, Language: language, PrivacyPreset: preset,
 	})
 	if errors.Is(err, db.ErrLimitReached) {
-		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.limit", db.PrivacyPreset(preset)))
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.limit", db.PrivacyPreset(preset), PresetPreviews()))
 		return
 	}
 	if err != nil {
-		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.slug", db.PrivacyPreset(preset)))
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignNew(h.cfg.InstanceName, user, org, "campaign.error.slug", db.PrivacyPreset(preset), PresetPreviews()))
 		return
 	}
 	formPreset := r.FormValue("form_preset")
 	if formPreset != "" && formPreset != "none" {
 		if err := ApplyFormPreset(r.Context(), h.q, campaign.ID, formPreset, language, user.ID); err != nil {
-			// If it fails, log and redirect anyway or return an error. Let's log it and redirect since the campaign is created.
-			// Or we could return an error. But campaign creation succeeded, so redirecting is better UX.
+			web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "error", "toast.campaign.created_preset_failed")
+			http.Redirect(w, r, campaignURL(org.PublicID, campaign.PublicID), http.StatusSeeOther)
+			return
 		}
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.campaign.created")
 	http.Redirect(w, r, campaignURL(org.PublicID, campaign.PublicID), http.StatusSeeOther)
 }
 
@@ -322,7 +325,52 @@ func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "load campaign form", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, stats, submissionStats, len(fields), role, strings.TrimRight(h.cfg.BaseURL, "/")))
+	redirect, _ := h.q.GetCampaignRedirect(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusOK, templates.CampaignDetail(h.cfg.InstanceName, user, campaign, settings, stats, submissionStats, len(fields), redirect, role, strings.TrimRight(h.cfg.BaseURL, "/")))
+}
+
+func (h *Handler) Preview(w http.ResponseWriter, r *http.Request) {
+	_, campaign, role, ok := h.campaign(r, permissionView)
+	if !ok || (role != "owner" && role != "editor") || campaign.DisabledAt.Valid {
+		h.forbidden(w, r)
+		return
+	}
+	settings, err := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	if err != nil {
+		http.Error(w, "load preview", http.StatusInternalServerError)
+		return
+	}
+	branding, _ := h.q.GetCampaignBranding(r.Context(), campaign.ID)
+	fields, err := h.q.ListFormFields(r.Context(), campaign.ID, false)
+	if err != nil {
+		http.Error(w, "load preview", http.StatusInternalServerError)
+		return
+	}
+	r = r.WithContext(i18n.PublicCampaignContext(r.Context(), r, settings.PublicLanguageDefault))
+	web.Render(w, r, http.StatusOK, templates.PublicCampaignPreview(h.cfg.InstanceName, campaign, settings, branding, fields))
+}
+
+func (h *Handler) Duplicate(w http.ResponseWriter, r *http.Request) {
+	user, campaign, role, ok := h.campaign(r, permissionView)
+	if !ok || role != "owner" || campaign.DisabledAt.Valid {
+		h.forbidden(w, r)
+		return
+	}
+	duplicate, err := h.q.DuplicateCampaign(r.Context(), db.DuplicateCampaignInput{
+		Source: campaign, Name: i18n.T(r.Context(), "campaign.duplicate.name", campaign.Name), ActorID: user.ID,
+	})
+	if errors.Is(err, db.ErrLimitReached) {
+		web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "error", "campaign.error.limit")
+		http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID), http.StatusSeeOther)
+		return
+	}
+	if err != nil {
+		web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "error", "toast.campaign.duplicate_failed")
+		http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID), http.StatusSeeOther)
+		return
+	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.campaign.duplicated")
+	http.Redirect(w, r, campaignURL(duplicate.OrganizationPublicID, duplicate.PublicID), http.StatusSeeOther)
 }
 
 func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
@@ -373,6 +421,7 @@ func (h *Handler) BrandingPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "branding update failed", http.StatusInternalServerError)
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.branding.saved")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/branding", http.StatusSeeOther)
 }
 
@@ -395,6 +444,7 @@ func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
 		h.renderCampaignSettings(w, r, http.StatusUnprocessableEntity, user, campaign, "campaign.error.slug")
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.campaign.saved")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID), http.StatusSeeOther)
 }
 
@@ -404,10 +454,14 @@ func (h *Handler) RedirectPost(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
+	if !requireConfirmation(w, r) {
+		return
+	}
 	if err := h.q.SetCampaignRedirect(r.Context(), campaign, r.FormValue("target_campaign_public_id"), user.ID); err != nil {
 		h.renderCampaignSettings(w, r, http.StatusUnprocessableEntity, user, campaign, "campaign.redirect.error")
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.redirect.saved")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/settings", http.StatusSeeOther)
 }
 
@@ -454,6 +508,7 @@ func (h *Handler) PrivacyPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "privacy update denied", http.StatusUnprocessableEntity)
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.privacy.saved")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/privacy", http.StatusSeeOther)
 }
 
@@ -479,6 +534,7 @@ func (h *Handler) AccessPost(w http.ResponseWriter, r *http.Request) {
 		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignAccess(h.cfg.InstanceName, user, campaign, members, campaignAccessError(err)))
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.access.saved")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/access", http.StatusSeeOther)
 }
 
@@ -488,12 +544,16 @@ func (h *Handler) AccessRemove(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
+	if !requireConfirmation(w, r) {
+		return
+	}
 	err := h.q.RemoveCampaignMember(r.Context(), campaign, chi.URLParam(r, "userPublicID"), user.ID)
 	if err != nil {
 		members, _ := h.q.ListCampaignAccess(r.Context(), campaign.ID, campaign.OrganizationID)
 		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignAccess(h.cfg.InstanceName, user, campaign, members, campaignAccessError(err)))
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.access.removed")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/access", http.StatusSeeOther)
 }
 
@@ -503,10 +563,15 @@ func (h *Handler) Status(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	if err := h.q.ChangeCampaignStatus(r.Context(), campaign, r.FormValue("status"), user.ID); err != nil {
+	status := r.FormValue("status")
+	if status == "archived" && !requireConfirmation(w, r) {
+		return
+	}
+	if err := h.q.ChangeCampaignStatus(r.Context(), campaign, status, user.ID); err != nil {
 		http.Error(w, "invalid status transition", http.StatusUnprocessableEntity)
 		return
 	}
+	web.SetFlash(w, h.cfg.Secret, h.cfg.SecureCookies, "success", "toast.campaign.status_saved")
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID), http.StatusSeeOther)
 }
 

@@ -2,7 +2,10 @@ package templates
 
 import "context"
 
-import "github.com/koalastuff/koalabye/internal/i18n"
+import (
+	"github.com/koalastuff/koalabye/internal/i18n"
+	"github.com/koalastuff/koalabye/internal/web"
+)
 
 type csrfContextKey struct{}
 type instanceSettingsContextKey struct{}
@@ -27,6 +30,24 @@ func csrfFromContext(ctx context.Context) string {
 
 func tr(ctx context.Context, key string, args ...any) string {
 	return i18n.T(ctx, key, args...)
+}
+
+func flashFromContext(ctx context.Context) (web.Flash, bool) {
+	return web.FlashFromContext(ctx)
+}
+
+func toastRole(kind string) string {
+	if kind == "error" {
+		return "alert"
+	}
+	return "status"
+}
+
+func toastLive(kind string) string {
+	if kind == "error" {
+		return "assertive"
+	}
+	return "polite"
 }
 
 func localeFromContext(ctx context.Context) i18n.RequestLocale {

@@ -19,7 +19,7 @@ templ CampaignNav(campaign db.Campaign) {
 	</nav>
 }
 
-templ CampaignList(instanceName string, user db.User, org db.Organization, campaigns []db.Campaign, limits db.OrganizationLimits, count int64, canCreate bool) {
+templ CampaignList(instanceName string, user db.User, org db.Organization, campaigns []db.Campaign, redirects map[int64]db.CampaignRedirect, limits db.OrganizationLimits, count int64, canCreate bool) {
 	@Layout(tr(ctx, "campaign.title"), instanceName, &user) {
 		<section class="page-heading">
 			<div><div class="eyebrow">{ org.Name }</div><h1>{ tr(ctx, "campaign.title") }</h1><p class="muted">{ tr(ctx, "campaign.list.description") }</p></div>
@@ -36,6 +36,9 @@ templ CampaignList(instanceName string, user db.User, org db.Organization, campa
 					<h2>{ campaign.Name }</h2>
 					<p>{ campaign.Description.String }</p>
 					<div class="stats"><span class="badge">{ tr(ctx, "campaign.status." + campaign.Status) }</span><span>{ campaign.Slug }</span></div>
+					if redirect, ok := redirects[campaign.ID]; ok {
+						<p class="redirect-status">{ tr(ctx, "campaign.redirect.status", redirect.TargetCampaignName) }</p>
+					}
 				</a>
 			}
 			if len(campaigns) == 0 {
@@ -57,7 +60,7 @@ templ CampaignList(instanceName string, user db.User, org db.Organization, campa
 	}
 }
 
-templ CampaignNew(instanceName string, user db.User, org db.Organization, errorKey string, defaults db.CampaignSettings) {
+templ CampaignNew(instanceName string, user db.User, org db.Organization, errorKey string, defaults db.CampaignSettings, previews map[string]map[string][]db.FormField) {
 	@Layout(tr(ctx, "campaign.new.title"), instanceName, &user) {
 		<section class="auth-shell wide">
 			<div class="eyebrow">{ org.Name }</div>
@@ -75,7 +78,7 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 				</label>
 				<label>
 					<div class="field-header"><span>{ tr(ctx, "campaign.preset") }</span></div>
-					<select name="form_preset">
+					<select name="form_preset" data-preset-select>
 						<option value="none">{ tr(ctx, "campaign.preset.none") }</option>
 						for _, preset := range []string{"quick_feedback", "uninstall", "bug_report", "feature_feedback", "satisfaction", "onboarding", "performance", "support_followup"} {
 							<option value={ preset }>{ tr(ctx, "campaign.preset." + preset) }</option>
@@ -83,6 +86,7 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 					</select>
 				</label>
 				<p class="muted">{ tr(ctx, "campaign.preset.help") }</p>
+				@PresetPreview(previews, defaults.PublicLanguageDefault)
 				<label><div class="field-header"><span>{ tr(ctx, "campaign.privacy.preset") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.campaign_privacy") }>i</span></div><select name="privacy_preset"><option value="strict">{ tr(ctx, "campaign.privacy.strict") }</option><option value="balanced">{ tr(ctx, "campaign.privacy.balanced") }</option></select></label>
 				<p class="muted">{ tr(ctx, "campaign.privacy.preset_help") }</p>
 				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.create") }>{ tr(ctx, "campaign.create") }</button>
@@ -91,25 +95,27 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 	}
 }
 
-templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, stats db.CampaignVisitStats, submissionStats db.SubmissionStats, fieldCount int, role, baseURL string) {
+templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, stats db.CampaignVisitStats, submissionStats db.SubmissionStats, fieldCount int, redirect db.CampaignRedirect, role, baseURL string) {
 	@Layout(campaign.Name, instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
 			<div><div class="eyebrow">{ campaign.OrganizationName }</div><h1>{ campaign.Name }</h1><p class="muted">{ campaign.Description.String }</p></div>
 			<div class="heading-actions">
 				<span class={ "badge status-" + campaign.Status }>{ tr(ctx, "campaign.status." + campaign.Status) }</span>
-				if campaign.PublicLinkEnabled {
-					<a class="button secondary" href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }>{ tr(ctx, "campaign.preview") }</a>
+				if role == "owner" || role == "editor" {
+					<a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/preview") }>{ tr(ctx, "campaign.preview") }</a>
 				}
 			</div>
 		</section>
+		if redirect.TargetCampaignPublicID != "" {
+			<div class="notice redirect-status"><strong>{ tr(ctx, "campaign.redirect.active") }</strong> { tr(ctx, "campaign.redirect.status", redirect.TargetCampaignName) }</div>
+		}
 		if campaign.DisabledAt.Valid {
 			<div class="alert" role="alert">{ tr(ctx, "campaign.disabled") }</div>
 		}
 		if campaign.Status == "archived" {
 			<div class="notice">{ tr(ctx, "campaign.archived.read_only") }</div>
 		}
-
 		if stats.RawTotal == 0 && submissionStats.Total == 0 {
 			<!-- ONBOARDING MODE: Checklist and snippet at the top to guide setup -->
 			<section class="panel checklist">
@@ -123,7 +129,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				</ul>
 				<p class="muted">{ tr(ctx, "campaign.checklist.derived") }</p>
 			</section>
-
 			<section class="panel" id="extension-integration">
 				<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
 				<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
@@ -139,7 +144,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 					<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.no_token.title") }><code>{ chromeNoTokenSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
 				</details>
 			</section>
-
 			<section class="grid two">
 				<article class="panel">
 					<h2>{ tr(ctx, "campaign.public_link") }</h2>
@@ -171,9 +175,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				<article class="panel"><h2>{ tr(ctx, "submissions.current_month") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.CurrentMonth) }</strong></article>
 				<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(submissionStats.LatestAt) }</p><p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a> · <a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a></p></article>
 			</section>
-
 			<section class="panel"><h2>{ tr(ctx, "analytics.title") }</h2><p>{ tr(ctx, "analytics.description") }</p><a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.open") }</a></section>
-
 			<section class="grid two">
 				<article class="panel">
 					<h2>{ tr(ctx, "campaign.public_link") }</h2>
@@ -193,7 +195,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 					<ul><li>{ tr(ctx, "campaign.privacy.no_ip") }</li><li>{ tr(ctx, "campaign.privacy.no_fingerprint") }</li><li>{ tr(ctx, "campaign.privacy.no_raw_token") }</li><li>{ tr(ctx, "campaign.privacy.cookie_free") }</li></ul>
 				</article>
 			</section>
-
 			<!-- Collapsed onboarding/integration resources at the bottom -->
 			<section class="panel">
 				<h2>{ tr(ctx, "campaign.onboarding.title") }</h2>
@@ -229,7 +230,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				</details>
 			</section>
 		}
-
 		if campaign.Status != "archived" && role == "owner" {
 			<section class="panel">
 				<h2>{ tr(ctx, "campaign.lifecycle") }</h2>
@@ -242,6 +242,16 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 					}
 					@statusForm(campaign, "archived", "campaign.archive", "tooltip.btn.archive")
 				</div>
+			</section>
+		}
+		if role == "owner" {
+			<section class="panel">
+				<h2>{ tr(ctx, "campaign.duplicate.title") }</h2>
+				<p>{ tr(ctx, "campaign.duplicate.help") }</p>
+				<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/duplicate") }>
+					<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+					<button type="submit" class="button secondary">{ tr(ctx, "campaign.duplicate.action") }</button>
+				</form>
 			</section>
 		}
 	}
@@ -266,8 +276,7 @@ templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, 
 				}
 			</form>
 			if canRedirect {
-				<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/redirect") } class="panel form-stack">
-					<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+				<form method="get" action={ templ.SafeURL(campaignPath(campaign) + "/confirm/redirect") } class="panel form-stack">
 					<div>
 						<h2>{ tr(ctx, "campaign.redirect.title") }</h2>
 						<p class="muted">{ tr(ctx, "campaign.redirect.help") }</p>
@@ -399,7 +408,7 @@ templ CampaignAccess(instanceName string, user db.User, campaign db.Campaign, me
 										<button class="compact-button" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.grant") }>{ tr(ctx, "campaign.access.grant") }</button>
 									</form>
 									if member.Role.Valid {
-										<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access/" + member.PublicID + "/remove") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="compact-button" style="background: var(--danger);" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "members.remove") }</button></form>
+										<a class="compact-button danger-button" href={ templ.SafeURL(campaignPath(campaign) + "/confirm/remove-member?member=" + member.PublicID) }>{ tr(ctx, "members.remove") }</a>
 									}
 								</div>
 							</td>
@@ -412,7 +421,11 @@ templ CampaignAccess(instanceName string, user db.User, campaign db.Campaign, me
 }
 
 templ statusForm(campaign db.Campaign, status, key, tooltip string) {
-	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/status") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="status" value={ status }/><button type="submit" data-tooltip={ tr(ctx, tooltip) }>{ tr(ctx, key) }</button></form>
+	if status == "archived" {
+		<a class="button danger-button" href={ templ.SafeURL(campaignPath(campaign) + "/confirm/archive-campaign") }>{ tr(ctx, key) }</a>
+	} else {
+		<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/status") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="status" value={ status }/><button type="submit" data-tooltip={ tr(ctx, tooltip) }>{ tr(ctx, key) }</button></form>
+	}
 }
 
 templ campaignCheck(name, key string, checked bool) {
@@ -456,6 +469,23 @@ func privacySummary(ctx context.Context, settings db.CampaignSettings) string {
 		return tr(ctx, "campaign.privacy.balanced_summary")
 	}
 	return tr(ctx, "campaign.privacy.strict_summary")
+}
+
+templ PresetPreview(previews map[string]map[string][]db.FormField, selectedLanguage string) {
+	<section class="preset-preview" data-preset-preview aria-live="polite">
+		<h2>{ tr(ctx, "form.preset.preview.title") }</h2>
+		<p class="muted">{ tr(ctx, "form.preset.preview.help") }</p>
+		for preset, languages := range previews {
+			for language, fields := range languages {
+				<div data-preset-panel={ preset } data-preset-language={ language } hidden?={ preset != "quick_feedback" || language != selectedLanguage }>
+					@PublicFields(fields, false)
+				</div>
+			}
+		}
+		<div data-preset-panel="none" data-preset-language={ selectedLanguage } hidden>
+			<p>{ tr(ctx, "form.preset.preview.none") }</p>
+		</div>
+	</section>
 }
 
 func chromeSnippet(publicURL string) string {

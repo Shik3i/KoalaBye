@@ -1,0 +1,25 @@
+package templates
+
+import "github.com/koalastuff/koalabye/internal/db"
+
+templ ConfirmationPage(instanceName string, user db.User, campaign db.Campaign, titleKey, messageKey, subject, actionURL, cancelURL string, hidden map[string]string) {
+	@Layout(tr(ctx, titleKey), instanceName, &user) {
+		@CampaignNav(campaign)
+		<section class="auth-shell wide confirmation-page">
+			<div class="eyebrow">{ campaign.Name }</div>
+			<h1>{ tr(ctx, titleKey) }</h1>
+			<div class="panel">
+				<p>{ tr(ctx, messageKey, subject) }</p>
+				<div class="confirmation-subject">{ subject }</div>
+				<form method="post" action={ templ.SafeURL(actionURL) } class="confirmation-actions">
+					<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+					for name, value := range hidden {
+						<input type="hidden" name={ name } value={ value }/>
+					}
+					<button type="submit" class="danger-button">{ tr(ctx, "confirm.continue") }</button>
+					<a class="button secondary" href={ templ.SafeURL(cancelURL) }>{ tr(ctx, "confirm.cancel") }</a>
+				</form>
+			</div>
+		</section>
+	}
+}

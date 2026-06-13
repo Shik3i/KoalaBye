@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 )
 
 func createCampaignForTest(t *testing.T, q *Querier, owner User, org Organization, publicID, slug, preset string) Campaign {
@@ -151,5 +152,80 @@ func TestCampaignRedirectCanBeManagedAfterArchive(t *testing.T) {
 	}
 	if _, err := q.GetCampaignRedirect(ctx, source.ID); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("removed redirect still exists: %v", err)
+	}
+}
+
+func TestDuplicateCampaignCopiesConfigurationOnly(t *testing.T) {
+	t.Parallel()
+	q, owner, org := phase3DB(t)
+	ctx := context.Background()
+	source := createCampaignForTest(t, q, owner, org, "camp_source_copy", "source-copy", "strict")
+	settings, _ := q.GetCampaignSettings(ctx, source.ID)
+	settings.CollectCoarseBrowser = true
+	settings.RetentionEnabled = true
+	settings.RetentionDays = sql.NullInt64{Int64: 90, Valid: true}
+	if err := q.UpdateCampaignPrivacy(ctx, source, settings, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	branding := CampaignBranding{
+		BrandName: sql.NullString{String: "Acme", Valid: true}, AccentPreset: "purple",
+		BackgroundStyle: "theme-dark", ShowKoalabyeBranding: false,
+	}
+	if err := q.UpdateCampaignBranding(ctx, source, branding, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.CreateFormField(ctx, SaveFormFieldInput{PublicID: "field_copy", CampaignID: source.ID, FieldType: "radio_group", Label: "Reason"}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	field, _ := q.GetFormField(ctx, source.ID, "field_copy")
+	if err := q.CreateFormOption(ctx, source.ID, field.ID, "option_copy", "Bugs", "bugs", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	target := createCampaignForTest(t, q, owner, org, "camp_target_copy", "target-copy", "strict")
+	if _, err := q.RawDB().Exec(`UPDATE campaigns SET status='active',public_link_enabled=1 WHERE id=?`, target.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.SetCampaignRedirect(ctx, source, target.PublicID, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.RecordCampaignVisit(ctx, RecordVisitInput{PublicID: "visit_copy", CampaignID: source.ID, OrganizationID: org.ID, CountRaw: true, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.CreateSubmission(ctx, CreateSubmissionInput{PublicID: "submission_copy", CampaignID: source.ID, OrgID: org.ID, SubmittedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+
+	duplicate, err := q.DuplicateCampaign(ctx, DuplicateCampaignInput{Source: source, Name: "Copy of source", ActorID: owner.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if duplicate.Status != "draft" || duplicate.PublicLinkEnabled || duplicate.Slug != "source-copy-copy" {
+		t.Fatalf("unexpected duplicate basics: %#v", duplicate)
+	}
+	duplicateSettings, _ := q.GetCampaignSettings(ctx, duplicate.ID)
+	if !duplicateSettings.CollectCoarseBrowser || !duplicateSettings.RetentionEnabled || duplicateSettings.RetentionDays.Int64 != 90 {
+		t.Fatalf("settings not copied: %#v", duplicateSettings)
+	}
+	duplicateBranding, _ := q.GetCampaignBranding(ctx, duplicate.ID)
+	if duplicateBranding.BrandName.String != "Acme" || duplicateBranding.AccentPreset != "purple" || duplicateBranding.ShowKoalabyeBranding {
+		t.Fatalf("branding not copied: %#v", duplicateBranding)
+	}
+	fields, _ := q.ListFormFields(ctx, duplicate.ID, false)
+	if len(fields) != 1 || fields[0].PublicID == "field_copy" || len(fields[0].Options) != 1 || fields[0].Options[0].PublicID == "option_copy" {
+		t.Fatalf("form not safely copied: %#v", fields)
+	}
+	for table, query := range map[string]string{
+		"visits":      `SELECT COUNT(*) FROM campaign_visits WHERE campaign_id=?`,
+		"submissions": `SELECT COUNT(*) FROM campaign_submissions WHERE campaign_id=?`,
+		"redirects":   `SELECT COUNT(*) FROM campaign_redirects WHERE source_campaign_id=?`,
+	} {
+		var count int
+		if err := q.RawDB().QueryRow(query, duplicate.ID).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("%s copied: count=%d err=%v", table, count, err)
+		}
+	}
+	var members int
+	if err := q.RawDB().QueryRow(`SELECT COUNT(*) FROM campaign_members WHERE campaign_id=?`, duplicate.ID).Scan(&members); err != nil || members != 1 {
+		t.Fatalf("unexpected copied members: %d %v", members, err)
 	}
 }

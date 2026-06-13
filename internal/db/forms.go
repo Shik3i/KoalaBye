@@ -5,10 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
+
+	"github.com/koalastuff/koalabye/internal/ids"
 )
 
 var ErrSubmissionLimitReached = errors.New("monthly submission safety limit reached")
+var ErrInvalidFieldOrder = errors.New("invalid form field order")
 
 type FormField struct {
 	ID         int64
@@ -107,6 +111,16 @@ func (q *Querier) GetFormField(ctx context.Context, campaignID int64, publicID s
 	return field, err
 }
 
+func (q *Querier) GetFormOption(ctx context.Context, campaignID int64, publicID string) (FormOption, error) {
+	var option FormOption
+	err := q.db.QueryRowContext(ctx, `SELECT option.id,option.public_id,option.field_id,option.label,option.value,option.sort_order,option.created_at,option.updated_at,option.archived_at
+		FROM campaign_form_options option
+		JOIN campaign_form_fields field ON field.id=option.field_id
+		WHERE field.campaign_id=? AND option.public_id=?`, campaignID, publicID).
+		Scan(&option.ID, &option.PublicID, &option.FieldID, &option.Label, &option.Value, &option.SortOrder, &option.CreatedAt, &option.UpdatedAt, &option.ArchivedAt)
+	return option, err
+}
+
 func (q *Querier) listFormOptions(ctx context.Context, fieldID int64, includeArchived bool) ([]FormOption, error) {
 	archived := "AND archived_at IS NULL"
 	if includeArchived {
@@ -191,7 +205,136 @@ func (q *Querier) MoveFormField(ctx context.Context, campaignID int64, publicID,
 	if _, err = tx.ExecContext(ctx, `UPDATE campaign_form_fields SET sort_order=CASE id WHEN ? THEN ? WHEN ? THEN ? END,updated_at=? WHERE id IN (?,?)`, id, otherOrder, otherID, order, Now(), id, otherID); err != nil {
 		return err
 	}
+	if err = insertFormAudit(ctx, tx, campaignID, actorID, "campaign_form_reordered", publicID); err != nil {
+		return err
+	}
 	return tx.Commit()
+}
+
+func (q *Querier) ReorderFormFields(ctx context.Context, campaignID int64, publicIDs []string, actorID int64) error {
+	tx, err := q.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	rows, err := tx.QueryContext(ctx, `SELECT public_id FROM campaign_form_fields WHERE campaign_id=? AND archived_at IS NULL ORDER BY sort_order,id`, campaignID)
+	if err != nil {
+		return err
+	}
+	var current []string
+	for rows.Next() {
+		var publicID string
+		if err := rows.Scan(&publicID); err != nil {
+			rows.Close()
+			return err
+		}
+		current = append(current, publicID)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if len(current) != len(publicIDs) {
+		return ErrInvalidFieldOrder
+	}
+	expected := make(map[string]bool, len(current))
+	for _, publicID := range current {
+		expected[publicID] = true
+	}
+	for _, publicID := range publicIDs {
+		if !expected[publicID] {
+			return ErrInvalidFieldOrder
+		}
+		delete(expected, publicID)
+	}
+	if len(expected) != 0 {
+		return ErrInvalidFieldOrder
+	}
+	now := Now()
+	for index, publicID := range publicIDs {
+		res, err := tx.ExecContext(ctx, `UPDATE campaign_form_fields SET sort_order=?,updated_at=? WHERE campaign_id=? AND public_id=? AND archived_at IS NULL`, index+1, now, campaignID, publicID)
+		if err != nil {
+			return err
+		}
+		if count, _ := res.RowsAffected(); count != 1 {
+			return ErrInvalidFieldOrder
+		}
+	}
+	if err := insertFormAudit(ctx, tx, campaignID, actorID, "campaign_form_reordered", ""); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (q *Querier) DuplicateFormField(ctx context.Context, campaignID int64, publicID string, actorID int64) (string, error) {
+	tx, err := q.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+	var field FormField
+	if err := tx.QueryRowContext(ctx, `SELECT id,field_type,label,help_text,required,sort_order,config_json
+		FROM campaign_form_fields WHERE campaign_id=? AND public_id=? AND archived_at IS NULL`, campaignID, publicID).
+		Scan(&field.ID, &field.FieldType, &field.Label, &field.HelpText, &field.Required, &field.SortOrder, &field.ConfigJSON); err != nil {
+		return "", err
+	}
+	newPublicID, err := ids.New("field")
+	if err != nil {
+		return "", err
+	}
+	now := Now()
+	if _, err := tx.ExecContext(ctx, `UPDATE campaign_form_fields SET sort_order=sort_order+1,updated_at=? WHERE campaign_id=? AND archived_at IS NULL AND sort_order>?`, now, campaignID, field.SortOrder); err != nil {
+		return "", err
+	}
+	result, err := tx.ExecContext(ctx, `INSERT INTO campaign_form_fields(public_id,campaign_id,field_type,label,help_text,required,sort_order,config_json,created_at,updated_at)
+		VALUES(?,?,?,?,?,?,?,?,?,?)`, newPublicID, campaignID, field.FieldType, field.Label, nullableText(field.HelpText.String), field.Required, field.SortOrder+1, nullableText(field.ConfigJSON.String), now, now)
+	if err != nil {
+		return "", err
+	}
+	newFieldID, err := result.LastInsertId()
+	if err != nil {
+		return "", err
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT label,value,sort_order FROM campaign_form_options WHERE field_id=? AND archived_at IS NULL ORDER BY sort_order,id`, field.ID)
+	if err != nil {
+		return "", err
+	}
+	type optionCopy struct {
+		label, value string
+		order        int
+	}
+	var options []optionCopy
+	for rows.Next() {
+		var option optionCopy
+		if err := rows.Scan(&option.label, &option.value, &option.order); err != nil {
+			rows.Close()
+			return "", err
+		}
+		options = append(options, option)
+	}
+	if err := rows.Close(); err != nil {
+		return "", err
+	}
+	for _, option := range options {
+		optionPublicID, err := ids.New("option")
+		if err != nil {
+			return "", err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO campaign_form_options(public_id,field_id,label,value,sort_order,created_at,updated_at) VALUES(?,?,?,?,?,?,?)`,
+			optionPublicID, newFieldID, option.label, option.value, option.order, now, now); err != nil {
+			return "", err
+		}
+	}
+	if err := insertFormAudit(ctx, tx, campaignID, actorID, "campaign_form_field_duplicated", newPublicID); err != nil {
+		return "", err
+	}
+	if err := tx.Commit(); err != nil {
+		return "", err
+	}
+	return newPublicID, nil
 }
 
 func (q *Querier) CreateFormOption(ctx context.Context, campaignID int64, fieldID int64, publicID, label, value string, actorID int64) error {
@@ -232,6 +375,19 @@ func (q *Querier) auditFormChange(ctx context.Context, campaignID, actorID int64
 		return err
 	}
 	return q.CreateAuditEvent(ctx, actorID, orgID, action, "campaign_form", targetID, nil, nil)
+}
+
+func insertFormAudit(ctx context.Context, tx *sql.Tx, campaignID, actorID int64, action, targetID string) error {
+	var orgID int64
+	if err := tx.QueryRowContext(ctx, `SELECT organization_id FROM campaigns WHERE id=?`, campaignID).Scan(&orgID); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `INSERT INTO audit_log(actor_user_id,organization_id,action,target_type,target_id,created_at) VALUES(?,?,?,?,?,?)`,
+		actorID, orgID, action, "campaign_form", nullableText(targetID), Now())
+	if err != nil {
+		return fmt.Errorf("audit form change: %w", err)
+	}
+	return nil
 }
 
 type SubmissionAnswerInput struct {
