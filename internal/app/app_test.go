@@ -186,6 +186,13 @@ func TestFirstRunSetupCreatesOwnerAndSession(t *testing.T) {
 	if ownerCount != 1 {
 		t.Fatalf("expected one owner, got %d", ownerCount)
 	}
+	var organizationName string
+	if err := application.Database.QueryRow(`SELECT name FROM organizations LIMIT 1`).Scan(&organizationName); err != nil {
+		t.Fatalf("read default organization: %v", err)
+	}
+	if organizationName != "Test Owner Team" {
+		t.Fatalf("unexpected default organization name %q", organizationName)
+	}
 	var sessionHash string
 	if err := application.Database.QueryRow(`SELECT session_hash FROM sessions LIMIT 1`).Scan(&sessionHash); err != nil {
 		t.Fatalf("read session: %v", err)
@@ -681,6 +688,129 @@ func TestInstanceAdminPagesActionsAndAudit(t *testing.T) {
 	}
 }
 
+func TestSharedControlsAdminNavigationAndSourceLink(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	normal := seedNonOwner(t, application, "navuser", "navigation user password")
+
+	landing := httptest.NewRecorder()
+	application.Handler.ServeHTTP(landing, httptest.NewRequest(http.MethodGet, "/", nil))
+	if body := landing.Body.String(); !strings.Contains(body, `<select name="lang"`) || !strings.Contains(body, `data-theme-selector`) {
+		t.Fatalf("landing is missing shared controls: %s", body)
+	}
+	if strings.Contains(landing.Body.String(), "English Deutsch Español") {
+		t.Fatal("landing still renders a fixed language link row")
+	}
+
+	ownerLogin := login(t, application, owner.Username, password)
+	ownerRequest := httptest.NewRequest(http.MethodGet, "/app", nil)
+	ownerRequest.AddCookie(ownerLogin.session)
+	ownerResponse := httptest.NewRecorder()
+	application.Handler.ServeHTTP(ownerResponse, ownerRequest)
+	ownerBody := ownerResponse.Body.String()
+	if !strings.Contains(ownerBody, `href="/instance">Admin</a>`) || !strings.Contains(ownerBody, `<select name="lang"`) || !strings.Contains(ownerBody, `data-theme-selector`) {
+		t.Fatalf("owner dashboard is missing admin navigation or shared controls: %s", ownerBody)
+	}
+
+	normalLogin := login(t, application, normal.Username, "navigation user password")
+	normalRequest := httptest.NewRequest(http.MethodGet, "/app", nil)
+	normalRequest.AddCookie(normalLogin.session)
+	normalResponse := httptest.NewRecorder()
+	application.Handler.ServeHTTP(normalResponse, normalRequest)
+	if strings.Contains(normalResponse.Body.String(), `href="/instance">Admin</a>`) {
+		t.Fatal("regular user saw instance admin navigation")
+	}
+
+	q := db.NewQuerier(application.Database)
+	sourceURL := "https://github.com/Shik3i/KoalaBye?ref=release&view=source"
+	if err := q.UpdateSettings(context.Background(), map[string]string{"instance_source_url": sourceURL}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	withSource := httptest.NewRecorder()
+	application.Handler.ServeHTTP(withSource, httptest.NewRequest(http.MethodGet, "/", nil))
+	if body := withSource.Body.String(); !strings.Contains(body, `https://github.com/Shik3i/KoalaBye?ref=release&amp;view=source`) {
+		t.Fatalf("configured source URL was not safely rendered: %s", body)
+	}
+	if err := q.UpdateSettings(context.Background(), map[string]string{"instance_source_url": ""}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	withoutSource := httptest.NewRecorder()
+	application.Handler.ServeHTTP(withoutSource, httptest.NewRequest(http.MethodGet, "/", nil))
+	if strings.Contains(withoutSource.Body.String(), "github.com/Shik3i/KoalaBye") {
+		t.Fatal("empty source URL still rendered a source link")
+	}
+}
+
+func TestInstanceOwnerUpdatesOrganizationLimitsWithValidationAndAudit(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	normal := seedNonOwner(t, application, "limituser", "limit user long password")
+	q := db.NewQuerier(application.Database)
+	orgs, err := q.ListOrganizationsForUser(context.Background(), owner.ID)
+	if err != nil || len(orgs) != 1 {
+		t.Fatalf("load owner organization: %v", err)
+	}
+	org := orgs[0]
+
+	ownerLogin := login(t, application, owner.Username, password)
+	csrfCookie, token, detailBody := csrfPage(t, application, "/app/orgs/"+org.PublicID, ownerLogin.session)
+	if !strings.Contains(detailBody, "Manage limits in admin") {
+		t.Fatal("organization detail did not expose limit management to the instance owner")
+	}
+	valid := url.Values{
+		"csrf_token": {token}, "public_id": {org.PublicID}, "max_campaigns": {"12"},
+		"max_members": {"25"}, "max_active_invites": {"30"}, "max_monthly_visits": {"50000"},
+		"max_monthly_submissions": {"5000"},
+	}
+	response := formPost(application, "/instance/organizations/limits", valid, ownerLogin.session, csrfCookie)
+	if response.Code != http.StatusSeeOther {
+		t.Fatalf("valid limit update failed: %d %s", response.Code, response.Body.String())
+	}
+	limits, err := q.GetOrganizationLimits(context.Background(), org.ID)
+	if err != nil || limits.MaxMembers != 25 || limits.MaxCampaigns != 12 {
+		t.Fatalf("limits were not updated: %#v %v", limits, err)
+	}
+	var auditCount int
+	if err := application.Database.QueryRow(`SELECT COUNT(*) FROM audit_log WHERE action='organization_limits_updated' AND organization_id=?`, org.ID).Scan(&auditCount); err != nil || auditCount != 1 {
+		t.Fatalf("limit update was not audited: %d %v", auditCount, err)
+	}
+
+	invalid := url.Values{
+		"csrf_token": {token}, "public_id": {org.PublicID}, "max_campaigns": {"10001"},
+		"max_members": {"0"}, "max_active_invites": {"1"}, "max_monthly_visits": {"1"},
+		"max_monthly_submissions": {"1"},
+	}
+	if rejected := formPost(application, "/instance/organizations/limits", invalid, ownerLogin.session, csrfCookie); rejected.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid limits were accepted: %d", rejected.Code)
+	}
+
+	normalLogin := login(t, application, normal.Username, "limit user long password")
+	if denied := formPost(application, "/instance/organizations/limits", valid, normalLogin.session, csrfCookie); denied.Code != http.StatusForbidden {
+		t.Fatalf("non-admin updated global organization limits: %d", denied.Code)
+	}
+}
+
+func TestInstanceSettingsRejectNonHTTPSSourceURL(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	ownerLogin := login(t, application, owner.Username, password)
+	csrfCookie, token, _ := csrfPage(t, application, "/instance/settings", ownerLogin.session)
+	form := url.Values{
+		"csrf_token": {token}, "instance_name": {"KoalaBye Test"},
+		"default_max_organizations_per_user": {"1"}, "default_max_campaigns_per_org": {"3"},
+		"default_max_members_per_org": {"5"}, "default_max_active_invites_per_org": {"10"},
+		"default_max_monthly_visits_per_org": {"10000"}, "default_max_monthly_submissions_per_org": {"1000"},
+		"instance_source_url": {"http://example.com/source"},
+	}
+	response := formPost(application, "/instance/settings", form, ownerLogin.session, csrfCookie)
+	if response.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("non-HTTPS source URL was accepted: %d", response.Code)
+	}
+}
+
 func TestNewRoutesRenderGermanAndSpanishWithoutExternalCDN(t *testing.T) {
 	t.Parallel()
 	application := testApp(t)
@@ -931,8 +1061,8 @@ func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
 	if len(response.Result().Cookies()) != 0 {
 		t.Fatalf("public page set cookies: %#v", response.Result().Cookies())
 	}
-	if strings.Contains(body, rawToken) || strings.Contains(body, "https://cdn") || strings.Contains(body, "<script") {
-		t.Fatal("public page leaked token or loaded scripts/external assets")
+	if strings.Contains(body, rawToken) || strings.Contains(body, "https://cdn") || strings.Contains(body, "htmx.min.js") || !strings.Contains(body, `<script src="/assets/app.js" defer></script>`) {
+		t.Fatal("public page leaked token or loaded unexpected scripts/external assets")
 	}
 	mac := hmac.New(sha256.New, []byte(application.Config.Secret))
 	_, _ = mac.Write([]byte(rawToken))

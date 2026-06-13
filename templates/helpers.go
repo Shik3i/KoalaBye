@@ -5,9 +5,19 @@ import "context"
 import "github.com/koalastuff/koalabye/internal/i18n"
 
 type csrfContextKey struct{}
+type instanceSettingsContextKey struct{}
+type instanceAdminContextKey struct{}
 
 func WithCSRF(ctx context.Context, token string) context.Context {
 	return context.WithValue(ctx, csrfContextKey{}, token)
+}
+
+func WithInstanceSettings(ctx context.Context, settings map[string]string) context.Context {
+	return context.WithValue(ctx, instanceSettingsContextKey{}, settings)
+}
+
+func WithInstanceAdmin(ctx context.Context, allowed bool) context.Context {
+	return context.WithValue(ctx, instanceAdminContextKey{}, allowed)
 }
 
 func csrfFromContext(ctx context.Context) string {
@@ -30,9 +40,18 @@ func languageCurrent(ctx context.Context, locale i18n.Locale) string {
 	return "false"
 }
 
+func supportedLanguages() []i18n.Locale {
+	return i18n.Supported
+}
+
 func instanceSourceURL(ctx context.Context) string {
-	if settings, ok := ctx.Value("settings").(map[string]string); ok {
+	if settings, ok := ctx.Value(instanceSettingsContextKey{}).(map[string]string); ok {
 		return settings["instance_source_url"]
 	}
 	return ""
+}
+
+func instanceAdmin(ctx context.Context) bool {
+	allowed, _ := ctx.Value(instanceAdminContextKey{}).(bool)
+	return allowed
 }

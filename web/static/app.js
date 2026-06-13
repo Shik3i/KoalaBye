@@ -7,7 +7,7 @@ document.documentElement.classList.add("js");
     }
 
     window.addEventListener("DOMContentLoaded", function() {
-        var toggles = document.querySelectorAll("#theme-toggle");
+        var toggles = document.querySelectorAll("[data-theme-selector]");
         toggles.forEach(function(switcher) {
             if (theme === "light" || theme === "dark") {
                 switcher.value = theme;

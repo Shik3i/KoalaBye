@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -116,9 +117,8 @@ func (h *Handler) LimitsPost(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	num := func(k string) int64 { v, _ := strconv.ParseInt(r.FormValue(k), 10, 64); return v }
-	limits := db.OrganizationLimits{MaxCampaigns: num("max_campaigns"), MaxMembers: num("max_members"), MaxActiveInvites: num("max_active_invites"), MaxMonthlyVisits: num("max_monthly_visits"), MaxMonthlySubmissions: num("max_monthly_submissions")}
-	if limits.MaxMembers < 1 || limits.MaxCampaigns < 0 || limits.MaxActiveInvites < 0 || limits.MaxMonthlyVisits < 0 || limits.MaxMonthlySubmissions < 0 {
+	limits, err := parseOrganizationLimits(r)
+	if err != nil {
 		http.Error(w, "invalid limits", 422)
 		return
 	}
@@ -147,13 +147,15 @@ func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
 		"invite_registration_enabled":           boolString(r.FormValue("invite_registration_enabled") == "on"),
 		"instance_name":                         strings.TrimSpace(r.FormValue("instance_name")),
 		"instance_operator_name":                strings.TrimSpace(r.FormValue("instance_operator_name")),
-		"instance_operator_url":                 safeURL(r.FormValue("instance_operator_url")),
-		"instance_legal_notice_url":             safeURL(r.FormValue("instance_legal_notice_url")),
-		"instance_privacy_policy_url":           safeURL(r.FormValue("instance_privacy_policy_url")),
-		"instance_source_url":                   safeURL(r.FormValue("instance_source_url")),
-		"instance_contact_url":                  safeURL(r.FormValue("instance_contact_url")),
-		"instance_support_url":                  safeURL(r.FormValue("instance_support_url")),
 		"instance_legal_pages_are_placeholders": boolString(r.FormValue("instance_legal_pages_are_placeholders") == "on"),
+	}
+	for _, key := range []string{"instance_operator_url", "instance_legal_notice_url", "instance_privacy_policy_url", "instance_source_url", "instance_contact_url", "instance_support_url"} {
+		value, valid := safeURL(r.FormValue(key))
+		if !valid {
+			http.Error(w, "invalid URL", http.StatusUnprocessableEntity)
+			return
+		}
+		values[key] = value
 	}
 	for _, k := range []string{"default_max_organizations_per_user", "default_max_campaigns_per_org", "default_max_members_per_org", "default_max_active_invites_per_org", "default_max_monthly_visits_per_org", "default_max_monthly_submissions_per_org"} {
 		v, err := strconv.Atoi(r.FormValue(k))
@@ -201,22 +203,59 @@ func boolString(v bool) string {
 	return "false"
 }
 
-func safeURL(raw string) string {
+func safeURL(raw string) (string, bool) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return ""
+		return "", true
 	}
 	parsed, err := url.Parse(raw)
-	if err != nil {
-		return ""
+	if err != nil || parsed.Host == "" || parsed.User != nil {
+		return "", false
 	}
 	if parsed.Scheme == "https" {
-		return raw
+		return raw, true
 	}
-	if parsed.Scheme == "http" && (parsed.Hostname() == "localhost" || parsed.Hostname() == "127.0.0.1") {
-		return raw
+	if parsed.Scheme == "http" && (parsed.Hostname() == "localhost" || parsed.Hostname() == "127.0.0.1" || parsed.Hostname() == "::1") {
+		return raw, true
 	}
-	return ""
+	return "", false
+}
+
+func parseOrganizationLimits(r *http.Request) (db.OrganizationLimits, error) {
+	parse := func(key string, minimum, maximum int64) (int64, error) {
+		value, err := strconv.ParseInt(strings.TrimSpace(r.FormValue(key)), 10, 64)
+		if err != nil || value < minimum || value > maximum {
+			return 0, errors.New("invalid limit")
+		}
+		return value, nil
+	}
+	campaigns, err := parse("max_campaigns", 0, 10000)
+	if err != nil {
+		return db.OrganizationLimits{}, err
+	}
+	members, err := parse("max_members", 1, 10000)
+	if err != nil {
+		return db.OrganizationLimits{}, err
+	}
+	invites, err := parse("max_active_invites", 0, 10000)
+	if err != nil {
+		return db.OrganizationLimits{}, err
+	}
+	visits, err := parse("max_monthly_visits", 0, 1000000000)
+	if err != nil {
+		return db.OrganizationLimits{}, err
+	}
+	submissions, err := parse("max_monthly_submissions", 0, 1000000000)
+	if err != nil {
+		return db.OrganizationLimits{}, err
+	}
+	return db.OrganizationLimits{
+		MaxCampaigns:          campaigns,
+		MaxMembers:            members,
+		MaxActiveInvites:      invites,
+		MaxMonthlyVisits:      visits,
+		MaxMonthlySubmissions: submissions,
+	}, nil
 }
 
 func New(cfg config.Config, queries *db.Querier, permissionService *permissions.Service) *Handler {

@@ -3,7 +3,6 @@ package templates
 import (
 	"context"
 	"github.com/koalastuff/koalabye/internal/db"
-	"github.com/koalastuff/koalabye/internal/i18n"
 )
 
 templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
@@ -15,6 +14,7 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 			<meta name="description" content={ tr(ctx, "public.meta") }/>
 			<title>{ title } · { instanceName }</title>
 			<link rel="stylesheet" href="/assets/app.css"/>
+			<script src="/assets/app.js" defer></script>
 		</head>
 		<body class={ bodyClass(branding) }>
 			<a class="skip-link" href="#main-content">{ tr(ctx, "common.skip") }</a>
@@ -30,24 +30,9 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 				} else {
 					<span></span>
 				}
-				<form method="get" class="language-switcher inline-form">
-					<select name="lang" aria-label={ tr(ctx, "language.label") } onchange="this.form.submit()">
-						for _, language := range i18n.Supported {
-							if languageCurrent(ctx, language) == "page" {
-								<option value={ string(language) } selected>{ tr(ctx, "language." + string(language)) }</option>
-							} else {
-								<option value={ string(language) }>{ tr(ctx, "language." + string(language)) }</option>
-							}
-						}
-					</select>
-					<noscript><button type="submit" class="button secondary" style="padding: 4px 8px; min-height: 0; margin-left: 5px;">{ tr(ctx, "common.apply") }</button></noscript>
-				</form>
-				<div class="theme-switcher inline-form" style="margin-left: 10px;">
-					<select id="theme-toggle" aria-label={ tr(ctx, "theme.label") }>
-						<option value="system">{ tr(ctx, "theme.system") }</option>
-						<option value="light">{ tr(ctx, "theme.light") }</option>
-						<option value="dark">{ tr(ctx, "theme.dark") }</option>
-					</select>
+				<div class="public-controls">
+					@LanguageSelector()
+					@ThemeSelector()
 				</div>
 			</header>
 			<main class="public-page" id="main-content">
@@ -75,6 +60,9 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 					<nav aria-label={ tr(ctx, "nav.aria") }>
 						<a href="/legal/privacy">{ tr(ctx, "legal.privacy.link") }</a>
 						<a href="/legal/imprint">{ tr(ctx, "legal.imprint.link") }</a>
+						if url := instanceSourceURL(ctx); url != "" {
+							<a href={ templ.SafeURL(url) }>{ tr(ctx, "instance.legal.source") }</a>
+						}
 					</nav>
 				}
 			</footer>

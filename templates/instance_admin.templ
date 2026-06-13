@@ -146,7 +146,7 @@ templ InstanceAudit(instanceName string, user db.User, events []db.AuditEvent) {
 }
 
 templ limitInput(name, key string, value int64) {
-	<label>{ tr(ctx, key) }<input type="number" min="0" name={ name } value={ fmt.Sprint(value) } required/></label>
+	<label>{ tr(ctx, key) }<input type="number" min={ limitMinimum(name) } max={ limitMaximum(name) } name={ name } value={ fmt.Sprint(value) } required/></label>
 }
 
 templ settingInput(settings map[string]string, name, key string) {
@@ -169,4 +169,20 @@ func campaignPrivacySummary(ctx context.Context, optional bool) string {
 		return tr(ctx, "campaign.privacy.balanced")
 	}
 	return tr(ctx, "campaign.privacy.strict")
+}
+
+func limitMinimum(name string) string {
+	if name == "max_members" {
+		return "1"
+	}
+	return "0"
+}
+
+func limitMaximum(name string) string {
+	switch name {
+	case "max_campaigns", "max_members", "max_active_invites":
+		return "10000"
+	default:
+		return "1000000000"
+	}
 }

@@ -29,6 +29,9 @@ services:
       
       # Name of the instance (visible to users)
       - KOALABYE_INSTANCE_NAME=KoalaBye
+
+      # Source-code link shown in the footer and legal pages
+      - KOALABYE_INSTANCE_SOURCE_URL=https://github.com/Shik3i/KoalaBye
       
       # Optional: Bootstrap the first admin user on startup (only created if no users exist)
       # - KOALABYE_BOOTSTRAP_ADMIN_USERNAME=admin

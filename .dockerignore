@@ -1,4 +1,5 @@
 .git
+.go-cache
 .env
 data
 koalabye

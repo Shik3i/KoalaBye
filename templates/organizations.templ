@@ -54,6 +54,7 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 			<div><div class="eyebrow">{ tr(ctx, "org.role", tr(ctx, "role." + role)) }</div><h1>{ org.Name }</h1><p class="muted">{ org.Slug }</p></div>
 			if canManage {
 				<a class="button secondary" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/invites") }>{ tr(ctx, "invite.title") }</a>
+				<a class="button secondary" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/settings") }>{ tr(ctx, "org.settings") }</a>
 			}
 		</section>
 		<section class="grid two">
@@ -74,7 +75,18 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 					<a href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") }>{ tr(ctx, "campaign.open_all") }</a>
 				}
 			</article>
-			<article class="panel"><h2>{ tr(ctx, "limits.title") }</h2><p>{ tr(ctx, "limits.explanation") }</p><dl class="stats"><dt>{ tr(ctx, "limits.members") }</dt><dd>{ fmt.Sprint(limits.MaxMembers) }</dd><dt>{ tr(ctx, "limits.invites") }</dt><dd>{ fmt.Sprint(limits.MaxActiveInvites) }</dd><dt>{ tr(ctx, "limits.campaigns") }</dt><dd>{ fmt.Sprint(limits.MaxCampaigns) }</dd></dl></article>
+			<article class="panel">
+				<h2>{ tr(ctx, "limits.title") }</h2>
+				<p>{ tr(ctx, "limits.explanation") }</p>
+				<dl class="stats">
+					<dt>{ tr(ctx, "limits.members") }</dt><dd>{ fmt.Sprint(limits.MaxMembers) }</dd>
+					<dt>{ tr(ctx, "limits.invites") }</dt><dd>{ fmt.Sprint(limits.MaxActiveInvites) }</dd>
+					<dt>{ tr(ctx, "limits.campaigns") }</dt><dd>{ fmt.Sprint(limits.MaxCampaigns) }</dd>
+				</dl>
+				if instanceAdmin(ctx) {
+					<p><a href={ templ.SafeURL("/instance/organizations/limits?org=" + org.PublicID) }>{ tr(ctx, "limits.manage_in_admin") }</a></p>
+				}
+			</article>
 		</section>
 		<section class="panel">
 			<h2>{ tr(ctx, "members.title") }</h2>

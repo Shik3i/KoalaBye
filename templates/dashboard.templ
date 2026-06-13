@@ -9,9 +9,6 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 	@Layout(tr(ctx, "dashboard.page_title"), instanceName, &user) {
 		<section class="page-heading">
 			<div><div class="eyebrow">{ tr(ctx, "dashboard.eyebrow") }</div><h1>{ tr(ctx, "dashboard.welcome", user.DisplayName) }</h1></div>
-			if isOwner {
-				<a class="button secondary" href="/instance">{ tr(ctx, "nav.instance_admin") }</a>
-			}
 			if canCreate {
 				<a class="button" href="/app/orgs/new">{ tr(ctx,"org.create") }</a>
 			}
@@ -40,6 +37,13 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 				<p>{ tr(ctx, "dashboard.campaigns_text") }</p>
 				<p class="muted">{ tr(ctx, "dashboard.selfhost_text") }</p>
 			</article>
+			if isOwner {
+				<article class="panel admin-card">
+					<h2>{ tr(ctx, "dashboard.admin.title") }</h2>
+					<p>{ tr(ctx, "dashboard.admin.text") }</p>
+					<a class="button secondary" href="/instance">{ tr(ctx, "dashboard.admin.open") }</a>
+				</article>
+			}
 		</section>
 	}
 }

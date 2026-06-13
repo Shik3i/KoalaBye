@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"io/fs"
@@ -49,6 +48,20 @@ func Routes(
 	r.Use(securityHeaders)
 	r.Use(i18n.Middleware(catalog, cfg.SecureCookies))
 	r.Use(auth.LoadUser(sessions))
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			if settings, err := queries.Settings(ctx); err == nil {
+				ctx = templates.WithInstanceSettings(ctx, settings)
+			}
+			if user, ok := auth.UserFromContext(ctx); ok {
+				if allowed, err := queries.UserHasInstanceRole(ctx, user.ID, "instance_owner"); err == nil {
+					ctx = templates.WithInstanceAdmin(ctx, allowed)
+				}
+			}
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	})
 
 	assets, _ := fs.Sub(staticassets.FS, ".")
 	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.FS(assets))))
@@ -81,9 +94,7 @@ func Routes(
 			http.Redirect(w, r, "/app", http.StatusSeeOther)
 			return
 		}
-		settings, _ := queries.Settings(r.Context())
-		ctx := context.WithValue(r.Context(), "settings", settings)
-		web.Render(w, r.WithContext(ctx), http.StatusOK, templates.Landing(cfg.InstanceName))
+		web.Render(w, r, http.StatusOK, templates.Landing(cfg.InstanceName))
 	})
 	r.Get("/setup", setupHandler.Get)
 	r.Post("/setup", setupHandler.Post)
@@ -111,14 +122,12 @@ func Routes(
 	r.Get("/legal/privacy", func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(i18n.LegalContext(r.Context()))
 		settings, _ := queries.Settings(r.Context())
-		ctx := context.WithValue(r.Context(), "settings", settings)
-		web.Render(w, r.WithContext(ctx), http.StatusOK, templates.Legal(cfg.InstanceName, "privacy", settings))
+		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "privacy", settings))
 	})
 	r.Get("/legal/imprint", func(w http.ResponseWriter, r *http.Request) {
 		r = r.WithContext(i18n.LegalContext(r.Context()))
 		settings, _ := queries.Settings(r.Context())
-		ctx := context.WithValue(r.Context(), "settings", settings)
-		web.Render(w, r.WithContext(ctx), http.StatusOK, templates.Legal(cfg.InstanceName, "imprint", settings))
+		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "imprint", settings))
 	})
 
 	r.Group(func(protected chi.Router) {

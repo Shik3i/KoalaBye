@@ -1,9 +1,31 @@
 package templates
 
-import (
-	"github.com/koalastuff/koalabye/internal/db"
-	"github.com/koalastuff/koalabye/internal/i18n"
-)
+import "github.com/koalastuff/koalabye/internal/db"
+
+templ LanguageSelector() {
+	<form method="get" class="control-switcher">
+		<label>
+			<span class="visually-hidden">{ tr(ctx, "language.label") }</span>
+			<select name="lang" aria-label={ tr(ctx, "language.label") }>
+				for _, language := range supportedLanguages() {
+					<option value={ string(language) } selected?={ languageCurrent(ctx, language) == "page" }>{ tr(ctx, "language." + string(language)) }</option>
+				}
+			</select>
+		</label>
+		<button type="submit" class="compact-button">{ tr(ctx, "common.apply") }</button>
+	</form>
+}
+
+templ ThemeSelector() {
+	<label class="control-switcher theme-switcher">
+		<span class="visually-hidden">{ tr(ctx, "theme.label") }</span>
+		<select data-theme-selector aria-label={ tr(ctx, "theme.label") }>
+			<option value="system">{ tr(ctx, "theme.system") }</option>
+			<option value="light">{ tr(ctx, "theme.light") }</option>
+			<option value="dark">{ tr(ctx, "theme.dark") }</option>
+		</select>
+	</label>
+}
 
 templ Layout(title string, instanceName string, user *db.User) {
 	<!DOCTYPE html>
@@ -26,31 +48,17 @@ templ Layout(title string, instanceName string, user *db.User) {
 						<nav aria-label={ tr(ctx, "nav.aria") }>
 							<a href="/app">{ tr(ctx, "nav.dashboard") }</a>
 							<a href="/app/orgs">{ tr(ctx, "nav.organizations") }</a>
+							if instanceAdmin(ctx) {
+								<a href="/instance">{ tr(ctx, "nav.instance_admin") }</a>
+							}
 							<form method="post" action="/logout" class="inline-form">
 								<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 								<button class="link-button" type="submit">{ tr(ctx, "common.logout") }</button>
 							</form>
 						</nav>
 					}
-					<form method="get" class="language-switcher inline-form">
-						<select name="lang" aria-label={ tr(ctx, "language.label") } onchange="this.form.submit()">
-							for _, language := range i18n.Supported {
-								if languageCurrent(ctx, language) == "page" {
-									<option value={ string(language) } selected>{ tr(ctx, "language." + string(language)) }</option>
-								} else {
-									<option value={ string(language) }>{ tr(ctx, "language." + string(language)) }</option>
-								}
-							}
-						</select>
-						<noscript><button type="submit" class="button secondary" style="padding: 4px 8px; min-height: 0; margin-left: 5px;">{ tr(ctx, "common.apply") }</button></noscript>
-					</form>
-					<div class="theme-switcher inline-form" style="margin-left: 10px;">
-						<select id="theme-toggle" aria-label={ tr(ctx, "theme.label") }>
-							<option value="system">{ tr(ctx, "theme.system") }</option>
-							<option value="light">{ tr(ctx, "theme.light") }</option>
-							<option value="dark">{ tr(ctx, "theme.dark") }</option>
-						</select>
-					</div>
+					@LanguageSelector()
+					@ThemeSelector()
 				</div>
 			</header>
 			<main class="page" id="main-content">

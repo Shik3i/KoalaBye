@@ -60,7 +60,7 @@ func (c *Catalog) Translate(locale Locale, key string, args ...any) string {
 		message, ok = c.messages[DefaultLocale][key]
 	}
 	if !ok {
-		return "[missing:" + key + "]"
+		return "[" + "missing:" + key + "]"
 	}
 	if len(args) > 0 {
 		return fmt.Sprintf(message, args...)
@@ -146,7 +146,7 @@ func FromContext(ctx context.Context) RequestLocale {
 func T(ctx context.Context, key string, args ...any) string {
 	current := FromContext(ctx)
 	if current.catalog == nil {
-		return "[missing:" + key + "]"
+		return "[" + "missing:" + key + "]"
 	}
 	return current.catalog.Translate(current.Locale, key, args...)
 }

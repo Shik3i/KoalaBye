@@ -23,6 +23,7 @@ type Config struct {
 	InviteRegistrationEnabled          bool
 	SecureCookies                      bool
 	InstanceName                       string
+	InstanceSourceURL                  string
 	BootstrapUsername                  string
 	BootstrapPassword                  string
 	BootstrapDisplayName               string
@@ -46,6 +47,7 @@ func Load() (Config, error) {
 		InviteRegistrationEnabled:          envBool("KOALABYE_INVITE_REGISTRATION_ENABLED", true),
 		SecureCookies:                      envBool("KOALABYE_SECURE_COOKIES", false),
 		InstanceName:                       env("KOALABYE_INSTANCE_NAME", "KoalaBye"),
+		InstanceSourceURL:                  strings.TrimSpace(os.Getenv("KOALABYE_INSTANCE_SOURCE_URL")),
 		BootstrapUsername:                  strings.TrimSpace(os.Getenv("KOALABYE_BOOTSTRAP_ADMIN_USERNAME")),
 		BootstrapPassword:                  os.Getenv("KOALABYE_BOOTSTRAP_ADMIN_PASSWORD"),
 		BootstrapDisplayName:               strings.TrimSpace(os.Getenv("KOALABYE_BOOTSTRAP_ADMIN_DISPLAY_NAME")),
@@ -62,6 +64,9 @@ func Load() (Config, error) {
 	}
 	if _, err := url.ParseRequestURI(cfg.BaseURL); err != nil {
 		return Config{}, fmt.Errorf("invalid KOALABYE_BASE_URL: %w", err)
+	}
+	if cfg.InstanceSourceURL != "" && !isSafePublicURL(cfg.InstanceSourceURL) {
+		return Config{}, errors.New("KOALABYE_INSTANCE_SOURCE_URL must use https, except localhost development URLs")
 	}
 	if cfg.Secret == "" {
 		return Config{}, errors.New("KOALABYE_SECRET is required")
@@ -88,6 +93,17 @@ func Load() (Config, error) {
 		return Config{}, errors.New("default safety limits must be non-negative and owner/member limits at least 1")
 	}
 	return cfg, nil
+}
+
+func isSafePublicURL(raw string) bool {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" || parsed.User != nil {
+		return false
+	}
+	if parsed.Scheme == "https" {
+		return true
+	}
+	return parsed.Scheme == "http" && (parsed.Hostname() == "localhost" || parsed.Hostname() == "127.0.0.1" || parsed.Hostname() == "::1")
 }
 
 func envInt(key string, fallback int) int {

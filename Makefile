@@ -1,7 +1,7 @@
 .PHONY: dev build check test fmt fmt-check vet vulncheck templ templ-check sqlc sqlc-check migrate docker-build
 
 GOCACHE ?= /tmp/koalabye-go-cache
-TEMPL_VERSION := v0.3.960
+TEMPL_VERSION := v0.3.1020
 SQLC_VERSION := v1.29.0
 GOOSE_VERSION := v3.26.0
 
@@ -29,14 +29,10 @@ vulncheck:
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 templ:
-	go run github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION) generate
+	go run ./cmd/templgenerate
 
 templ-check:
-	@tmp="$$(mktemp -d)"; cp templates/*_templ.go "$$tmp"/; \
-	go run github.com/a-h/templ/cmd/templ@$(TEMPL_VERSION) generate; \
-	status=0; \
-	for file in templates/*_templ.go; do cmp -s "$$tmp/$$(basename "$$file")" "$$file" || { echo "$$file is out of date"; status=1; }; done; \
-	rm -rf "$$tmp"; exit $$status
+	go run ./cmd/templgenerate -check
 
 sqlc:
 	go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) generate

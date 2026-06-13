@@ -28,6 +28,7 @@ Local image builds require Docker Desktop or another Docker daemon to be install
 | `KOALABYE_MODE` | Use `selfhost` |
 | `KOALABYE_SECURE_COOKIES` | Set `true` behind HTTPS |
 | `KOALABYE_INSTANCE_NAME` | Name shown in the UI |
+| `KOALABYE_INSTANCE_SOURCE_URL` | Optional HTTPS source-code URL shown in the UI; the official deployment uses `https://github.com/Shik3i/KoalaBye` |
 | `KOALABYE_REGISTRATION_ENABLED` | Usually `false` for a private instance |
 | `KOALABYE_INVITE_ONLY` | Usually `true` |
 | `KOALABYE_INVITE_REGISTRATION_ENABLED` | Allows account creation from valid invite codes |

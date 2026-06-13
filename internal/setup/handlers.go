@@ -123,7 +123,7 @@ func (h *Handler) createOwner(r *http.Request, username, displayName, password, 
 		UserPublicID: randomID("usr"), Username: username, UsernameNormalized: db.NormalizeUsername(username),
 		DisplayName: displayName, PasswordHash: hash, OrganizationPublicID: randomID("org"),
 		OrganizationSlug: slug, OrganizationName: h.catalog.Translate(i18n.FromContext(r.Context()).Locale, "setup.default_org_name", displayName),
-		InstanceName: h.cfg.InstanceName, RegistrationEnabled: h.cfg.RegistrationEnabled,
+		InstanceName: h.cfg.InstanceName, InstanceSourceURL: h.cfg.InstanceSourceURL, RegistrationEnabled: h.cfg.RegistrationEnabled,
 		InviteOnly: h.cfg.InviteOnly, InviteRegistrationEnabled: h.cfg.InviteRegistrationEnabled,
 		Limits: db.DefaultLimits{
 			MaxOrganizationsPerUser:     h.cfg.DefaultMaxOrganizationsPerUser,

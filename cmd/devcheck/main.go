@@ -104,71 +104,78 @@ func goFiles() []string {
 }
 
 func checkTemplGenerated() error {
-	out, err := exec.Command("git", "status", "--porcelain", "templates").Output()
-	if err != nil {
-		return fmt.Errorf("git status failed: %w", err)
-	}
-	if len(bytes.TrimSpace(out)) > 0 {
-		return fmt.Errorf("templates/ has uncommitted changes. Please commit or stash them before running devcheck")
-	}
-
-	// Try running via docker if available to bypass Windows file locking
-	var cmd *exec.Cmd
-	if _, err := exec.LookPath("docker"); err == nil {
-		cmd = exec.Command("docker", "run", "--rm", "-v", fmt.Sprintf("%s:/src", getwd()), "-w", "/src", "docker.io/library/golang:1.26.4-alpine", "sh", "-c", "go run github.com/a-h/templ/cmd/templ@v0.3.960 generate")
-	} else {
-		cmd = exec.Command("go", "run", "github.com/a-h/templ/cmd/templ@v0.3.960", "generate")
-	}
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("templ generate failed: %w", err)
-	}
-
-	out, err = exec.Command("git", "status", "--porcelain", "templates").Output()
-	if err != nil {
-		return fmt.Errorf("git status failed: %w", err)
-	}
-	if len(bytes.TrimSpace(out)) > 0 {
-		exec.Command("git", "checkout", "--", "templates").Run()
-		return fmt.Errorf("templ generated files are out of date! Please run \"go run github.com/a-h/templ/cmd/templ@v0.3.960 generate\" and commit the changes")
+	command := exec.Command("go", "run", "./cmd/templgenerate", "-check")
+	command.Stdout = os.Stdout
+	command.Stderr = os.Stderr
+	if err := command.Run(); err != nil {
+		return fmt.Errorf(`templ generated files are out of date; run "go run ./cmd/templgenerate": %w`, err)
 	}
 	return nil
 }
 
 func checkSqlcGenerated() error {
-	out, err := exec.Command("git", "status", "--porcelain", "internal/db/dbgen").Output()
+	tempDir, err := os.MkdirTemp("", "koalabye-sqlc-")
 	if err != nil {
-		return fmt.Errorf("git status failed: %w", err)
+		return fmt.Errorf("create sqlc temporary directory: %w", err)
 	}
-	if len(bytes.TrimSpace(out)) > 0 {
-		return fmt.Errorf("internal/db/dbgen/ has uncommitted changes. Please commit or stash them before running devcheck")
+	defer os.RemoveAll(tempDir)
+	workDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("get working directory: %w", err)
 	}
-
-	var cmd *exec.Cmd
-	if _, err := exec.LookPath("docker"); err == nil {
-		cmd = exec.Command("docker", "run", "--rm", "-v", fmt.Sprintf("%s:/src", getwd()), "-w", "/src", "docker.io/library/golang:1.26.4-alpine", "sh", "-c", "go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0 generate")
-	} else {
-		cmd = exec.Command("go", "run", "github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0", "generate")
+	configPath := filepath.Join(tempDir, "sqlc.yaml")
+	outputDir := filepath.Join(tempDir, "dbgen")
+	config := fmt.Sprintf(`version: "2"
+sql:
+  - engine: "sqlite"
+    schema: %q
+    queries: %q
+    gen:
+      go:
+        package: "dbgen"
+        out: %q
+        emit_json_tags: true
+        emit_empty_slices: true
+`, relativePath(tempDir, filepath.Join(workDir, "migrations")), relativePath(tempDir, filepath.Join(workDir, "queries")), "dbgen")
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
+		return fmt.Errorf("write temporary sqlc config: %w", err)
 	}
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	command := exec.Command("go", "run", "github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0", "generate", "-f", configPath)
+	command.Stdout = os.Stdout
+	command.Stderr = os.Stderr
+	if err := command.Run(); err != nil {
 		return fmt.Errorf("sqlc generate failed: %w", err)
 	}
-
-	out, err = exec.Command("git", "status", "--porcelain", "internal/db/dbgen").Output()
+	committed, err := filepath.Glob(filepath.Join("internal", "db", "dbgen", "*.go"))
 	if err != nil {
-		return fmt.Errorf("git status failed: %w", err)
+		return fmt.Errorf("find committed sqlc files: %w", err)
 	}
-	if len(bytes.TrimSpace(out)) > 0 {
-		exec.Command("git", "checkout", "--", "internal/db/dbgen").Run()
-		return fmt.Errorf("sqlc generated files are out of date! Please run \"go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0 generate\" and commit the changes")
+	generated, err := filepath.Glob(filepath.Join(outputDir, "*.go"))
+	if err != nil || len(generated) != len(committed) {
+		return fmt.Errorf("sqlc generated file set differs from committed output")
+	}
+	for _, currentPath := range committed {
+		generatedPath := filepath.Join(outputDir, filepath.Base(currentPath))
+		current, err := os.ReadFile(currentPath)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", currentPath, err)
+		}
+		fresh, err := os.ReadFile(generatedPath)
+		if err != nil || !bytes.Equal(normalizeLines(current), normalizeLines(fresh)) {
+			return fmt.Errorf(`%s is out of date; run "go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0 generate"`, currentPath)
+		}
 	}
 	return nil
 }
 
-func getwd() string {
-	d, _ := os.Getwd()
-	return d
+func normalizeLines(content []byte) []byte {
+	return bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+}
+
+func relativePath(base, target string) string {
+	value, err := filepath.Rel(base, target)
+	if err != nil {
+		return filepath.ToSlash(target)
+	}
+	return filepath.ToSlash(value)
 }

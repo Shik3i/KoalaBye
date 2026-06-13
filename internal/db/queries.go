@@ -273,6 +273,7 @@ func (q *Querier) CreateFirstOwner(ctx context.Context, input FirstOwnerInput) (
 		"invite_only":                             fmt.Sprintf("%t", input.InviteOnly),
 		"invite_registration_enabled":             fmt.Sprintf("%t", input.InviteRegistrationEnabled),
 		"instance_name":                           input.InstanceName,
+		"instance_source_url":                     input.InstanceSourceURL,
 		"default_max_organizations_per_user":      fmt.Sprintf("%d", input.Limits.MaxOrganizationsPerUser),
 		"default_max_campaigns_per_org":           fmt.Sprintf("%d", input.Limits.MaxCampaignsPerOrg),
 		"default_max_members_per_org":             fmt.Sprintf("%d", input.Limits.MaxMembersPerOrg),
@@ -323,6 +324,7 @@ type FirstOwnerInput struct {
 	OrganizationSlug          string
 	OrganizationName          string
 	InstanceName              string
+	InstanceSourceURL         string
 	RegistrationEnabled       bool
 	InviteOnly                bool
 	InviteRegistrationEnabled bool
