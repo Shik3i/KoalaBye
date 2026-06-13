@@ -1268,7 +1268,7 @@ func fieldAction(campaign db.Campaign, field db.FormField, direction string, dis
 		var templ_7745c5c3_Var72 string
 		templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfFromContext(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 145, Col: 202}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 146, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var72)
 		if templ_7745c5c3_Err != nil {
@@ -1281,7 +1281,7 @@ func fieldAction(campaign db.Campaign, field db.FormField, direction string, dis
 		var templ_7745c5c3_Var73 string
 		templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.ResolveAttributeValue(direction)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 145, Col: 261}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 146, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var73)
 		if templ_7745c5c3_Err != nil {
@@ -1304,7 +1304,7 @@ func fieldAction(campaign db.Campaign, field db.FormField, direction string, dis
 		var templ_7745c5c3_Var74 string
 		templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.ResolveAttributeValue(tr(ctx, "tooltip.btn.move_"+direction))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 146, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 147, Col: 120}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var74)
 		if templ_7745c5c3_Err != nil {
@@ -1317,7 +1317,7 @@ func fieldAction(campaign db.Campaign, field db.FormField, direction string, dis
 		var templ_7745c5c3_Var75 string
 		templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "form.move."+direction))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 146, Col: 160}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 147, Col: 158}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 		if templ_7745c5c3_Err != nil {
@@ -1360,7 +1360,7 @@ func fieldTypeOptions(selected string) templ.Component {
 			var templ_7745c5c3_Var77 string
 			templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.ResolveAttributeValue(fieldType)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 152, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 153, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var77)
 			if templ_7745c5c3_Err != nil {
@@ -1383,7 +1383,7 @@ func fieldTypeOptions(selected string) templ.Component {
 			var templ_7745c5c3_Var78 string
 			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "form.type."+fieldType))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 152, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 153, Col: 101}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
 			if templ_7745c5c3_Err != nil {
@@ -1432,7 +1432,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 				var templ_7745c5c3_Var80 string
 				templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(field.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 160, Col: 25}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 161, Col: 25}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 				if templ_7745c5c3_Err != nil {
@@ -1445,7 +1445,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 				var templ_7745c5c3_Var81 string
 				templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(field.Config().Body)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 161, Col: 28}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 162, Col: 28}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var81))
 				if templ_7745c5c3_Err != nil {
@@ -1463,7 +1463,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 				var templ_7745c5c3_Var82 string
 				templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(field.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 164, Col: 18}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 165, Col: 18}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
 				if templ_7745c5c3_Err != nil {
@@ -1491,7 +1491,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 					var templ_7745c5c3_Var83 string
 					templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.ResolveAttributeValue(helpID(field))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 170, Col: 40}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 171, Col: 40}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var83)
 					if templ_7745c5c3_Err != nil {
@@ -1504,7 +1504,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 					var templ_7745c5c3_Var84 string
 					templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(field.HelpText.String)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 170, Col: 66}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 171, Col: 66}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 					if templ_7745c5c3_Err != nil {
@@ -1528,7 +1528,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 					var templ_7745c5c3_Var85 string
 					templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.ResolveAttributeValue("field_" + field.PublicID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 174, Col: 48}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 175, Col: 48}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var85)
 					if templ_7745c5c3_Err != nil {
@@ -1541,7 +1541,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 					var templ_7745c5c3_Var86 string
 					templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprint(field.Config().MaxLength))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 174, Col: 99}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 175, Col: 99}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var86)
 					if templ_7745c5c3_Err != nil {
@@ -1584,7 +1584,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 						var templ_7745c5c3_Var87 string
 						templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.ResolveAttributeValue("field_" + field.PublicID)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 178, Col: 67}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 179, Col: 67}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var87)
 						if templ_7745c5c3_Err != nil {
@@ -1597,7 +1597,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 						var templ_7745c5c3_Var88 string
 						templ_7745c5c3_Var88, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprint(rating))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 178, Col: 96}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 179, Col: 96}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var88)
 						if templ_7745c5c3_Err != nil {
@@ -1630,7 +1630,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 						var templ_7745c5c3_Var89 string
 						templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprint(rating))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 178, Col: 209}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 179, Col: 209}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var89))
 						if templ_7745c5c3_Err != nil {
@@ -1655,7 +1655,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 							var templ_7745c5c3_Var90 string
 							templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.ResolveAttributeValue("field_" + field.PublicID)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 184, Col: 82}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 185, Col: 82}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var90)
 							if templ_7745c5c3_Err != nil {
@@ -1668,7 +1668,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 							var templ_7745c5c3_Var91 string
 							templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.ResolveAttributeValue(option.Value)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 184, Col: 105}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 185, Col: 105}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var91)
 							if templ_7745c5c3_Err != nil {
@@ -1701,7 +1701,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 							var templ_7745c5c3_Var92 string
 							templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.JoinStringErrs(option.Label)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 184, Col: 212}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 185, Col: 212}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var92))
 							if templ_7745c5c3_Err != nil {
@@ -1723,7 +1723,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 							var templ_7745c5c3_Var93 string
 							templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.ResolveAttributeValue("field_" + field.PublicID)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 190, Col: 85}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 191, Col: 85}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var93)
 							if templ_7745c5c3_Err != nil {
@@ -1736,7 +1736,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 							var templ_7745c5c3_Var94 string
 							templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.ResolveAttributeValue(option.Value)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 190, Col: 108}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 191, Col: 108}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var94)
 							if templ_7745c5c3_Err != nil {
@@ -1763,7 +1763,7 @@ func PublicFields(fields []db.FormField, enabled bool) templ.Component {
 							var templ_7745c5c3_Var95 string
 							templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(option.Label)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 190, Col: 175}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 191, Col: 175}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var95))
 							if templ_7745c5c3_Err != nil {
@@ -1830,7 +1830,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 			var templ_7745c5c3_Var98 string
 			templ_7745c5c3_Var98, templ_7745c5c3_Err = templ.JoinStringErrs(campaign.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 202, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 203, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var98))
 			if templ_7745c5c3_Err != nil {
@@ -1843,7 +1843,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 			var templ_7745c5c3_Var99 string
 			templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 202, Col: 113}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 203, Col: 113}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var99))
 			if templ_7745c5c3_Err != nil {
@@ -1856,7 +1856,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 			var templ_7745c5c3_Var100 string
 			templ_7745c5c3_Var100, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.table_caption", campaign.Name))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 205, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 206, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var100))
 			if templ_7745c5c3_Err != nil {
@@ -1869,7 +1869,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 			var templ_7745c5c3_Var101 string
 			templ_7745c5c3_Var101, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.submitted_at"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 206, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 207, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var101))
 			if templ_7745c5c3_Err != nil {
@@ -1882,7 +1882,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 			var templ_7745c5c3_Var102 string
 			templ_7745c5c3_Var102, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.summary"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 206, Col: 95}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 207, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var102))
 			if templ_7745c5c3_Err != nil {
@@ -1895,7 +1895,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 			var templ_7745c5c3_Var103 string
 			templ_7745c5c3_Var103, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.visit"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 206, Col: 134}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 207, Col: 134}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var103))
 			if templ_7745c5c3_Err != nil {
@@ -1908,7 +1908,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 			var templ_7745c5c3_Var104 string
 			templ_7745c5c3_Var104, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.token"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 206, Col: 173}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 207, Col: 173}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var104))
 			if templ_7745c5c3_Err != nil {
@@ -1926,7 +1926,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 				var templ_7745c5c3_Var105 templ.SafeURL
 				templ_7745c5c3_Var105, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(campaignPath(campaign) + "/responses/" + submission.PublicID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 210, Col: 96}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 211, Col: 96}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var105))
 				if templ_7745c5c3_Err != nil {
@@ -1939,7 +1939,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 				var templ_7745c5c3_Var106 string
 				templ_7745c5c3_Var106, templ_7745c5c3_Err = templ.JoinStringErrs(submission.SubmittedAt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 210, Col: 123}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 211, Col: 123}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var106))
 				if templ_7745c5c3_Err != nil {
@@ -1952,7 +1952,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 				var templ_7745c5c3_Var107 string
 				templ_7745c5c3_Var107, templ_7745c5c3_Err = templ.JoinStringErrs(submission.AnswerSummary)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 211, Col: 37}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 212, Col: 37}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var107))
 				if templ_7745c5c3_Err != nil {
@@ -1965,7 +1965,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 				var templ_7745c5c3_Var108 string
 				templ_7745c5c3_Var108, templ_7745c5c3_Err = templ.JoinStringErrs(nullable(submission.VisitPublicID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 212, Col: 47}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 213, Col: 47}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var108))
 				if templ_7745c5c3_Err != nil {
@@ -1979,7 +1979,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 					var templ_7745c5c3_Var109 string
 					templ_7745c5c3_Var109, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "common.yes"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 215, Col: 32}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 216, Col: 32}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var109))
 					if templ_7745c5c3_Err != nil {
@@ -1989,7 +1989,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 					var templ_7745c5c3_Var110 string
 					templ_7745c5c3_Var110, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "common.no"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 217, Col: 31}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 218, Col: 31}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var110))
 					if templ_7745c5c3_Err != nil {
@@ -2013,7 +2013,7 @@ func CampaignResponses(instanceName string, user db.User, campaign db.Campaign, 
 				var templ_7745c5c3_Var111 string
 				templ_7745c5c3_Var111, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.empty"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 225, Col: 35}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 226, Col: 35}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var111))
 				if templ_7745c5c3_Err != nil {
@@ -2082,7 +2082,7 @@ func CampaignResponseDetail(instanceName string, user db.User, campaign db.Campa
 			var templ_7745c5c3_Var114 string
 			templ_7745c5c3_Var114, templ_7745c5c3_Err = templ.JoinStringErrs(submission.SubmittedAt)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 234, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 235, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var114))
 			if templ_7745c5c3_Err != nil {
@@ -2095,7 +2095,7 @@ func CampaignResponseDetail(instanceName string, user db.User, campaign db.Campa
 			var templ_7745c5c3_Var115 string
 			templ_7745c5c3_Var115, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.detail"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 234, Col: 123}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 235, Col: 123}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var115))
 			if templ_7745c5c3_Err != nil {
@@ -2108,7 +2108,7 @@ func CampaignResponseDetail(instanceName string, user db.User, campaign db.Campa
 			var templ_7745c5c3_Var116 string
 			templ_7745c5c3_Var116, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "responses.privacy"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 235, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 236, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var116))
 			if templ_7745c5c3_Err != nil {
@@ -2126,7 +2126,7 @@ func CampaignResponseDetail(instanceName string, user db.User, campaign db.Campa
 				var templ_7745c5c3_Var117 string
 				templ_7745c5c3_Var117, templ_7745c5c3_Err = templ.JoinStringErrs(answer.FieldLabelSnapshot)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 238, Col: 35}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 239, Col: 35}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var117))
 				if templ_7745c5c3_Err != nil {
@@ -2139,7 +2139,7 @@ func CampaignResponseDetail(instanceName string, user db.User, campaign db.Campa
 				var templ_7745c5c3_Var118 string
 				templ_7745c5c3_Var118, templ_7745c5c3_Err = templ.JoinStringErrs(submissionAnswerDisplay(answer.ValueJSON))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 239, Col: 50}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 240, Col: 50}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var118))
 				if templ_7745c5c3_Err != nil {

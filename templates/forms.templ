@@ -142,8 +142,9 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 }
 
 templ fieldAction(campaign db.Campaign, field db.FormField, direction string, disabled bool) {
-	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/move") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="direction" value={ direction }/>
-		<button class="link-button" type="submit" disabled?={ disabled } data-tooltip={ tr(ctx, "tooltip.btn.move_" + direction) }>{ tr(ctx, "form.move." + direction) }</button>
+	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/move") }>
+		<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="direction" value={ direction }/>
+		<button class="link-button" type="submit" disabled?={ disabled } data-tooltip={ tr(ctx, "tooltip.btn.move_"+direction) }>{ tr(ctx, "form.move." + direction) }</button>
 	</form>
 }
 
