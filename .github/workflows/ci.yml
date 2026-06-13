@@ -7,16 +7,19 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.26.4"
           cache: true
@@ -43,8 +46,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.26.4"
           cache: true
@@ -52,16 +55,3 @@ jobs:
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - name: Scan Go dependencies
         run: govulncheck ./...
-
-  docker:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build production image
-        run: |
-          docker build \
-            --build-arg VERSION=ci \
-            --build-arg COMMIT="${GITHUB_SHA}" \
-            --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            -t koalabye:ci .

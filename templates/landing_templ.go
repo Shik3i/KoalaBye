@@ -129,7 +129,7 @@ func Landing(instanceName string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></div><div class=\"hero-panel\" style=\"display: flex; align-items: center;\"><article class=\"panel\" style=\"width: 100%;\"><h2>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></div><div class=\"hero-panel\"><article class=\"panel\"><h2>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
