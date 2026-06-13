@@ -107,9 +107,9 @@ document.documentElement.classList.add("js");
                 var maxLengthLabel = form.querySelector(".conditional-max-length");
                 var requiredLabel = form.querySelector(".conditional-required");
                 
-                if (bodyLabel) bodyLabel.style.display = (val === "text_block") ? "grid" : "none";
-                if (maxLengthLabel) maxLengthLabel.style.display = (val === "textarea") ? "grid" : "none";
-                if (requiredLabel) requiredLabel.style.display = (val === "text_block") ? "none" : "flex";
+                if (bodyLabel) bodyLabel.classList.toggle("hidden", val !== "text_block");
+                if (maxLengthLabel) maxLengthLabel.classList.toggle("hidden", val !== "textarea");
+                if (requiredLabel) requiredLabel.classList.toggle("hidden", val === "text_block");
             };
             
             fieldTypeSelect.addEventListener("change", updateFieldVisibility);

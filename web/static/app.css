@@ -78,6 +78,10 @@ button, input, select, textarea { font: inherit; }
 .notice { margin: 20px 0; background: #eef5ff; border: 1px solid #c8d9ee; color: #294a6b; padding: 12px 14px; border-radius: 10px; }
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 50px 0 28px; }
 .heading-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+
+/* Utilities */
+.hidden { display: none !important; }
+
 .clean-list { list-style: none; padding: 0; margin: 18px 0 0; }
 .clean-list li { display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--line); }
 .badge { display: inline-flex; border-radius: 999px; background: var(--green-soft); color: var(--green-dark); padding: 3px 9px; font-size: .75rem; font-weight: 800; }

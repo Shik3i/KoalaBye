@@ -3,6 +3,7 @@ package templates
 import (
 	"context"
 	"github.com/koalastuff/koalabye/internal/db"
+	"github.com/koalastuff/koalabye/internal/version"
 )
 
 templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
@@ -18,8 +19,8 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 			<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16x16.png"/>
 			<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png"/>
 			<link rel="manifest" href="/assets/site.webmanifest"/>
-			<link rel="stylesheet" href="/assets/app.css"/>
-			<script src="/assets/app.js" defer></script>
+			<link rel="stylesheet" href={ "/assets/app.css?v=" + version.Current().Version }/>
+			<script src={ "/assets/app.js?v=" + version.Current().Version } defer></script>
 		</head>
 		<body class={ bodyClass(branding) }>
 			<a class="skip-link" href="#main-content">{ tr(ctx, "common.skip") }</a>
