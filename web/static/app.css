@@ -144,8 +144,35 @@ th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-s
 .danger-zone { border-color: #e2aaa0; margin-top: 24px; }
 .danger-form { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 18px; }
 .danger-form button { background: var(--danger); justify-self: start; }
-.empty-state { max-width: 720px; }
-.empty-state ul { padding-left: 20px; color: var(--muted); }
+.empty-state {
+  text-align: center;
+  padding: 40px 24px;
+  border: 2px dashed var(--line);
+  background: var(--paper);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.empty-state h2 {
+  margin-bottom: 12px;
+}
+.empty-state p {
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.empty-state ul {
+  text-align: left;
+  margin: 12px auto 24px;
+  padding-left: 20px;
+  max-width: 420px;
+  color: var(--muted);
+}
+.empty-state .button {
+  margin-top: 12px;
+}
 .checklist-list { list-style: none; margin: 16px 0 0; padding: 0; }
 .checklist-list li { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
 .checklist-status { color: var(--muted); font-weight: 900; }

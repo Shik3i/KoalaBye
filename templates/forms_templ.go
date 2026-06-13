@@ -416,7 +416,7 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, field
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</span><span class=\"info-icon\" data-tooltip=\"The type of the field.\">i</span></div><select name=\"field_type\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"The type of the field.\">i</span></div><select name=\"field_type\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -437,7 +437,7 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, field
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</span><span class=\"info-icon\" data-tooltip=\"The main label or question text.\">i</span></div><input name=\"label\" maxlength=\"300\" required></label> <label><div class=\"field-header\"><span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"The main label or question text.\">i</span></div><input name=\"label\" maxlength=\"300\" required></label> <label><div class=\"field-header\"><span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -450,46 +450,46 @@ func CampaignForm(instanceName string, user db.User, campaign db.Campaign, field
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</span><span class=\"info-icon\" data-tooltip=\"Optional descriptive text.\">i</span></div><textarea name=\"help_text\" maxlength=\"1000\"></textarea></label> <label class=\"check\"><input type=\"checkbox\" name=\"required\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"Optional descriptive text.\">i</span></div><textarea name=\"help_text\" maxlength=\"1000\"></textarea></label> <label class=\"check conditional-required\"><input type=\"checkbox\" name=\"required\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var26 string
 				templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "form.required"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 67, Col: 93}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 67, Col: 114}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</label> <label><div class=\"field-header\"><span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</label> <label class=\"conditional-body\"><div class=\"field-header\"><span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var27 string
 				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "form.text_block.body"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 68, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 68, Col: 103}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</span><span class=\"info-icon\" data-tooltip=\"Text to display.\">i</span></div><textarea name=\"body\" maxlength=\"5000\"></textarea></label> <label><div class=\"field-header\"><span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"Text to display.\">i</span></div><textarea name=\"body\" maxlength=\"5000\"></textarea></label> <label class=\"conditional-max-length\"><div class=\"field-header\"><span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var28 string
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(tr(ctx, "form.textarea.max_length"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 69, Col: 82}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 69, Col: 113}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</span><span class=\"info-icon\" data-tooltip=\"Max characters allowed.\">i</span></div><input type=\"number\" name=\"max_length\" value=\"1000\" min=\"1\" max=\"5000\"></label> <button type=\"submit\" data-tooltip=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"Max characters allowed.\">i</span></div><input type=\"number\" name=\"max_length\" value=\"1000\" min=\"1\" max=\"5000\"></label> <button type=\"submit\" data-tooltip=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -723,14 +723,14 @@ func CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campai
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "</span><span class=\"info-icon\" data-tooltip=\"The main label or question text.\">i</span></div><input name=\"label\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"The main label or question text.\">i</span></div><input name=\"label\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.ResolveAttributeValue(field.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 98, Col: 199}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 98, Col: 246}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var42)
 			if templ_7745c5c3_Err != nil {
@@ -759,7 +759,7 @@ func CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campai
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "</span><span class=\"info-icon\" data-tooltip=\"Optional descriptive text.\">i</span></div><textarea name=\"help_text\" maxlength=\"1000\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"Optional descriptive text.\">i</span></div><textarea name=\"help_text\" maxlength=\"1000\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -776,7 +776,7 @@ func CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campai
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(field.HelpText.String)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 99, Col: 248}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 99, Col: 295}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -835,7 +835,7 @@ func CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campai
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "</span><span class=\"info-icon\" data-tooltip=\"Text to display.\">i</span></div><textarea name=\"body\" maxlength=\"5000\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"Text to display.\">i</span></div><textarea name=\"body\" maxlength=\"5000\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -852,7 +852,7 @@ func CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campai
 				var templ_7745c5c3_Var47 string
 				templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(field.Config().Body)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 104, Col: 238}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 104, Col: 285}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 				if templ_7745c5c3_Err != nil {
@@ -877,14 +877,14 @@ func CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campai
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "</span><span class=\"info-icon\" data-tooltip=\"Max characters allowed.\">i</span></div><input type=\"number\" name=\"max_length\" value=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "</span><span class=\"info-icon\" tabindex=\"0\" role=\"img\" aria-label=\"Help info\" data-tooltip=\"Max characters allowed.\">i</span></div><input type=\"number\" name=\"max_length\" value=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var49 string
 				templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprint(field.Config().MaxLength))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 107, Col: 249}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/forms.templ`, Line: 107, Col: 296}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var49)
 				if templ_7745c5c3_Err != nil {

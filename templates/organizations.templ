@@ -40,15 +40,15 @@ templ OrganizationNew(instanceName string, user db.User, errorKey string) {
 			}
 			<form method="post" action="/app/orgs" class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-				<label><div class="field-header"><span>{ tr(ctx, "org.name") }</span><span class="info-icon" data-tooltip="The public-facing name of the organization.">i</span></div><input name="name" required maxlength="100"/></label>
-				<label><div class="field-header"><span>{ tr(ctx, "org.slug") }</span><span class="info-icon" data-tooltip="The URL-safe identifier for the organization.">i</span></div><input name="slug" required maxlength="60" pattern="[A-Za-z0-9_-]+"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "org.name") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="The public-facing name of the organization.">i</span></div><input name="name" required maxlength="100"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "org.slug") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="The URL-safe identifier for the organization.">i</span></div><input name="slug" required maxlength="60" pattern="[A-Za-z0-9_-]+"/></label>
 				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.create") }>{ tr(ctx, "org.create") }</button>
 			</form>
 		</section>
 	}
 }
 
-templ OrganizationDetail(instanceName string, user db.User, org db.Organization, role string, members []db.OrganizationMember, limits db.OrganizationLimits, campaignCount int64, canManage bool) {
+templ OrganizationDetail(instanceName string, user db.User, org db.Organization, role string, members []db.OrganizationMember, limits db.OrganizationLimits, campaigns []db.Campaign, canManage bool) {
 	@Layout(org.Name, instanceName, &user) {
 		<section class="page-heading">
 			<div><div class="eyebrow">{ tr(ctx, "org.role", tr(ctx, "role." + role)) }</div><h1>{ org.Name }</h1><p class="muted">{ org.Slug }</p></div>
@@ -60,19 +60,33 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 		<section class="grid two">
 			<article class="panel">
 				<h2>{ tr(ctx, "campaign.title") }</h2>
-				if campaignCount == 0 {
+				if len(campaigns) == 0 {
 					<p>{ tr(ctx, "campaign.empty_explanation") }</p>
-					<ul>
-						<li>{ tr(ctx, "campaign.example.chrome") }</li>
-						<li>{ tr(ctx, "campaign.example.firefox") }</li>
-						<li>{ tr(ctx, "campaign.example.cancellation") }</li>
+					<ul class="clean-list" style="margin-bottom: 16px;">
+						<li style="border-top: none; padding: 4px 0;"><span style="color: var(--green);">✓</span> { tr(ctx, "campaign.example.chrome") }</li>
+						<li style="border-top: none; padding: 4px 0;"><span style="color: var(--green);">✓</span> { tr(ctx, "campaign.example.firefox") }</li>
+						<li style="border-top: none; padding: 4px 0;"><span style="color: var(--green);">✓</span> { tr(ctx, "campaign.example.cancellation") }</li>
 					</ul>
-					if canManage && campaignCount < limits.MaxCampaigns {
+					if canManage && int64(len(campaigns)) < limits.MaxCampaigns {
 						<a class="button" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/new") }>{ tr(ctx, "campaign.create") }</a>
 					}
 				} else {
-					<p>{ tr(ctx, "campaign.list.description") }</p>
-					<a href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") }>{ tr(ctx, "campaign.open_all") }</a>
+					<ul class="clean-list" style="margin-bottom: 16px;">
+						for _, campaign := range campaigns {
+							<li>
+								<a href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID) }>
+									<strong>{ campaign.Name }</strong>
+								</a>
+								<span class={ "badge status-" + campaign.Status }>{ tr(ctx, "campaign.status." + campaign.Status) }</span>
+							</li>
+						}
+					</ul>
+					<div style="display: flex; gap: 16px; align-items: center;">
+						if canManage && int64(len(campaigns)) < limits.MaxCampaigns {
+							<a class="button secondary compact-button" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/new") }>{ tr(ctx, "campaign.create") }</a>
+						}
+						<a href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") }>{ tr(ctx, "campaign.open_all") }</a>
+					</div>
 				}
 			</article>
 			<article class="panel">
@@ -123,6 +137,6 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 templ OrganizationSettings(instanceName string, user db.User, org db.Organization, role string, limits db.OrganizationLimits, instanceOwner bool) {
 	@Layout(tr(ctx, "org.settings"), instanceName, &user) {
 		<section class="page-heading"><div><div class="eyebrow">{ org.Name }</div><h1>{ tr(ctx, "org.settings") }</h1></div></section>
-		<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/settings") } class="panel form-stack"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><label><div class="field-header"><span>{ tr(ctx, "org.name") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.org_name") }>i</span></div><input name="name" value={ org.Name } required/></label><label><div class="field-header"><span>{ tr(ctx, "org.slug") }</span><span class="info-icon" data-tooltip={ tr(ctx, "tooltip.field.org_slug") }>i</span></div><input name="slug" value={ org.Slug } required/></label><button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button></form>
+		<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/settings") } class="panel form-stack"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><label><div class="field-header"><span>{ tr(ctx, "org.name") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.org_name") }>i</span></div><input name="name" value={ org.Name } required/></label><label><div class="field-header"><span>{ tr(ctx, "org.slug") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.org_slug") }>i</span></div><input name="slug" value={ org.Slug } required/></label><button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button></form>
 	}
 }

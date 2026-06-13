@@ -95,5 +95,25 @@ document.documentElement.classList.add("js");
                 });
             });
         }
+
+        // Dynamic visibility for conditional inputs in Form Builder "Add Field" form
+        var fieldTypeSelect = document.querySelector("select[name='field_type']");
+        if (fieldTypeSelect) {
+            var form = fieldTypeSelect.closest("form");
+            var updateFieldVisibility = function() {
+                var val = fieldTypeSelect.value;
+                
+                var bodyLabel = form.querySelector(".conditional-body");
+                var maxLengthLabel = form.querySelector(".conditional-max-length");
+                var requiredLabel = form.querySelector(".conditional-required");
+                
+                if (bodyLabel) bodyLabel.style.display = (val === "text_block") ? "grid" : "none";
+                if (maxLengthLabel) maxLengthLabel.style.display = (val === "textarea") ? "grid" : "none";
+                if (requiredLabel) requiredLabel.style.display = (val === "text_block") ? "none" : "flex";
+            };
+            
+            fieldTypeSelect.addEventListener("change", updateFieldVisibility);
+            updateFieldVisibility();
+        }
     });
 })();

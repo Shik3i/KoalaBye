@@ -170,6 +170,30 @@ func (q *Querier) ListCampaignsForUser(ctx context.Context, orgID, userID int64)
 	return out, rows.Err()
 }
 
+func (q *Querier) ListAllCampaignsForUser(ctx context.Context, userID int64) ([]Campaign, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,cm.role,
+		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner')
+		FROM campaigns c
+		JOIN organizations o ON o.id=c.organization_id
+		JOIN users u ON u.id=c.created_by_user_id
+		LEFT JOIN campaign_members cm ON cm.campaign_id=c.id AND cm.user_id=?
+		WHERE EXISTS(SELECT 1 FROM organization_members om WHERE om.organization_id=c.organization_id AND om.user_id=?)
+		ORDER BY c.updated_at DESC, c.id DESC`, userID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Campaign
+	for rows.Next() {
+		c, err := scanCampaign(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 func (q *Querier) GetCampaignByPublicID(ctx context.Context, orgPublicID, campaignPublicID string) (Campaign, error) {
 	return scanCampaign(q.db.QueryRowContext(ctx, `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,NULL,
 		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner')

@@ -29,6 +29,11 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not load dashboard", http.StatusInternalServerError)
 		return
 	}
+	campaigns, err := h.queries.ListAllCampaignsForUser(r.Context(), user.ID)
+	if err != nil {
+		http.Error(w, "could not load campaigns", http.StatusInternalServerError)
+		return
+	}
 	isOwner, err := h.permissions.IsInstanceOwner(r.Context(), user.ID)
 	if err != nil {
 		http.Error(w, "could not check permissions", http.StatusInternalServerError)
@@ -37,5 +42,5 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	settings, _ := h.queries.Settings(r.Context())
 	limit, _ := strconv.Atoi(settings["default_max_organizations_per_user"])
 	count, _ := h.queries.CountOrganizationsCreatedByUser(r.Context(), user.ID)
-	web.Render(w, r, http.StatusOK, templates.Dashboard(h.cfg.InstanceName, user, organizations, isOwner, count < limit))
+	web.Render(w, r, http.StatusOK, templates.Dashboard(h.cfg.InstanceName, user, organizations, campaigns, isOwner, count < limit))
 }

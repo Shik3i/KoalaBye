@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.12 - 2026-06-13
+
+### Added
+- Dynamic campaigns list on the main dashboard showing recent campaigns.
+- Inline campaigns list inside organization details for direct access.
+- Dynamic conditional field visibility in Form Builder (Add Field form).
+- Keyboard accessibility for tooltip info-icons (tabindex="0").
+
+### Changed
+- Refined empty states for campaigns and organizations with a premium dashed card design.
+- Reorganized Campaign Detail page layout with adaptive visual states (Onboarding Mode vs. Active Mode).
+- Made browser extension uninstall URL registration persistent on startup (MV3 service worker compliance).
+
 ## v0.1.3 - 2026-06-13
 
 ### Added

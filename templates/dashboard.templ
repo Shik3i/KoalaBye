@@ -5,7 +5,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/db"
 )
 
-templ Dashboard(instanceName string, user db.User, organizations []db.Organization, isOwner bool, canCreate bool) {
+templ Dashboard(instanceName string, user db.User, organizations []db.Organization, campaigns []db.Campaign, isOwner bool, canCreate bool) {
 	@Layout(tr(ctx, "dashboard.page_title"), instanceName, &user) {
 		<section class="page-heading">
 			<div><div class="eyebrow">{ tr(ctx, "dashboard.eyebrow") }</div><h1>{ tr(ctx, "dashboard.welcome", user.DisplayName) }</h1></div>
@@ -34,8 +34,33 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 			</article>
 			<article class="panel">
 				<h2>{ tr(ctx, "dashboard.campaigns") }</h2>
-				<p>{ tr(ctx, "dashboard.campaigns_text") }</p>
-				<p class="muted">{ tr(ctx, "dashboard.selfhost_text") }</p>
+				if len(campaigns) == 0 {
+					<div class="empty-state">
+						<p>{ tr(ctx, "dashboard.no_campaigns") }</p>
+						<p class="muted">{ tr(ctx, "dashboard.campaign_explanation") }</p>
+						if len(organizations) > 0 {
+							<p class="muted" style="font-size: 0.9rem; margin-top: 12px;">{ tr(ctx, "dashboard.create_campaign_instruction") }</p>
+						} else {
+							if canCreate {
+								<a class="button" href="/app/orgs/new">{ tr(ctx, "org.create") }</a>
+							}
+						}
+					</div>
+				} else {
+					<ul class="clean-list">
+						for i, campaign := range campaigns {
+							if i < 5 {
+								<li>
+									<a href={ templ.SafeURL("/app/orgs/" + campaign.OrganizationPublicID + "/campaigns/" + campaign.PublicID) }>
+										<strong>{ campaign.Name }</strong>
+									</a>
+									<span class="muted" style="font-size: 0.8rem; margin-left: auto; margin-right: 12px;">{ campaign.OrganizationName }</span>
+									<span class={ "badge status-" + campaign.Status }>{ tr(ctx, "campaign.status." + campaign.Status) }</span>
+								</li>
+							}
+						}
+					</ul>
+				}
 			</article>
 			if isOwner {
 				<article class="panel admin-card">

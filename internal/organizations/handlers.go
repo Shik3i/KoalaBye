@@ -83,9 +83,9 @@ func (h *Handler) View(w http.ResponseWriter, r *http.Request) {
 	}
 	members, _ := h.q.ListOrganizationMembers(r.Context(), org.ID)
 	limits, _ := h.q.GetOrganizationLimits(r.Context(), org.ID)
-	campaignCount, _ := h.q.CountCampaigns(r.Context(), org.ID)
+	campaigns, _ := h.q.ListCampaignsForUser(r.Context(), org.ID, u.ID)
 	canManage := owner || role == "owner" || role == "admin"
-	web.Render(w, r, 200, templates.OrganizationDetail(h.cfg.InstanceName, u, org, role, members, limits, campaignCount, canManage))
+	web.Render(w, r, 200, templates.OrganizationDetail(h.cfg.InstanceName, u, org, role, members, limits, campaigns, canManage))
 }
 func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 	u, _ := auth.UserFromContext(r.Context())

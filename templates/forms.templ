@@ -57,16 +57,16 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 						<h2>{ tr(ctx, "form.add") }</h2>
 						<label>
-							<div class="field-header"><span>{ tr(ctx, "form.field_type") }</span><span class="info-icon" data-tooltip="The type of the field.">i</span></div>
+							<div class="field-header"><span>{ tr(ctx, "form.field_type") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="The type of the field.">i</span></div>
 							<select name="field_type">
 								@fieldTypeOptions("")
 							</select>
 						</label>
-						<label><div class="field-header"><span>{ tr(ctx, "form.label") }</span><span class="info-icon" data-tooltip="The main label or question text.">i</span></div><input name="label" maxlength="300" required/></label>
-						<label><div class="field-header"><span>{ tr(ctx, "form.help_text") }</span><span class="info-icon" data-tooltip="Optional descriptive text.">i</span></div><textarea name="help_text" maxlength="1000"></textarea></label>
-						<label class="check"><input type="checkbox" name="required"/>{ tr(ctx, "form.required") }</label>
-						<label><div class="field-header"><span>{ tr(ctx, "form.text_block.body") }</span><span class="info-icon" data-tooltip="Text to display.">i</span></div><textarea name="body" maxlength="5000"></textarea></label>
-						<label><div class="field-header"><span>{ tr(ctx, "form.textarea.max_length") }</span><span class="info-icon" data-tooltip="Max characters allowed.">i</span></div><input type="number" name="max_length" value="1000" min="1" max="5000"/></label>
+						<label><div class="field-header"><span>{ tr(ctx, "form.label") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="The main label or question text.">i</span></div><input name="label" maxlength="300" required/></label>
+						<label><div class="field-header"><span>{ tr(ctx, "form.help_text") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="Optional descriptive text.">i</span></div><textarea name="help_text" maxlength="1000"></textarea></label>
+						<label class="check conditional-required"><input type="checkbox" name="required"/>{ tr(ctx, "form.required") }</label>
+						<label class="conditional-body"><div class="field-header"><span>{ tr(ctx, "form.text_block.body") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="Text to display.">i</span></div><textarea name="body" maxlength="5000"></textarea></label>
+						<label class="conditional-max-length"><div class="field-header"><span>{ tr(ctx, "form.textarea.max_length") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="Max characters allowed.">i</span></div><input type="number" name="max_length" value="1000" min="1" max="5000"/></label>
 						<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.add") }>{ tr(ctx, "form.add") }</button>
 					</form>
 				}
@@ -95,16 +95,16 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 		}
 		<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID) } class="panel form-stack">
 			<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-			<label><div class="field-header"><span>{ tr(ctx, "form.label") }</span><span class="info-icon" data-tooltip="The main label or question text.">i</span></div><input name="label" value={ field.Label } maxlength="300" required disabled?={ !canEdit }/></label>
-			<label><div class="field-header"><span>{ tr(ctx, "form.help_text") }</span><span class="info-icon" data-tooltip="Optional descriptive text.">i</span></div><textarea name="help_text" maxlength="1000" disabled?={ !canEdit }>{ field.HelpText.String }</textarea></label>
+			<label><div class="field-header"><span>{ tr(ctx, "form.label") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="The main label or question text.">i</span></div><input name="label" value={ field.Label } maxlength="300" required disabled?={ !canEdit }/></label>
+			<label><div class="field-header"><span>{ tr(ctx, "form.help_text") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="Optional descriptive text.">i</span></div><textarea name="help_text" maxlength="1000" disabled?={ !canEdit }>{ field.HelpText.String }</textarea></label>
 			if field.FieldType != "text_block" {
 				<label class="check"><input type="checkbox" name="required" checked?={ field.Required } disabled?={ !canEdit }/>{ tr(ctx, "form.required") }</label>
 			}
 			if field.FieldType == "text_block" {
-				<label><div class="field-header"><span>{ tr(ctx, "form.text_block.body") }</span><span class="info-icon" data-tooltip="Text to display.">i</span></div><textarea name="body" maxlength="5000" disabled?={ !canEdit }>{ field.Config().Body }</textarea></label>
+				<label><div class="field-header"><span>{ tr(ctx, "form.text_block.body") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="Text to display.">i</span></div><textarea name="body" maxlength="5000" disabled?={ !canEdit }>{ field.Config().Body }</textarea></label>
 			}
 			if field.FieldType == "textarea" {
-				<label><div class="field-header"><span>{ tr(ctx, "form.textarea.max_length") }</span><span class="info-icon" data-tooltip="Max characters allowed.">i</span></div><input type="number" name="max_length" value={ fmt.Sprint(field.Config().MaxLength) } min="1" max="5000" disabled?={ !canEdit }/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "form.textarea.max_length") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="Max characters allowed.">i</span></div><input type="number" name="max_length" value={ fmt.Sprint(field.Config().MaxLength) } min="1" max="5000" disabled?={ !canEdit }/></label>
 			}
 			if field.FieldType == "checkbox_group" || field.FieldType == "radio_group" {
 				<h2>{ tr(ctx, "form.options") }</h2>
