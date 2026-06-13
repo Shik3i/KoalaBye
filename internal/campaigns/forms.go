@@ -34,7 +34,26 @@ func (h *Handler) Form(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	canEdit := (role == "owner" || role == "editor") && campaign.Status != "archived" && !campaign.DisabledAt.Valid
-	web.Render(w, r, http.StatusOK, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, canEdit, ""))
+	web.Render(w, r, http.StatusOK, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, PresetNames(), canEdit, ""))
+}
+
+func (h *Handler) FormPresetApply(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	preset := r.FormValue("form_preset")
+	if _, ok := presets[preset]; !ok {
+		h.renderFormError(w, r, user, campaign, "form.preset.invalid")
+		return
+	}
+	settings, err := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	if err != nil || ApplyFormPreset(r.Context(), h.q, campaign.ID, preset, settings.PublicLanguageDefault, user.ID) != nil {
+		h.renderFormError(w, r, user, campaign, "form.error.save")
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
 }
 
 func (h *Handler) FormFieldCreate(w http.ResponseWriter, r *http.Request) {
@@ -203,7 +222,7 @@ func formFieldInput(r *http.Request, requireType bool) (db.SaveFormFieldInput, s
 
 func (h *Handler) renderFormError(w http.ResponseWriter, r *http.Request, user db.User, campaign db.Campaign, key string) {
 	fields, _ := h.q.ListFormFields(r.Context(), campaign.ID, false)
-	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, true, key))
+	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignForm(h.cfg.InstanceName, user, campaign, fields, PresetNames(), true, key))
 }
 
 func (h *Handler) PublicSubmitByID(w http.ResponseWriter, r *http.Request) {
@@ -226,6 +245,9 @@ func (h *Handler) publicSubmit(w http.ResponseWriter, r *http.Request, resolve f
 	}
 	publicCampaign, err := resolve()
 	if err != nil || !publicCampaign.Available() {
+		if err == nil && h.redirectPublicCampaign(w, r, publicCampaign, true) {
+			return
+		}
 		h.publicUnavailable(w, r, http.StatusNotFound, false, "en")
 		return
 	}

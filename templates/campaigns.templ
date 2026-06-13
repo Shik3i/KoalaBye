@@ -77,10 +77,9 @@ templ CampaignNew(instanceName string, user db.User, org db.Organization, errorK
 					<div class="field-header"><span>{ tr(ctx, "campaign.preset") }</span></div>
 					<select name="form_preset">
 						<option value="none">{ tr(ctx, "campaign.preset.none") }</option>
-						<option value="uninstall">{ tr(ctx, "campaign.preset.uninstall") }</option>
-						<option value="bug_report">{ tr(ctx, "campaign.preset.bug_report") }</option>
-						<option value="feature_feedback">{ tr(ctx, "campaign.preset.feature_feedback") }</option>
-						<option value="satisfaction">{ tr(ctx, "campaign.preset.satisfaction") }</option>
+						for _, preset := range []string{"quick_feedback", "uninstall", "bug_report", "feature_feedback", "satisfaction", "onboarding", "performance", "support_followup"} {
+							<option value={ preset }>{ tr(ctx, "campaign.preset." + preset) }</option>
+						}
 					</select>
 				</label>
 				<p class="muted">{ tr(ctx, "campaign.preset.help") }</p>
@@ -248,7 +247,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 	}
 }
 
-templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, errorKey string) {
+templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, redirectTargets []db.Campaign, redirect db.CampaignRedirect, canEdit, canRedirect bool, errorKey string) {
 	@Layout(tr(ctx, "campaign.settings"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="auth-shell wide">
@@ -258,12 +257,36 @@ templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, 
 			}
 			<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/settings") } class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-				<label><div class="field-header"><span>{ tr(ctx, "campaign.name") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.campaign_name") }>i</span></div><input name="name" value={ campaign.Name } required maxlength="120"/></label>
-				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*"/></label>
-				<label><div class="field-header"><span>{ tr(ctx, "campaign.description") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.campaign_desc") }>i</span></div><textarea name="description" maxlength="1000">{ campaign.Description.String }</textarea></label>
-				<label class="check"><input type="checkbox" name="public_link_enabled" checked?={ campaign.PublicLinkEnabled }/>{ tr(ctx, "campaign.public_link.enable") }</label>
-				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.name") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.campaign_name") }>i</span></div><input name="name" value={ campaign.Name } required maxlength="120" disabled?={ !canEdit }/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*" disabled?={ !canEdit }/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "campaign.description") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.campaign_desc") }>i</span></div><textarea name="description" maxlength="1000" disabled?={ !canEdit }>{ campaign.Description.String }</textarea></label>
+				<label class="check"><input type="checkbox" name="public_link_enabled" checked?={ campaign.PublicLinkEnabled } disabled?={ !canEdit }/>{ tr(ctx, "campaign.public_link.enable") }</label>
+				if canEdit {
+					<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
+				}
 			</form>
+			if canRedirect {
+				<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/redirect") } class="panel form-stack">
+					<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+					<div>
+						<h2>{ tr(ctx, "campaign.redirect.title") }</h2>
+						<p class="muted">{ tr(ctx, "campaign.redirect.help") }</p>
+					</div>
+					<label>
+						{ tr(ctx, "campaign.redirect.target") }
+						<select name="target_campaign_public_id">
+							<option value="">{ tr(ctx, "campaign.redirect.none") }</option>
+							for _, target := range redirectTargets {
+								<option value={ target.PublicID } selected?={ redirect.TargetCampaignPublicID == target.PublicID }>{ target.Name }</option>
+							}
+						</select>
+					</label>
+					if len(redirectTargets) == 0 {
+						<div class="notice">{ tr(ctx, "campaign.redirect.no_targets") }</div>
+					}
+					<button type="submit">{ tr(ctx, "campaign.redirect.save") }</button>
+				</form>
+			}
 		</section>
 	}
 }

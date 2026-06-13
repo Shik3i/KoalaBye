@@ -20,6 +20,25 @@ type presetField struct {
 }
 
 var presets = map[string][]presetField{
+	"quick_feedback": {
+		{
+			fieldType: "rating_1_5",
+			label: map[string]string{
+				"en": "How was your experience overall?",
+				"de": "Wie war Ihre Erfahrung insgesamt?",
+				"es": "¿Cómo fue tu experiencia en general?",
+			},
+			required: true,
+		},
+		{
+			fieldType: "textarea",
+			label: map[string]string{
+				"en": "What is the one thing we should improve?",
+				"de": "Was sollten wir als Erstes verbessern?",
+				"es": "¿Qué es lo primero que deberíamos mejorar?",
+			},
+		},
+	},
 	"uninstall": {
 		{
 			fieldType: "radio_group",
@@ -146,6 +165,113 @@ var presets = map[string][]presetField{
 			required: false,
 		},
 	},
+	"onboarding": {
+		{
+			fieldType: "rating_1_5",
+			label: map[string]string{
+				"en": "How easy was it to get started?",
+				"de": "Wie einfach war der Einstieg?",
+				"es": "¿Qué tan fácil fue comenzar?",
+			},
+			required: true,
+		},
+		{
+			fieldType: "radio_group",
+			label: map[string]string{
+				"en": "Did you achieve what you came to do?",
+				"de": "Konnten Sie Ihr Ziel erreichen?",
+				"es": "¿Lograste lo que querías hacer?",
+			},
+			required: true,
+			options: []presetFieldOption{
+				{label: map[string]string{"en": "Yes, completely", "de": "Ja, vollständig", "es": "Sí, por completo"}, value: "yes"},
+				{label: map[string]string{"en": "Partly", "de": "Teilweise", "es": "Parcialmente"}, value: "partly"},
+				{label: map[string]string{"en": "No", "de": "Nein", "es": "No"}, value: "no"},
+			},
+		},
+		{
+			fieldType: "textarea",
+			label: map[string]string{
+				"en": "What was unclear or difficult?",
+				"de": "Was war unklar oder schwierig?",
+				"es": "¿Qué fue confuso o difícil?",
+			},
+		},
+	},
+	"performance": {
+		{
+			fieldType: "radio_group",
+			label: map[string]string{
+				"en": "Where did the product feel slow?",
+				"de": "Wo fühlte sich das Produkt langsam an?",
+				"es": "¿Dónde sentiste lentitud?",
+			},
+			required: true,
+			options: []presetFieldOption{
+				{label: map[string]string{"en": "Startup", "de": "Start", "es": "Inicio"}, value: "startup"},
+				{label: map[string]string{"en": "Loading content", "de": "Inhalte laden", "es": "Carga de contenido"}, value: "loading"},
+				{label: map[string]string{"en": "Using a feature", "de": "Nutzung einer Funktion", "es": "Uso de una función"}, value: "feature"},
+				{label: map[string]string{"en": "Everywhere", "de": "Überall", "es": "En todas partes"}, value: "everywhere"},
+			},
+		},
+		{
+			fieldType: "textarea",
+			label: map[string]string{
+				"en": "What were you doing when it became slow?",
+				"de": "Was haben Sie getan, als es langsam wurde?",
+				"es": "¿Qué estabas haciendo cuando se volvió lento?",
+			},
+			required: true,
+		},
+	},
+	"support_followup": {
+		{
+			fieldType: "rating_1_5",
+			label: map[string]string{
+				"en": "How satisfied are you with the support you received?",
+				"de": "Wie zufrieden sind Sie mit dem erhaltenen Support?",
+				"es": "¿Qué tan satisfecho estás con el soporte recibido?",
+			},
+			required: true,
+		},
+		{
+			fieldType: "radio_group",
+			label: map[string]string{
+				"en": "Was your issue resolved?",
+				"de": "Wurde Ihr Problem gelöst?",
+				"es": "¿Se resolvió tu problema?",
+			},
+			required: true,
+			options: []presetFieldOption{
+				{label: map[string]string{"en": "Yes", "de": "Ja", "es": "Sí"}, value: "yes"},
+				{label: map[string]string{"en": "Partly", "de": "Teilweise", "es": "Parcialmente"}, value: "partly"},
+				{label: map[string]string{"en": "No", "de": "Nein", "es": "No"}, value: "no"},
+			},
+		},
+		{
+			fieldType: "textarea",
+			label: map[string]string{
+				"en": "What could we do better next time?",
+				"de": "Was können wir beim nächsten Mal besser machen?",
+				"es": "¿Qué podríamos hacer mejor la próxima vez?",
+			},
+		},
+	},
+}
+
+var presetOrder = []string{
+	"quick_feedback",
+	"uninstall",
+	"bug_report",
+	"feature_feedback",
+	"satisfaction",
+	"onboarding",
+	"performance",
+	"support_followup",
+}
+
+func PresetNames() []string {
+	return append([]string(nil), presetOrder...)
 }
 
 func ApplyFormPreset(ctx context.Context, q *db.Querier, campaignID int64, presetName string, lang string, actorID int64) error {

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 )
@@ -120,5 +121,35 @@ func TestArchivedCampaignIsReadOnly(t *testing.T) {
 	}
 	if err := q.ChangeCampaignStatus(ctx, campaign, "active", owner.ID); !errors.Is(err, ErrInvalidTransition) {
 		t.Fatalf("archived campaign was restored: %v", err)
+	}
+}
+
+func TestCampaignRedirectCanBeManagedAfterArchive(t *testing.T) {
+	t.Parallel()
+	q, owner, org := phase3DB(t)
+	ctx := context.Background()
+	source := createCampaignForTest(t, q, owner, org, "camp_redirect_source", "redirect-source", "strict")
+	target := createCampaignForTest(t, q, owner, org, "camp_redirect_target", "redirect-target", "strict")
+	target.Status = "active"
+	target.PublicLinkEnabled = true
+	if _, err := q.RawDB().Exec(`UPDATE campaigns SET status='active',public_link_enabled=1 WHERE id=?`, target.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.ChangeCampaignStatus(ctx, source, "archived", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	source.Status = "archived"
+	if err := q.SetCampaignRedirect(ctx, source, target.PublicID, owner.ID); err != nil {
+		t.Fatalf("set redirect after archive: %v", err)
+	}
+	redirect, err := q.GetCampaignRedirect(ctx, source.ID)
+	if err != nil || redirect.TargetCampaignPublicID != target.PublicID {
+		t.Fatalf("redirect=%#v err=%v", redirect, err)
+	}
+	if err := q.SetCampaignRedirect(ctx, source, "", owner.ID); err != nil {
+		t.Fatalf("remove redirect: %v", err)
+	}
+	if _, err := q.GetCampaignRedirect(ctx, source.ID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("removed redirect still exists: %v", err)
 	}
 }

@@ -298,15 +298,28 @@ html[data-theme="dark"] .badge.quiet { background: #29342e; }
 }
 
 /* Theme Toggle Button */
-.theme-toggle { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px; cursor: pointer; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; min-height: 34px; width: 34px; transition: background 0.15s, border-color 0.15s; }
-.theme-toggle:hover { background: var(--line); }
-.theme-toggle svg { width: 18px; height: 18px; }
+.theme-toggle, button.theme-toggle:not(.link-button) { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px; cursor: pointer; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; min-height: 38px; width: 38px; transition: background 0.15s, border-color 0.15s, transform .15s; }
+.theme-toggle:hover, button.theme-toggle:not(.link-button):hover { background: var(--green-soft); border-color: var(--green); color: var(--green-dark); transform: translateY(-1px); }
+.theme-toggle svg { display: block; width: 20px; height: 20px; flex: 0 0 20px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .theme-toggle .moon { display: none; }
 html[data-theme="dark"] .theme-toggle .sun { display: none; }
 html[data-theme="dark"] .theme-toggle .moon { display: block; }
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) .theme-toggle .sun { display: none; }
   html:not([data-theme="light"]) .theme-toggle .moon { display: block; }
+}
+
+.preset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.preset-card { display: grid; gap: 6px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); cursor: pointer; transition: border-color .15s, background .15s, transform .15s; }
+.preset-card:hover { border-color: var(--green); background: var(--green-soft); transform: translateY(-1px); }
+.preset-card input { width: auto; }
+.preset-card strong { color: var(--ink); }
+.preset-card span { color: var(--muted); font-size: .82rem; font-weight: 500; }
+.form-builder-sidebar { align-self: start; }
+.form-empty-state { margin-bottom: 16px; }
+
+@media (max-width: 720px) {
+  .preset-grid { grid-template-columns: 1fr; }
 }
 
 /* Collapsible Integration Details */

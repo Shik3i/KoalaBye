@@ -8,7 +8,7 @@ import (
 	"github.com/koalastuff/koalabye/internal/db"
 )
 
-templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fields []db.FormField, canEdit bool, errorKey string) {
+templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fields []db.FormField, presets []string, canEdit bool, errorKey string) {
 	@Layout(tr(ctx, "form.title"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
@@ -48,14 +48,34 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, fiel
 					</article>
 				}
 				if len(fields) == 0 {
-					<div class="notice">{ tr(ctx, "form.empty") }</div>
+					<div class="empty-state form-empty-state">
+						<h2>{ tr(ctx, "form.empty.title") }</h2>
+						<p>{ tr(ctx, "form.empty") }</p>
+					</div>
 				}
 			</div>
-			<div>
+			<div class="form-builder-sidebar">
 				if canEdit {
+					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/preset") } class="panel form-stack" data-confirm={ tr(ctx, "form.preset.confirm") }>
+						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+						<div>
+							<h2>{ tr(ctx, "form.preset.title") }</h2>
+							<p class="muted">{ tr(ctx, "form.preset.help") }</p>
+						</div>
+						<div class="preset-grid">
+							for index, preset := range presets {
+								<label class="preset-card">
+									<input type="radio" name="form_preset" value={ preset } required checked?={ index == 0 }/>
+									<strong>{ tr(ctx, "campaign.preset." + preset) }</strong>
+									<span>{ tr(ctx, "campaign.preset." + preset + ".description") }</span>
+								</label>
+							}
+						</div>
+						<button type="submit">{ tr(ctx, "form.preset.apply") }</button>
+					</form>
 					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields") } class="panel form-stack">
 						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-						<h2>{ tr(ctx, "form.add") }</h2>
+						<h2>{ tr(ctx, "form.add.custom") }</h2>
 						<label>
 							<div class="field-header"><span>{ tr(ctx, "form.field_type") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="The type of the field.">i</span></div>
 							<select name="field_type">

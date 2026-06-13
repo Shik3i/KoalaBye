@@ -9,6 +9,11 @@ document.documentElement.classList.add("js");
     window.addEventListener("DOMContentLoaded", function() {
         var toggles = document.querySelectorAll(".theme-toggle");
         toggles.forEach(function(btn) {
+            var updateThemeButton = function() {
+                var current = document.documentElement.getAttribute("data-theme");
+                var dark = current === "dark" || (!current && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                btn.setAttribute("aria-pressed", dark ? "true" : "false");
+            };
             btn.addEventListener("click", function() {
                 var current = document.documentElement.getAttribute("data-theme");
                 var isDark = current === "dark";
@@ -18,7 +23,9 @@ document.documentElement.classList.add("js");
                 var val = isDark ? "light" : "dark";
                 localStorage.setItem("theme", val);
                 document.documentElement.setAttribute("data-theme", val);
+                updateThemeButton();
             });
+            updateThemeButton();
         });
 
         document.querySelectorAll("[data-copy-target]").forEach(function(button) {
@@ -115,5 +122,13 @@ document.documentElement.classList.add("js");
             fieldTypeSelect.addEventListener("change", updateFieldVisibility);
             updateFieldVisibility();
         }
+
+        document.querySelectorAll("[data-confirm]").forEach(function(form) {
+            form.addEventListener("submit", function(event) {
+                if (!window.confirm(form.getAttribute("data-confirm"))) {
+                    event.preventDefault();
+                }
+            });
+        });
     });
 })();

@@ -64,6 +64,12 @@ type CampaignBranding struct {
 	ShowKoalabyeBranding bool
 }
 
+type CampaignRedirect struct {
+	TargetCampaignID       int64
+	TargetCampaignPublicID string
+	TargetCampaignName     string
+}
+
 type CampaignMember struct {
 	UserID      int64
 	PublicID    string
@@ -251,6 +257,64 @@ func (q *Querier) UpdateCampaign(ctx context.Context, campaign Campaign, actorID
 		return ErrCampaignArchived
 	}
 	return q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign_updated", "campaign", campaign.PublicID, nil, nil)
+}
+
+func (q *Querier) ListCampaignRedirectTargets(ctx context.Context, campaign Campaign) ([]Campaign, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,NULL,
+		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner')
+		FROM campaigns c
+		JOIN organizations o ON o.id=c.organization_id
+		JOIN users u ON u.id=c.created_by_user_id
+		WHERE c.organization_id=? AND c.id!=? AND c.status='active' AND c.public_link_enabled=1 AND c.disabled_at IS NULL
+		ORDER BY c.name,c.id`, campaign.OrganizationID, campaign.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Campaign
+	for rows.Next() {
+		item, err := scanCampaign(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (q *Querier) GetCampaignRedirect(ctx context.Context, sourceCampaignID int64) (CampaignRedirect, error) {
+	var redirect CampaignRedirect
+	err := q.db.QueryRowContext(ctx, `SELECT target.id,target.public_id,target.name
+		FROM campaign_redirects redirect
+		JOIN campaigns target ON target.id=redirect.target_campaign_id
+		WHERE redirect.source_campaign_id=?`, sourceCampaignID).
+		Scan(&redirect.TargetCampaignID, &redirect.TargetCampaignPublicID, &redirect.TargetCampaignName)
+	return redirect, err
+}
+
+func (q *Querier) SetCampaignRedirect(ctx context.Context, source Campaign, targetPublicID string, actorID int64) error {
+	if targetPublicID == "" {
+		if _, err := q.db.ExecContext(ctx, `DELETE FROM campaign_redirects WHERE source_campaign_id=?`, source.ID); err != nil {
+			return err
+		}
+		return q.CreateAuditEvent(ctx, actorID, source.OrganizationID, "campaign_redirect_removed", "campaign", source.PublicID, nil, nil)
+	}
+	var targetID int64
+	err := q.db.QueryRowContext(ctx, `SELECT id FROM campaigns
+		WHERE public_id=? AND organization_id=? AND id!=? AND status='active' AND public_link_enabled=1 AND disabled_at IS NULL`,
+		targetPublicID, source.OrganizationID, source.ID).Scan(&targetID)
+	if err != nil {
+		return ErrForbidden
+	}
+	now := Now()
+	_, err = q.db.ExecContext(ctx, `INSERT INTO campaign_redirects(source_campaign_id,target_campaign_id,created_at,updated_at,updated_by_user_id)
+		VALUES(?,?,?,?,?)
+		ON CONFLICT(source_campaign_id) DO UPDATE SET target_campaign_id=excluded.target_campaign_id,updated_at=excluded.updated_at,updated_by_user_id=excluded.updated_by_user_id`,
+		source.ID, targetID, now, now, actorID)
+	if err != nil {
+		return err
+	}
+	return q.CreateAuditEvent(ctx, actorID, source.OrganizationID, "campaign_redirect_updated", "campaign", source.PublicID, nil, nil)
 }
 
 func (q *Querier) UpdateCampaignPrivacy(ctx context.Context, campaign Campaign, s CampaignSettings, actorID int64) error {

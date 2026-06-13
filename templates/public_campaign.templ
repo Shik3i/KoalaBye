@@ -133,7 +133,9 @@ templ PublicCampaignUnavailable(instanceName string, quota bool) {
 				<p class="lede">{ tr(ctx, "public.unavailable.quota") }</p>
 			} else {
 				<p class="lede">{ tr(ctx, "public.unavailable.generic") }</p>
+				<p>{ tr(ctx, "public.unavailable.detail") }</p>
 			}
+			<a class="button secondary" href="/">{ tr(ctx, "common.return_home") }</a>
 		</section>
 	}
 }

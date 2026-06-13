@@ -978,8 +978,49 @@ func TestCampaignRolesPrivacyAndArchivedReadOnly(t *testing.T) {
 	request.AddCookie(ownerLogin.session)
 	response = httptest.NewRecorder()
 	application.Handler.ServeHTTP(response, request)
-	if response.Code != http.StatusForbidden {
-		t.Fatalf("archived settings remained writable: %d", response.Code)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "Old public link") || !strings.Contains(response.Body.String(), "disabled") {
+		t.Fatalf("archived settings did not expose read-only redirect management: %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestArchivedPublicCampaignRedirectsToReplacement(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, _ := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	orgs, _ := q.ListOrganizationsForUser(context.Background(), owner.ID)
+	org := orgs[0]
+	source, err := q.CreateCampaign(context.Background(), db.CreateCampaignInput{PublicID: "camp_old_link", OrganizationID: org.ID, CreatedBy: owner.ID, Name: "Old", Slug: "old", Language: "en", PrivacyPreset: "strict"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := q.CreateCampaign(context.Background(), db.CreateCampaignInput{PublicID: "camp_new_link", OrganizationID: org.ID, CreatedBy: owner.ID, Name: "New", Slug: "new", Language: "en", PrivacyPreset: "strict"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = application.Database.Exec(`UPDATE campaigns SET status='active',public_link_enabled=1 WHERE id=?`, target.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err = q.ChangeCampaignStatus(context.Background(), source, "archived", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err = q.SetCampaignRedirect(context.Background(), source, target.PublicID, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		method   string
+		path     string
+		location string
+	}{
+		{http.MethodGet, "/c/" + source.PublicID + "?app_version=1", "/c/" + target.PublicID + "?app_version=1"},
+		{http.MethodPost, "/c/" + source.PublicID + "/submit?lang=de", "/c/" + target.PublicID + "/submit?lang=de"},
+	} {
+		request := httptest.NewRequest(tc.method, tc.path, nil)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		if response.Code != http.StatusTemporaryRedirect || response.Header().Get("Location") != tc.location {
+			t.Fatalf("%s redirect=%d location=%q", tc.method, response.Code, response.Header().Get("Location"))
+		}
 	}
 }
 
