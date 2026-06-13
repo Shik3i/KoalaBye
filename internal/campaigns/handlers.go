@@ -208,16 +208,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	items, err := h.q.ListCampaignsForUser(r.Context(), org.ID, user.ID)
 	if instanceOwner {
-		items, err = h.q.ListInstanceCampaigns(r.Context())
-		if err == nil {
-			filtered := items[:0]
-			for _, item := range items {
-				if item.OrganizationID == org.ID {
-					filtered = append(filtered, item)
-				}
-			}
-			items = filtered
-		}
+		items, err = h.q.ListCampaignsForOrg(r.Context(), org.ID)
 	}
 	if err != nil {
 		http.Error(w, "load campaigns", http.StatusInternalServerError)

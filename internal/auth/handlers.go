@@ -2,6 +2,7 @@ package auth
 
 import (
 	"database/sql"
+	"net"
 	"net/http"
 	"strings"
 
@@ -34,13 +35,16 @@ func (h *Handler) LoginGet(w http.ResponseWriter, r *http.Request) {
 	web.Render(w, r, http.StatusOK, templates.Login(h.cfg.InstanceName, token, ""))
 }
 
+const dummyPasswordHash = "$argon2id$v=19$m=65536,t=3,p=2$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
 func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil || h.csrf.Validate(r) != nil {
 		h.loginError(w, r, "auth.error.expired")
 		return
 	}
 	username := db.NormalizeUsername(r.FormValue("username"))
-	if !h.limiter.Allow(username) {
+	ip := getClientIP(r)
+	if !h.limiter.Allow(username, ip) {
 		h.loginError(w, r, "auth.error.rate_limited")
 		return
 	}
@@ -50,6 +54,9 @@ func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 			h.loginError(w, r, "auth.error.unavailable")
 			return
 		}
+		// Mitigate timing attack by executing password verification against a dummy hash
+		_, _ = VerifyPassword(dummyPasswordHash, r.FormValue("password"))
+
 		h.audit.Record(r.Context(), nil, "login_failure", "username", username)
 		h.loginError(w, r, "auth.error.invalid_credentials")
 		return
@@ -64,9 +71,25 @@ func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 		h.loginError(w, r, "auth.error.unavailable")
 		return
 	}
-	h.limiter.Success(username)
+	h.limiter.Success(username, ip)
 	h.audit.Record(r.Context(), user.ID, "login_success", "user", user.PublicID)
 	http.Redirect(w, r, "/app", http.StatusSeeOther)
+}
+
+func getClientIP(r *http.Request) string {
+	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
+		if parts := strings.Split(ip, ","); len(parts) > 0 {
+			return strings.TrimSpace(parts[0])
+		}
+	}
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
 }
 
 func (h *Handler) LogoutPost(w http.ResponseWriter, r *http.Request) {

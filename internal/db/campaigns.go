@@ -417,6 +417,26 @@ func (q *Querier) SetCampaignDisabled(ctx context.Context, publicID string, disa
 	return q.CreateAuditEvent(ctx, actorID, orgID, action, "campaign", publicID, nil, nil)
 }
 
+func (q *Querier) ListCampaignsForOrg(ctx context.Context, orgID int64) ([]Campaign, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,NULL,
+		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner')
+		FROM campaigns c JOIN organizations o ON o.id=c.organization_id JOIN users u ON u.id=c.created_by_user_id
+		WHERE c.organization_id=? ORDER BY c.id DESC`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Campaign
+	for rows.Next() {
+		c, err := scanCampaign(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 func nullableText(value string) any {
 	if value == "" {
 		return nil

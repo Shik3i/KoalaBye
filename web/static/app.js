@@ -32,5 +32,11 @@ document.documentElement.classList.add("js");
                 });
             });
         });
+
+        document.querySelectorAll(".language-switcher select").forEach(function(el) {
+            el.addEventListener("change", function() {
+                el.form.submit();
+            });
+        });
     });
 })();

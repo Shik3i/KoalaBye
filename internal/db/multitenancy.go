@@ -237,8 +237,13 @@ func (q *Querier) AcceptInvite(ctx context.Context, code string, userID int64) e
 	if _, err = tx.ExecContext(ctx, `INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id)VALUES(?,?,?,?,NULL)`, orgID, userID, role, now); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE invites SET used_count=used_count+1 WHERE id=?`, id); err != nil {
+	res, err := tx.ExecContext(ctx, `UPDATE invites SET used_count=used_count+1 WHERE id=? AND used_count < max_uses AND revoked_at IS NULL AND expires_at > ?`, id, now)
+	if err != nil {
 		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrInviteUnavailable
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_log(actor_user_id,organization_id,action,target_type,target_id,created_at)VALUES(?,?,'invite_accepted','invite',?,?)`, userID, orgID, publicID, now); err != nil {
 		return err

@@ -282,16 +282,71 @@ func (q *Querier) fieldSummaries(ctx context.Context, campaignID int64, start *t
 }
 
 func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int64) ([]Submission, error) {
-	submissions, err := q.ListSubmissions(ctx, campaignID)
+	rows, err := q.db.QueryContext(ctx, `
+		SELECT s.id, s.public_id, s.campaign_id, v.public_id, s.install_token_hash IS NOT NULL, s.submitted_at, v.context_json,
+		       a.field_public_id, a.field_type, a.field_label_snapshot, a.value_json
+		FROM campaign_submissions s
+		LEFT JOIN campaign_visits v ON v.id = s.visit_id
+		LEFT JOIN campaign_submission_answers a ON a.submission_id = s.id
+		WHERE s.campaign_id = ?
+		ORDER BY s.id DESC, a.id ASC
+	`, campaignID)
 	if err != nil {
 		return nil, err
 	}
-	for index := range submissions {
-		full, err := q.GetSubmission(ctx, campaignID, submissions[index].PublicID)
+	defer rows.Close()
+
+	var submissions []Submission
+	submissionMap := make(map[int64]int) // maps submission ID to index in submissions slice
+
+	for rows.Next() {
+		var sID, sCampaignID int64
+		var sPublicID, sSubmittedAt string
+		var sVisitPublicID sql.NullString
+		var sHasInstallTokenHash bool
+		var contextJSON sql.NullString
+
+		var aFieldPublicID, aFieldType, aFieldLabelSnapshot, aValueJSON sql.NullString
+
+		err := rows.Scan(
+			&sID, &sPublicID, &sCampaignID, &sVisitPublicID, &sHasInstallTokenHash, &sSubmittedAt, &contextJSON,
+			&aFieldPublicID, &aFieldType, &aFieldLabelSnapshot, &aValueJSON,
+		)
 		if err != nil {
 			return nil, err
 		}
-		submissions[index].Answers = full.Answers
+
+		idx, exists := submissionMap[sID]
+		if !exists {
+			var urlContext map[string]string
+			if contextJSON.Valid {
+				_ = json.Unmarshal([]byte(contextJSON.String), &urlContext)
+			}
+			sub := Submission{
+				ID:                  sID,
+				PublicID:            sPublicID,
+				CampaignID:          sCampaignID,
+				VisitPublicID:       sVisitPublicID,
+				HasInstallTokenHash: sHasInstallTokenHash,
+				SubmittedAt:         sSubmittedAt,
+				URLContext:          urlContext,
+			}
+			submissions = append(submissions, sub)
+			idx = len(submissions) - 1
+			submissionMap[sID] = idx
+		}
+
+		if aFieldPublicID.Valid {
+			submissions[idx].Answers = append(submissions[idx].Answers, SubmissionAnswer{
+				FieldPublicID:      aFieldPublicID.String,
+				FieldType:          aFieldType.String,
+				FieldLabelSnapshot: aFieldLabelSnapshot.String,
+				ValueJSON:          aValueJSON.String,
+			})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return submissions, nil
 }

@@ -17,11 +17,12 @@ func Open(ctx context.Context, path string) (*sql.DB, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return nil, fmt.Errorf("create database directory: %w", err)
 	}
-	database, err := sql.Open("sqlite", path)
+	dsn := "file:" + filepath.ToSlash(path) + "?_txlock=immediate"
+	database, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
-	database.SetMaxOpenConns(1)
+	database.SetMaxOpenConns(10)
 	database.SetConnMaxLifetime(0)
 
 	for _, pragma := range []string{

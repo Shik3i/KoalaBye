@@ -19,21 +19,32 @@ func NewLoginLimiter() *LoginLimiter {
 	return &LoginLimiter{attempts: make(map[string]loginAttempt)}
 }
 
-func (l *LoginLimiter) Allow(key string) bool {
+func (l *LoginLimiter) Allow(username, ip string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := time.Now()
-	attempt := l.attempts[key]
-	if now.After(attempt.reset) {
-		attempt = loginAttempt{reset: now.Add(5 * time.Minute)}
+
+	userIPKey := username + ":" + ip
+	userIPAttempt := l.attempts[userIPKey]
+	if now.After(userIPAttempt.reset) {
+		userIPAttempt = loginAttempt{reset: now.Add(5 * time.Minute)}
 	}
-	attempt.count++
-	l.attempts[key] = attempt
-	return attempt.count <= 8
+	userIPAttempt.count++
+	l.attempts[userIPKey] = userIPAttempt
+
+	ipKey := "ip:" + ip
+	ipAttempt := l.attempts[ipKey]
+	if now.After(ipAttempt.reset) {
+		ipAttempt = loginAttempt{reset: now.Add(5 * time.Minute)}
+	}
+	ipAttempt.count++
+	l.attempts[ipKey] = ipAttempt
+
+	return userIPAttempt.count <= 5 && ipAttempt.count <= 50
 }
 
-func (l *LoginLimiter) Success(key string) {
+func (l *LoginLimiter) Success(username, ip string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	delete(l.attempts, key)
+	delete(l.attempts, username+":"+ip)
 }
