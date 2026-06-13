@@ -1,9 +1,34 @@
+# Personal/Environment config
 .env
+.env.*.local
+
+# Databases and data storage
 /data/
-/koalabye
 *.db
 *.db-shm
 *.db-wal
-.DS_Store
+
+# Build caches
 .go-cache/
 .cache/
+
+# Local Compiled Binaries
+/koalabye
+/koalabye.exe
+/templgenerate.exe
+/sqlc.exe
+*.exe
+*.test
+*.out
+*.prof
+
+# IDE and Editor configs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System files
+.DS_Store
+Thumbs.db

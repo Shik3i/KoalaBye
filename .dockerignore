@@ -1,8 +1,29 @@
+# Version control
 .git
+.gitignore
+.gitattributes
+
+# Documentation (avoid invalidating cache on docs updates)
+docs/
+*.md
+LICENSE
+
+# GitHub workflows (avoid invalidating cache on workflow updates)
+.github/
+
+# Development / local configuration files
+docker-compose*.yml
+Caddyfile*
+.env*
+.cache
 .go-cache
-.env
-data
+
+# Local build artifacts and caches
 koalabye
+koalabye.exe
+*.exe
+data
+/data/
 *.db
 *.db-shm
 *.db-wal
