@@ -75,7 +75,7 @@ jobs:
             BUILD_DATE=${{ steps.prep.outputs.date }}
 
       - name: Attest image provenance
-        uses: actions/attest@v1
+        uses: actions/attest-build-provenance@v1
         with:
           subject-name: ghcr.io/${{ github.repository_owner }}/koalabye
           subject-digest: ${{ steps.push.outputs.digest }}
