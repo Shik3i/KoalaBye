@@ -79,9 +79,12 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 				<h2>{ tr(ctx, "limits.title") }</h2>
 				<p>{ tr(ctx, "limits.explanation") }</p>
 				<dl class="stats">
-					<dt>{ tr(ctx, "limits.members") }</dt><dd>{ fmt.Sprint(limits.MaxMembers) }</dd>
-					<dt>{ tr(ctx, "limits.invites") }</dt><dd>{ fmt.Sprint(limits.MaxActiveInvites) }</dd>
-					<dt>{ tr(ctx, "limits.campaigns") }</dt><dd>{ fmt.Sprint(limits.MaxCampaigns) }</dd>
+					<dt>{ tr(ctx, "limits.members") }</dt>
+					<dd>{ fmt.Sprint(limits.MaxMembers) }</dd>
+					<dt>{ tr(ctx, "limits.invites") }</dt>
+					<dd>{ fmt.Sprint(limits.MaxActiveInvites) }</dd>
+					<dt>{ tr(ctx, "limits.campaigns") }</dt>
+					<dd>{ fmt.Sprint(limits.MaxCampaigns) }</dd>
 				</dl>
 				if instanceAdmin(ctx) {
 					<p><a href={ templ.SafeURL("/instance/organizations/limits?org=" + org.PublicID) }>{ tr(ctx, "limits.manage_in_admin") }</a></p>
