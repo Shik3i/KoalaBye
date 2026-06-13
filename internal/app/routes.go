@@ -66,6 +66,12 @@ func Routes(
 	assets, _ := fs.Sub(staticassets.FS, ".")
 	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.FS(assets))))
 
+	r.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("User-agent: *\nDisallow: /app/\nDisallow: /setup\nDisallow: /c/\n"))
+	})
+
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := database.PingContext(r.Context()); err != nil {
 			http.Error(w, "database unavailable", http.StatusServiceUnavailable)
