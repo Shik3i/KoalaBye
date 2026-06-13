@@ -1,6 +1,9 @@
 package templates
 
-import "context"
+import (
+	"context"
+	"strings"
+)
 
 import (
 	"github.com/koalastuff/koalabye/internal/i18n"
@@ -10,6 +13,7 @@ import (
 type csrfContextKey struct{}
 type instanceSettingsContextKey struct{}
 type instanceAdminContextKey struct{}
+type currentPathContextKey struct{}
 
 func WithCSRF(ctx context.Context, token string) context.Context {
 	return context.WithValue(ctx, csrfContextKey{}, token)
@@ -21,6 +25,10 @@ func WithInstanceSettings(ctx context.Context, settings map[string]string) conte
 
 func WithInstanceAdmin(ctx context.Context, allowed bool) context.Context {
 	return context.WithValue(ctx, instanceAdminContextKey{}, allowed)
+}
+
+func WithCurrentPath(ctx context.Context, path string) context.Context {
+	return context.WithValue(ctx, currentPathContextKey{}, path)
 }
 
 func csrfFromContext(ctx context.Context) string {
@@ -79,4 +87,43 @@ func instanceSourceURL(ctx context.Context) string {
 func instanceAdmin(ctx context.Context) bool {
 	allowed, _ := ctx.Value(instanceAdminContextKey{}).(bool)
 	return allowed
+}
+
+func currentPage(active bool) string {
+	if active {
+		return "page"
+	}
+	return ""
+}
+
+func mainNavCurrent(ctx context.Context, section string) string {
+	path, _ := ctx.Value(currentPathContextKey{}).(string)
+	active := section == "dashboard" && path == "/app"
+	active = active || section == "organizations" && strings.HasPrefix(path, "/app/orgs")
+	active = active || section == "instance" && strings.HasPrefix(path, "/instance")
+	return currentPage(active)
+}
+
+func campaignNavCurrent(ctx context.Context, section string) string {
+	path, _ := ctx.Value(currentPathContextKey{}).(string)
+	suffixes := map[string][]string{
+		"overview":  {"/campaigns/"},
+		"settings":  {"/settings"},
+		"branding":  {"/branding"},
+		"privacy":   {"/privacy"},
+		"form":      {"/form"},
+		"responses": {"/responses", "/export/"},
+		"analytics": {"/analytics"},
+		"access":    {"/access"},
+	}
+	for _, suffix := range suffixes[section] {
+		if strings.Contains(path, suffix) {
+			if section == "overview" {
+				after := path[strings.Index(path, suffix)+len(suffix):]
+				return currentPage(after != "" && !strings.Contains(after, "/"))
+			}
+			return "page"
+		}
+	}
+	return ""
 }

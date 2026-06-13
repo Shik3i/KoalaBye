@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -241,7 +242,53 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	count, _ := h.q.CountCampaigns(r.Context(), org.ID)
 	canCreate := (role == "owner" || role == "admin") && count < limits.MaxCampaigns
 	redirects, _ := h.q.ListCampaignRedirects(r.Context(), org.ID)
-	web.Render(w, r, http.StatusOK, templates.CampaignList(h.cfg.InstanceName, user, org, items, redirects, limits, count, canCreate))
+	activity, _ := h.q.CampaignLastActivity(r.Context(), org.ID)
+	filters := templates.CampaignListOptions{
+		Query: strings.TrimSpace(r.URL.Query().Get("q")), Status: r.URL.Query().Get("status"),
+		Redirect: r.URL.Query().Get("redirect"), Sort: r.URL.Query().Get("sort"),
+	}
+	items = filterAndSortCampaigns(items, redirects, activity, filters)
+	web.Render(w, r, http.StatusOK, templates.CampaignList(h.cfg.InstanceName, user, org, items, redirects, activity, limits, count, canCreate, filters))
+}
+
+func filterAndSortCampaigns(items []db.Campaign, redirects map[int64]db.CampaignRedirect, activity map[int64]string, filters templates.CampaignListOptions) []db.Campaign {
+	filtered := make([]db.Campaign, 0, len(items))
+	query := strings.ToLower(filters.Query)
+	for _, item := range items {
+		if query != "" && !strings.Contains(strings.ToLower(item.Name+" "+item.Slug+" "+item.Description.String), query) {
+			continue
+		}
+		if filters.Status != "" && filters.Status != "all" && item.Status != filters.Status {
+			continue
+		}
+		_, redirected := redirects[item.ID]
+		if filters.Redirect == "active" && !redirected || filters.Redirect == "none" && redirected {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	sortKey := filters.Sort
+	if sortKey == "" {
+		sortKey = "updated_desc"
+	}
+	sort.SliceStable(filtered, func(i, j int) bool {
+		left, right := filtered[i], filtered[j]
+		switch sortKey {
+		case "name_asc":
+			return strings.ToLower(left.Name) < strings.ToLower(right.Name)
+		case "created_asc":
+			return left.CreatedAt < right.CreatedAt
+		case "created_desc":
+			return left.CreatedAt > right.CreatedAt
+		case "updated_asc":
+			return left.UpdatedAt < right.UpdatedAt
+		case "activity_desc":
+			return activity[left.ID] > activity[right.ID]
+		default:
+			return left.UpdatedAt > right.UpdatedAt
+		}
+	})
+	return filtered
 }
 
 func (h *Handler) New(w http.ResponseWriter, r *http.Request) {

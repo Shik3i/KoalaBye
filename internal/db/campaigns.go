@@ -321,6 +321,29 @@ func (q *Querier) CountCampaigns(ctx context.Context, orgID int64) (int64, error
 	return count, err
 }
 
+func (q *Querier) CampaignLastActivity(ctx context.Context, orgID int64) (map[int64]string, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT c.id,MAX(activity_at) FROM campaigns c LEFT JOIN (
+		SELECT campaign_id,created_at activity_at FROM campaign_visits
+		UNION ALL SELECT campaign_id,submitted_at FROM campaign_submissions
+	) activity ON activity.campaign_id=c.id WHERE c.organization_id=? GROUP BY c.id`, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[int64]string{}
+	for rows.Next() {
+		var id int64
+		var value sql.NullString
+		if err := rows.Scan(&id, &value); err != nil {
+			return nil, err
+		}
+		if value.Valid {
+			out[id] = value.String
+		}
+	}
+	return out, rows.Err()
+}
+
 func (q *Querier) ListCampaignsForUser(ctx context.Context, orgID, userID int64) ([]Campaign, error) {
 	rows, err := q.db.QueryContext(ctx, `SELECT c.id,c.public_id,c.organization_id,o.public_id,o.name,o.slug,c.slug,c.name,c.description,c.status,c.public_link_enabled,c.created_by_user_id,u.username,c.created_at,c.updated_at,c.archived_at,c.disabled_at,cm.role,
 		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner')

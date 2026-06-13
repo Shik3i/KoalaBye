@@ -144,6 +144,16 @@ func (q *Querier) RecordCampaignVisit(ctx context.Context, in RecordVisitInput) 
 	return tx.Commit()
 }
 
+func (q *Querier) RecordFormStart(ctx context.Context, campaignID int64, visitPublicID string, startedAt time.Time) error {
+	if visitPublicID == "" {
+		return nil
+	}
+	_, err := q.db.ExecContext(ctx, `INSERT OR IGNORE INTO campaign_form_starts(campaign_id,visit_id,started_at)
+		SELECT ?,id,? FROM campaign_visits WHERE campaign_id=? AND public_id=?`,
+		campaignID, startedAt.UTC().Format(time.RFC3339Nano), campaignID, visitPublicID)
+	return err
+}
+
 func (q *Querier) CampaignVisitStats(ctx context.Context, campaignID int64, now time.Time) (CampaignVisitStats, error) {
 	monthStart := time.Date(now.UTC().Year(), now.UTC().Month(), 1, 0, 0, 0, 0, time.UTC)
 	monthEnd := monthStart.AddDate(0, 1, 0)

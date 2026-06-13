@@ -74,6 +74,13 @@ type CampaignFormOption struct {
 	ArchivedAt interface{} `json:"archived_at"`
 }
 
+type CampaignFormStart struct {
+	ID         int64  `json:"id"`
+	CampaignID int64  `json:"campaign_id"`
+	VisitID    int64  `json:"visit_id"`
+	StartedAt  string `json:"started_at"`
+}
+
 type CampaignMember struct {
 	ID              int64       `json:"id"`
 	CampaignID      int64       `json:"campaign_id"`
@@ -81,6 +88,14 @@ type CampaignMember struct {
 	Role            string      `json:"role"`
 	CreatedAt       string      `json:"created_at"`
 	CreatedByUserID interface{} `json:"created_by_user_id"`
+}
+
+type CampaignRedirect struct {
+	SourceCampaignID int64       `json:"source_campaign_id"`
+	TargetCampaignID int64       `json:"target_campaign_id"`
+	CreatedAt        string      `json:"created_at"`
+	UpdatedAt        string      `json:"updated_at"`
+	UpdatedByUserID  interface{} `json:"updated_by_user_id"`
 }
 
 type CampaignSetting struct {

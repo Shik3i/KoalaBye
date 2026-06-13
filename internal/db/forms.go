@@ -461,6 +461,8 @@ type Submission struct {
 	SubmittedAt         string
 	AnswerSummary       string
 	URLContext          map[string]string
+	CoarseBrowser       sql.NullString
+	CoarseOS            sql.NullString
 	Answers             []SubmissionAnswer
 }
 

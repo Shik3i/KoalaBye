@@ -32,8 +32,12 @@
 - [ ] Verify duplicate optional tokens count once as unique.
 - [ ] Submit feedback and verify the thank-you page, inbox, and analytics.
 - [ ] Verify CSV and JSON exports contain no raw token or token hash.
+- [ ] Verify CSV formula-like values are neutralized and disabled diagnostics cannot be selected or exported.
+- [ ] Verify the form-start event is deduplicated per visit and contains no field values.
 - [ ] Verify retention and permanent deletion require authorization and confirmation.
 - [ ] Check setup, app, campaign, analytics, and public pages at 360px width.
+- [ ] Check keyboard-only navigation, visible focus, search-dialog focus return, reduced motion, and current-page announcements.
+- [ ] Check light and dark themes for readable contrast and layout regressions.
 - [ ] Check English, German, and Spanish rendering for important pages.
 
 ## Privacy and Operations
@@ -44,7 +48,6 @@
 - [ ] Verify URL context accepts only allowlisted keys and never stores the raw query string.
 - [ ] Verify partial responses and text drafts are not saved before final submission.
 - [ ] Search for missing i18n markers and legal-compliance overclaims.
-- [ ] Verify HTTPS deployment uses `KOALABYE_SECURE_COOKIES=true`.
 - [ ] Verify HTTPS deployment uses `KOALABYE_SECURE_COOKIES=true`.
 - [ ] Verify `/healthz` and the Docker healthcheck.
 - [ ] Test a SQLite backup and restore.

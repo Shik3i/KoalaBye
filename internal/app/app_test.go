@@ -1740,7 +1740,7 @@ func TestPhase7AnalyticsExportsRetentionAndPermissions(t *testing.T) {
 		if response.Code != http.StatusOK || !strings.Contains(response.Header().Get("Content-Type"), tc.contentType) || !strings.Contains(response.Header().Get("Content-Disposition"), "phase7-submissions") {
 			t.Fatalf("%s export headers failed: %d %#v", tc.path, response.Code, response.Header())
 		}
-		if !strings.Contains(body, "submission_phase7") || !strings.Contains(body, "line one") || !strings.Contains(body, "firefox") || !strings.Contains(body, "uninstall") || strings.Contains(body, "secret-hash-not-exported") || strings.Contains(body, "raw-agent") || strings.Contains(body, `"campaign_id"`) {
+		if !strings.Contains(body, "submission_phase7") || !strings.Contains(body, "line one") || strings.Contains(body, "firefox") || strings.Contains(body, "uninstall") || strings.Contains(body, "secret-hash-not-exported") || strings.Contains(body, "raw-agent") || strings.Contains(body, `"campaign_id"`) {
 			t.Fatalf("%s export content unsafe: %s", tc.path, body)
 		}
 	}

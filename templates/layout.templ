@@ -48,13 +48,14 @@ templ Layout(title string, instanceName string, user *db.User) {
 				<a class="brand" href="/">{ instanceName }</a>
 				<div class="header-actions">
 					if user != nil {
+						<a class="search-trigger button secondary" href="/app/search" data-command-open aria-haspopup="dialog">{ tr(ctx, "search.open") } <kbd>⌘K</kbd></a>
 						<details class="nav-menu" open>
 							<summary>{ tr(ctx, "nav.menu") }</summary>
 							<nav aria-label={ tr(ctx, "nav.aria") }>
-								<a href="/app">{ tr(ctx, "nav.dashboard") }</a>
-								<a href="/app/orgs">{ tr(ctx, "nav.organizations") }</a>
+								<a href="/app" aria-current={ mainNavCurrent(ctx, "dashboard") }>{ tr(ctx, "nav.dashboard") }</a>
+								<a href="/app/orgs" aria-current={ mainNavCurrent(ctx, "organizations") }>{ tr(ctx, "nav.organizations") }</a>
 								if instanceAdmin(ctx) {
-									<a class="admin-link" href="/instance">{ tr(ctx, "nav.instance_admin") }</a>
+									<a class="admin-link" href="/instance" aria-current={ mainNavCurrent(ctx, "instance") }>{ tr(ctx, "nav.instance_admin") }</a>
 								}
 								if url := instanceSourceURL(ctx); url != "" {
 									<a href={ templ.SafeURL(url) }>{ tr(ctx, "instance.legal.source") }</a>
@@ -70,6 +71,16 @@ templ Layout(title string, instanceName string, user *db.User) {
 					@ThemeSelector()
 				</div>
 			</header>
+			if user != nil {
+				<dialog class="command-dialog" data-command-dialog aria-labelledby="command-title">
+					<form method="get" action="/app/search" class="form-stack">
+						<div class="dialog-heading"><h2 id="command-title">{ tr(ctx, "search.title") }</h2><button type="button" class="icon-button" data-command-close aria-label={ tr(ctx, "search.close") }>×</button></div>
+						<label>{ tr(ctx, "search.label") }<input type="search" name="q" autocomplete="off" data-command-input/></label>
+						<p class="muted">{ tr(ctx, "search.help") }</p>
+						<button type="submit">{ tr(ctx, "search.submit") }</button>
+					</form>
+				</dialog>
+			}
 			<main class="page" id="main-content">
 				if flash, ok := flashFromContext(ctx); ok {
 					<div class={ "toast toast-" + flash.Kind } role={ toastRole(flash.Kind) } aria-live={ toastLive(flash.Kind) } data-toast>

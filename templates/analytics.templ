@@ -3,11 +3,23 @@ package templates
 import (
 	"fmt"
 	"math"
+	"net/url"
 
 	"github.com/koalastuff/koalabye/internal/db"
 )
 
-templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, analytics db.CampaignAnalytics, rangeKey string, canDelete bool, messageKey string) {
+type AnalyticsPageOptions struct {
+	RangeKey          string
+	Filter            db.AnalyticsFilter
+	FilterOptions     db.AnalyticsFilterOptions
+	CompareCampaigns  []db.Campaign
+	CompareCampaignID string
+	Comparison        *db.CampaignAnalytics
+	ComparisonName    string
+	CanDelete         bool
+}
+
+templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, analytics db.CampaignAnalytics, options AnalyticsPageOptions, messageKey string) {
 	@Layout(tr(ctx, "analytics.title"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
@@ -18,17 +30,72 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 		}
 		<nav class="range-nav" aria-label={ tr(ctx, "analytics.range") }>
 			for _, item := range []string{"7", "30", "90", "all"} {
-				<a class={ templ.KV("button secondary", true), templ.KV("selected", item == rangeKey) } href={ templ.SafeURL(campaignPath(campaign) + "/analytics?range=" + item) }>{ tr(ctx, "analytics.range." + item) }</a>
+				<a class={ templ.KV("button secondary", true), templ.KV("selected", item == options.RangeKey) } aria-current={ currentPage(item == options.RangeKey) } href={ templ.SafeURL(campaignPath(campaign) + "/analytics?" + analyticsQuery(options, item)) }>{ tr(ctx, "analytics.range." + item) }</a>
 			}
 		</nav>
-		<section class="grid three">
-			@metricCard("visits.raw_total", analytics.Overview.RawVisits)
-			@metricCard("visits.unique_total", analytics.Overview.UniqueVisits)
-			@metricCard("submissions.total", analytics.Overview.Submissions)
-			<article class="panel"><h2>{ tr(ctx, "analytics.submission_rate") }</h2><strong class="metric">{ submissionRate(analytics.Overview.Submissions, analytics.Overview.RawVisits) }</strong></article>
-			@metricCard("visits.current_month", analytics.Overview.CurrentMonthVisits)
-			@metricCard("submissions.current_month", analytics.Overview.CurrentMonthSubmissions)
+		if hasAnalyticsFilters(options.FilterOptions) || len(options.CompareCampaigns) > 1 {
+			<form method="get" class="panel filter-form" aria-label={ tr(ctx, "analytics.filters.title") }>
+				<input type="hidden" name="range" value={ options.RangeKey }/>
+				<div class="filter-grid">
+					if len(options.FilterOptions.AppVersions) > 0 {
+						@analyticsSelect("app_version", "analytics.filters.app_version", options.Filter.AppVersion, options.FilterOptions.AppVersions)
+					}
+					if len(options.FilterOptions.ExtensionVersions) > 0 {
+						@analyticsSelect("extension_version", "analytics.filters.extension_version", options.Filter.ExtensionVersion, options.FilterOptions.ExtensionVersions)
+					}
+					if len(options.FilterOptions.Platforms) > 0 {
+						@analyticsSelect("platform", "analytics.filters.platform", options.Filter.Platform, options.FilterOptions.Platforms)
+					}
+					if len(options.FilterOptions.Browsers) > 0 {
+						@analyticsSelect("browser", "analytics.filters.browser", options.Filter.Browser, options.FilterOptions.Browsers)
+					}
+					if len(options.FilterOptions.OSFamilies) > 0 {
+						@analyticsSelect("os", "analytics.filters.os", options.Filter.OSFamily, options.FilterOptions.OSFamilies)
+					}
+					if len(options.CompareCampaigns) > 1 {
+						<label>
+							{ tr(ctx, "analytics.compare.campaign") }
+							<select name="compare_campaign">
+								<option value="">{ tr(ctx, "analytics.compare.none") }</option>
+								for _, candidate := range options.CompareCampaigns {
+									if candidate.ID != campaign.ID {
+										<option value={ candidate.PublicID } selected?={ candidate.PublicID == options.CompareCampaignID }>{ candidate.Name }</option>
+									}
+								}
+							</select>
+						</label>
+					}
+				</div>
+				<div class="actions compact"><button type="submit">{ tr(ctx, "common.apply") }</button><a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/analytics?range=" + options.RangeKey) }>{ tr(ctx, "analytics.filters.reset") }</a></div>
+			</form>
+		}
+		<section class="grid four funnel" aria-labelledby="funnel-title">
+			<h2 id="funnel-title" class="grid-heading">{ tr(ctx, "analytics.funnel.title") }</h2>
+			@metricCardWithDelta("visits.raw_total", analytics.Overview.RawVisits, analytics.Previous.RawVisits, options.RangeKey != "all")
+			@metricCardWithDelta("analytics.form_starts", analytics.Overview.FormStarts, analytics.Previous.FormStarts, options.RangeKey != "all")
+			@metricCardWithDelta("submissions.total", analytics.Overview.Submissions, analytics.Previous.Submissions, options.RangeKey != "all")
+			<article class="panel"><h3>{ tr(ctx, "analytics.start_rate") }</h3><strong class="metric">{ submissionRate(analytics.Overview.FormStarts, analytics.Overview.RawVisits) }</strong><p>{ tr(ctx, "analytics.rate.help") }</p></article>
+			<article class="panel"><h3>{ tr(ctx, "analytics.completion_rate") }</h3><strong class="metric">{ submissionRate(analytics.Overview.Submissions, analytics.Overview.FormStarts) }</strong><p>{ tr(ctx, "analytics.rate.help") }</p></article>
+			<article class="panel"><h3>{ tr(ctx, "analytics.submission_rate") }</h3><strong class="metric">{ submissionRate(analytics.Overview.Submissions, analytics.Overview.RawVisits) }</strong><p>{ tr(ctx, "analytics.rate.help") }</p></article>
 		</section>
+		if options.Comparison != nil {
+			<section class="panel">
+				<h2>{ tr(ctx, "analytics.compare.title", options.ComparisonName) }</h2>
+				<div class="table-wrap">
+					<table>
+						<caption>{ tr(ctx, "analytics.compare.caption", campaign.Name, options.ComparisonName) }</caption>
+						<thead><tr><th>{ tr(ctx, "analytics.metric") }</th><th>{ campaign.Name }</th><th>{ options.ComparisonName }</th></tr></thead>
+						<tbody>
+							@comparisonRow("visits.raw_total", analytics.Overview.RawVisits, options.Comparison.Overview.RawVisits)
+							@comparisonRow("visits.unique_total", analytics.Overview.UniqueVisits, options.Comparison.Overview.UniqueVisits)
+							@comparisonRow("analytics.form_starts", analytics.Overview.FormStarts, options.Comparison.Overview.FormStarts)
+							@comparisonRow("submissions.total", analytics.Overview.Submissions, options.Comparison.Overview.Submissions)
+							<tr><th>{ tr(ctx, "analytics.submission_rate") }</th><td>{ submissionRate(analytics.Overview.Submissions, analytics.Overview.RawVisits) }</td><td>{ submissionRate(options.Comparison.Overview.Submissions, options.Comparison.Overview.RawVisits) }</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		}
 		<section class="grid two">
 			<article class="panel"><h2>{ tr(ctx, "analytics.latest_visit") }</h2><p>{ nullable(analytics.Overview.LatestVisitAt) }</p></article>
 			<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(analytics.Overview.LatestSubmissionAt) }</p></article>
@@ -43,10 +110,10 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 				<div class="table-wrap">
 					<table>
 						<caption>{ tr(ctx, "analytics.trend_caption", campaign.Name) }</caption>
-						<thead><tr><th>{ tr(ctx, "analytics.day") }</th><th>{ tr(ctx, "visits.raw_total") }</th><th>{ tr(ctx, "visits.unique_total") }</th><th>{ tr(ctx, "submissions.total") }</th></tr></thead>
+						<thead><tr><th>{ tr(ctx, "analytics.day") }</th><th>{ tr(ctx, "visits.raw_total") }</th><th>{ tr(ctx, "visits.unique_total") }</th><th>{ tr(ctx, "analytics.form_starts") }</th><th>{ tr(ctx, "submissions.total") }</th></tr></thead>
 						<tbody>
 							for _, point := range analytics.Trend {
-								<tr><td>{ point.Day }</td><td>{ fmt.Sprint(point.RawVisits) }</td><td>{ fmt.Sprint(point.UniqueVisits) }</td><td>{ fmt.Sprint(point.Submissions) }</td></tr>
+								<tr><td>{ point.Day }</td><td>{ fmt.Sprint(point.RawVisits) }</td><td>{ fmt.Sprint(point.UniqueVisits) }</td><td>{ fmt.Sprint(point.FormStarts) }</td><td>{ fmt.Sprint(point.Submissions) }</td></tr>
 							}
 						</tbody>
 					</table>
@@ -90,10 +157,26 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 						<div class="table-wrap">
 							<table>
 								<caption>{ tr(ctx, "analytics.field_caption", field.Label) }</caption>
-								<thead><tr><th>{ tr(ctx, "analytics.value") }</th><th>{ tr(ctx, "analytics.count") }</th><th>{ tr(ctx, "analytics.percentage") }</th></tr></thead>
+								<thead>
+									<tr>
+										<th>{ tr(ctx, "analytics.value") }</th>
+										<th>{ tr(ctx, "analytics.count") }</th>
+										<th>{ tr(ctx, "analytics.percentage") }</th>
+										if options.RangeKey != "all" {
+											<th>{ tr(ctx, "analytics.previous_change_heading") }</th>
+										}
+									</tr>
+								</thead>
 								<tbody>
 									for _, value := range field.Values {
-										<tr><td>{ value.Label }</td><td>{ fmt.Sprint(value.Count) }</td><td>{ fmt.Sprintf("%.1f%%", value.Percentage) }</td></tr>
+										<tr>
+											<td>{ value.Label }</td>
+											<td>{ fmt.Sprint(value.Count) }</td>
+											<td>{ fmt.Sprintf("%.1f%%", value.Percentage) }</td>
+											if options.RangeKey != "all" {
+												<td>{ fmt.Sprintf("%+.1f%%", value.Change) }</td>
+											}
+										</tr>
 									}
 								</tbody>
 							</table>
@@ -111,12 +194,24 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 		<section class="panel">
 			<h2>{ tr(ctx, "export.title") }</h2>
 			<div class="notice">{ tr(ctx, "export.warning") }</div>
-			<div class="actions compact">
-				<a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/export/submissions.csv") }>{ tr(ctx, "export.csv") }</a>
+			<form method="get" action={ templ.SafeURL(campaignPath(campaign) + "/export/submissions.csv") } class="form-stack export-columns">
+				<input type="hidden" name="range" value={ options.RangeKey }/>
+				@filterHiddenInputs(options.Filter)
+				<fieldset>
+					<legend>{ tr(ctx, "export.columns") }</legend>
+					<label class="check"><input type="checkbox" name="column" value="submitted_at" checked/> { tr(ctx, "export.column.timestamp") }</label>
+					<label class="check"><input type="checkbox" name="column" value="submission_id" checked/> { tr(ctx, "export.column.submission_id") }</label>
+					<label class="check"><input type="checkbox" name="column" value="visit_id"/> { tr(ctx, "export.column.visit_id") }</label>
+					if settings.CollectURLContext || settings.CollectCoarseBrowser || settings.CollectCoarseOS {
+						<label class="check"><input type="checkbox" name="column" value="diagnostics"/> { tr(ctx, "export.column.diagnostics") }</label>
+					}
+					<label class="check"><input type="checkbox" name="column" value="answers" checked/> { tr(ctx, "export.column.answers") }</label>
+				</fieldset>
+				<button type="submit">{ tr(ctx, "export.csv") }</button>
 				<a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/export/submissions.json") }>{ tr(ctx, "export.json") }</a>
-			</div>
+			</form>
 		</section>
-		if canDelete {
+		if options.CanDelete {
 			<section class="panel danger-zone">
 				<h2>{ tr(ctx, "deletion.title") }</h2>
 				<p>{ tr(ctx, "deletion.confirm_help", campaign.Slug) }</p>
@@ -137,6 +232,49 @@ templ metricCard(key string, value int64) {
 	<article class="panel"><h2>{ tr(ctx, key) }</h2><strong class="metric">{ fmt.Sprint(value) }</strong></article>
 }
 
+templ metricCardWithDelta(key string, value, previous int64, show bool) {
+	<article class="panel">
+		<h3>{ tr(ctx, key) }</h3><strong class="metric">{ fmt.Sprint(value) }</strong>
+		if show {
+			<p>{ tr(ctx, "analytics.previous_change", signedChange(value, previous)) }</p>
+		}
+	</article>
+}
+
+templ comparisonRow(key string, current, compared int64) {
+	<tr><th>{ tr(ctx, key) }</th><td>{ fmt.Sprint(current) }</td><td>{ fmt.Sprint(compared) }</td></tr>
+}
+
+templ analyticsSelect(name, key, selected string, values []string) {
+	<label>
+		{ tr(ctx, key) }
+		<select name={ name }>
+			<option value="">{ tr(ctx, "analytics.filters.any") }</option>
+			for _, value := range values {
+				<option value={ value } selected?={ selected == value }>{ value }</option>
+			}
+		</select>
+	</label>
+}
+
+templ filterHiddenInputs(filter db.AnalyticsFilter) {
+	if filter.AppVersion != "" {
+		<input type="hidden" name="app_version" value={ filter.AppVersion }/>
+	}
+	if filter.ExtensionVersion != "" {
+		<input type="hidden" name="extension_version" value={ filter.ExtensionVersion }/>
+	}
+	if filter.Platform != "" {
+		<input type="hidden" name="platform" value={ filter.Platform }/>
+	}
+	if filter.Browser != "" {
+		<input type="hidden" name="browser" value={ filter.Browser }/>
+	}
+	if filter.OSFamily != "" {
+		<input type="hidden" name="os" value={ filter.OSFamily }/>
+	}
+}
+
 templ metadataList(key string, items []db.MetadataCount) {
 	<div>
 		<h3>{ tr(ctx, key) }</h3>
@@ -149,16 +287,16 @@ templ metadataList(key string, items []db.MetadataCount) {
 }
 
 templ trendSVG(points []db.DailyTrend) {
-	<svg class="trend-chart" viewBox={ fmt.Sprintf("0 0 %d 180", maxInt(420, len(points)*34+50)) } role="img" aria-label={ tr(ctx, "analytics.trend") }>
-		<title>{ tr(ctx, "analytics.trend") }</title>
+	<svg class="trend-chart" viewBox={ fmt.Sprintf("0 0 %d 180", maxInt(420, len(points)*34+50)) } aria-hidden="true" focusable="false">
 		<line x1="35" y1="150" x2={ fmt.Sprint(maxInt(400, len(points)*34+30)) } y2="150" class="chart-axis"></line>
 		for index, point := range points {
 			<rect x={ fmt.Sprint(45 + index*34) } y={ fmt.Sprint(150 - barHeight(point.RawVisits, points)) } width="8" height={ fmt.Sprint(barHeight(point.RawVisits, points)) } class="bar raw"><title>{ point.Day } { tr(ctx, "visits.raw_total") }: { fmt.Sprint(point.RawVisits) }</title></rect>
 			<rect x={ fmt.Sprint(54 + index*34) } y={ fmt.Sprint(150 - barHeight(point.UniqueVisits, points)) } width="8" height={ fmt.Sprint(barHeight(point.UniqueVisits, points)) } class="bar unique"><title>{ point.Day } { tr(ctx, "visits.unique_total") }: { fmt.Sprint(point.UniqueVisits) }</title></rect>
-			<rect x={ fmt.Sprint(63 + index*34) } y={ fmt.Sprint(150 - barHeight(point.Submissions, points)) } width="8" height={ fmt.Sprint(barHeight(point.Submissions, points)) } class="bar submissions"><title>{ point.Day } { tr(ctx, "submissions.total") }: { fmt.Sprint(point.Submissions) }</title></rect>
+			<rect x={ fmt.Sprint(63 + index*34) } y={ fmt.Sprint(150 - barHeight(point.FormStarts, points)) } width="8" height={ fmt.Sprint(barHeight(point.FormStarts, points)) } class="bar starts"><title>{ point.Day } { tr(ctx, "analytics.form_starts") }: { fmt.Sprint(point.FormStarts) }</title></rect>
+			<rect x={ fmt.Sprint(72 + index*34) } y={ fmt.Sprint(150 - barHeight(point.Submissions, points)) } width="8" height={ fmt.Sprint(barHeight(point.Submissions, points)) } class="bar submissions"><title>{ point.Day } { tr(ctx, "submissions.total") }: { fmt.Sprint(point.Submissions) }</title></rect>
 		}
 	</svg>
-	<div class="chart-legend"><span class="raw">{ tr(ctx, "visits.raw_total") }</span><span class="unique">{ tr(ctx, "visits.unique_total") }</span><span class="submissions">{ tr(ctx, "submissions.total") }</span></div>
+	<div class="chart-legend"><span class="raw">{ tr(ctx, "visits.raw_total") }</span><span class="unique">{ tr(ctx, "visits.unique_total") }</span><span class="starts">{ tr(ctx, "analytics.form_starts") }</span><span class="submissions">{ tr(ctx, "submissions.total") }</span></div>
 }
 
 templ dangerLink(action, key string) {
@@ -184,9 +322,46 @@ func ratingAverage(field db.FieldSummary) string {
 func barHeight(value int64, points []db.DailyTrend) int {
 	maximum := int64(1)
 	for _, point := range points {
-		maximum = max(maximum, point.RawVisits, point.UniqueVisits, point.Submissions)
+		maximum = max(maximum, point.RawVisits, point.UniqueVisits, point.FormStarts, point.Submissions)
 	}
 	return int(math.Round(float64(value) * 120 / float64(maximum)))
+}
+
+func signedChange(current, previous int64) string {
+	if previous == 0 {
+		if current == 0 {
+			return "0%"
+		}
+		return "+100%"
+	}
+	return fmt.Sprintf("%+.1f%%", float64(current-previous)*100/float64(previous))
+}
+
+func hasAnalyticsFilters(options db.AnalyticsFilterOptions) bool {
+	return len(options.AppVersions)+len(options.ExtensionVersions)+len(options.Platforms)+len(options.Browsers)+len(options.OSFamilies) > 0
+}
+
+func analyticsQuery(options AnalyticsPageOptions, rangeKey string) string {
+	values := url.Values{"range": []string{rangeKey}}
+	if options.Filter.AppVersion != "" {
+		values.Set("app_version", options.Filter.AppVersion)
+	}
+	if options.Filter.ExtensionVersion != "" {
+		values.Set("extension_version", options.Filter.ExtensionVersion)
+	}
+	if options.Filter.Platform != "" {
+		values.Set("platform", options.Filter.Platform)
+	}
+	if options.Filter.Browser != "" {
+		values.Set("browser", options.Filter.Browser)
+	}
+	if options.Filter.OSFamily != "" {
+		values.Set("os", options.Filter.OSFamily)
+	}
+	if options.CompareCampaignID != "" {
+		values.Set("compare_campaign", options.CompareCampaignID)
+	}
+	return values.Encode()
 }
 
 func maxInt(a, b int) int {

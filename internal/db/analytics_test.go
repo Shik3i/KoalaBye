@@ -34,11 +34,16 @@ func TestCampaignAnalyticsTrendsFieldsAndMetadata(t *testing.T) {
 	now := time.Date(2026, 6, 12, 12, 0, 0, 0, time.UTC)
 	old := now.AddDate(0, 0, -20)
 	for index, at := range []time.Time{old, now.Add(-24 * time.Hour), now} {
+		visitID := "visit_analytics_" + string(rune('a'+index))
 		if err := q.RecordCampaignVisit(ctx, RecordVisitInput{
-			PublicID: "visit_analytics_" + string(rune('a'+index)), CampaignID: campaign.ID, OrganizationID: org.ID,
+			PublicID: visitID, CampaignID: campaign.ID, OrganizationID: org.ID,
 			TokenHash: "hash-" + string(rune('a'+index)), ReferrerDomain: "example.com", CoarseBrowser: "Firefox", CoarseOS: "Linux",
-			CountRaw: true, CountUnique: true, CollectToken: true, CreatedAt: at,
+			URLContext: map[string]string{"app_version": "1.2.3", "platform": "linux"},
+			CountRaw:   true, CountUnique: true, CollectToken: true, CreatedAt: at,
 		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := q.RecordFormStart(ctx, campaign.ID, visitID, at.Add(time.Minute)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -60,11 +65,11 @@ func TestCampaignAnalyticsTrendsFieldsAndMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 	start := now.AddDate(0, 0, -6)
-	analytics, err := q.CampaignAnalytics(ctx, campaign.ID, &start, now)
+	analytics, err := q.CampaignAnalytics(ctx, campaign.ID, AnalyticsFilter{Start: &start}, now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if analytics.Overview.RawVisits != 3 || analytics.Overview.Submissions != 3 || len(analytics.Trend) != 7 || analytics.Trend[5].RawVisits != 1 || analytics.Trend[6].Submissions != 1 {
+	if analytics.Overview.RawVisits != 2 || analytics.Overview.FormStarts != 2 || analytics.Overview.Submissions != 2 || len(analytics.Trend) != 7 || analytics.Trend[5].RawVisits != 1 || analytics.Trend[6].Submissions != 1 {
 		t.Fatalf("overview/trend incorrect: %#v", analytics)
 	}
 	summaries := map[string]FieldSummary{}
@@ -79,6 +84,10 @@ func TestCampaignAnalyticsTrendsFieldsAndMetadata(t *testing.T) {
 	}
 	if summaries["field_check"].TotalSelections != 2 || len(analytics.Referrers) != 1 || analytics.Browsers[0].Value != "Firefox" {
 		t.Fatalf("checkbox or metadata summary incorrect: %#v", analytics)
+	}
+	filtered, err := q.CampaignAnalytics(ctx, campaign.ID, AnalyticsFilter{AppVersion: "missing"}, now)
+	if err != nil || filtered.Overview.RawVisits != 0 || filtered.Overview.Submissions != 0 {
+		t.Fatalf("diagnostic filter was not applied: %#v %v", filtered, err)
 	}
 }
 
@@ -99,6 +108,9 @@ func TestRetentionAndManualDeletion(t *testing.T) {
 		if err := q.CreateSubmission(ctx, CreateSubmissionInput{PublicID: item.submission, VisitPublicID: item.visit, CampaignID: campaign.ID, OrgID: org.ID, SubmittedAt: item.at}); err != nil {
 			t.Fatal(err)
 		}
+		if err := q.RecordFormStart(ctx, campaign.ID, item.visit, item.at); err != nil {
+			t.Fatal(err)
+		}
 	}
 	counts, err := q.DeleteOldCampaignData(ctx, campaign, now.AddDate(0, 0, -90), owner.ID)
 	if err != nil || counts.Visits != 1 || counts.Submissions != 1 {
@@ -106,6 +118,10 @@ func TestRetentionAndManualDeletion(t *testing.T) {
 	}
 	if count, err := q.DeleteAllCampaignVisits(ctx, campaign, owner.ID); err != nil || count != 1 {
 		t.Fatalf("delete visits failed: %d %v", count, err)
+	}
+	var starts int
+	if err := q.RawDB().QueryRow(`SELECT COUNT(*) FROM campaign_form_starts WHERE campaign_id=?`, campaign.ID).Scan(&starts); err != nil || starts != 0 {
+		t.Fatalf("form starts were not deleted with visits: %d %v", starts, err)
 	}
 	var linked any
 	if err := q.RawDB().QueryRow(`SELECT visit_id FROM campaign_submissions WHERE public_id='submission_new'`).Scan(&linked); err != nil || linked != nil {

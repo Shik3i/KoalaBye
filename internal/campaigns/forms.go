@@ -297,6 +297,36 @@ func (h *Handler) PublicSubmitBySlug(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) PublicFormStartByID(w http.ResponseWriter, r *http.Request) {
+	h.publicFormStart(w, r, func() (db.PublicCampaign, error) {
+		return h.q.GetPublicCampaignByID(r.Context(), chi.URLParam(r, "campaignPublicID"))
+	})
+}
+
+func (h *Handler) PublicFormStartBySlug(w http.ResponseWriter, r *http.Request) {
+	h.publicFormStart(w, r, func() (db.PublicCampaign, error) {
+		return h.q.GetPublicCampaignBySlug(r.Context(), chi.URLParam(r, "orgSlug"), chi.URLParam(r, "campaignSlug"))
+	})
+}
+
+func (h *Handler) publicFormStart(w http.ResponseWriter, r *http.Request, resolve func() (db.PublicCampaign, error)) {
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form start", http.StatusBadRequest)
+		return
+	}
+	publicCampaign, err := resolve()
+	if err != nil || !publicCampaign.Available() {
+		http.NotFound(w, r)
+		return
+	}
+	if err := h.q.RecordFormStart(r.Context(), publicCampaign.Campaign.ID, r.FormValue("visit_public_id"), time.Now().UTC()); err != nil {
+		http.Error(w, "record form start", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *Handler) publicSubmit(w http.ResponseWriter, r *http.Request, resolve func() (db.PublicCampaign, error)) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxPublicFormBody)
 	if err := r.ParseForm(); err != nil {
@@ -427,12 +457,21 @@ func (h *Handler) Responses(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	submissions, err := h.q.ListSubmissions(r.Context(), campaign.ID)
+	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	filterOptions, _ := h.q.CampaignAnalyticsFilterOptions(r.Context(), campaign.ID)
+	_, filter := analyticsFilter(r.URL.Query(), settings, filterOptions, time.Now().UTC())
+	filter.Start, filter.End = nil, nil
+	submissions, err := h.q.ListSubmissionsWithAnswersFiltered(r.Context(), campaign.ID, filter)
 	if err != nil {
 		http.Error(w, "load responses", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignResponses(h.cfg.InstanceName, user, campaign, submissions))
+	for index := range submissions {
+		if len(submissions[index].Answers) > 0 {
+			submissions[index].AnswerSummary = submissions[index].Answers[0].FieldLabelSnapshot
+		}
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignResponses(h.cfg.InstanceName, user, campaign, submissions, settings, filterOptions, filter))
 }
 
 func (h *Handler) ResponseDetail(w http.ResponseWriter, r *http.Request) {

@@ -99,7 +99,10 @@ templ DraggableFormFieldCard(campaign db.Campaign, field db.FormField, index, fi
 	<article class="panel form-field-card" draggable="true" data-field-id={ field.PublicID }>
 		<div class="field-heading">
 			<div class="field-title"><button type="button" class="drag-handle" aria-label={ tr(ctx, "form.drag", field.Label) } title={ tr(ctx, "form.drag.help") }>↕</button><div><span class="badge quiet">{ tr(ctx, "form.type." + field.FieldType) }</span><h2>{ field.Label }</h2></div></div>
-			<a href={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/edit") }>{ tr(ctx, "common.edit") }</a>
+			<a class="icon-text" href={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/edit") }>
+				@Icon("edit")
+				{ tr(ctx, "common.edit") }
+			</a>
 		</div>
 		if field.HelpText.Valid {
 			<p>{ field.HelpText.String }</p>
@@ -112,8 +115,17 @@ templ DraggableFormFieldCard(campaign db.Campaign, field db.FormField, index, fi
 		<div class="actions compact">
 			@fieldAction(campaign, field, "up", index == 0)
 			@fieldAction(campaign, field, "down", index == fieldCount-1)
-			<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/duplicate") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button" type="submit">{ tr(ctx, "form.duplicate") }</button></form>
-			<a class="link-button danger" href={ templ.SafeURL(campaignPath(campaign) + "/confirm/archive-field?field=" + field.PublicID) }>{ tr(ctx, "common.remove") }</a>
+			<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/duplicate") }>
+				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+				<button class="link-button icon-text" type="submit">
+					@Icon("duplicate")
+					{ tr(ctx, "form.duplicate") }
+				</button>
+			</form>
+			<a class="link-button danger icon-text" href={ templ.SafeURL(campaignPath(campaign) + "/confirm/archive-field?field=" + field.PublicID) }>
+				@Icon("delete")
+				{ tr(ctx, "common.remove") }
+			</a>
 		</div>
 	</article>
 }
@@ -206,7 +218,10 @@ templ CampaignFormFieldEdit(instanceName string, user db.User, campaign db.Campa
 templ fieldAction(campaign db.Campaign, field db.FormField, direction string, disabled bool) {
 	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/move") }>
 		<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="direction" value={ direction }/>
-		<button class="link-button" type="submit" disabled?={ disabled } data-tooltip={ tr(ctx, "tooltip.btn.move_"+direction) }>{ tr(ctx, "form.move." + direction) }</button>
+		<button class="link-button icon-text" type="submit" disabled?={ disabled } data-tooltip={ tr(ctx, "tooltip.btn.move_"+direction) }>
+			@Icon("move-" + direction)
+			{ tr(ctx, "form.move." + direction) }
+		</button>
 	</form>
 }
 
@@ -259,10 +274,32 @@ templ PublicFields(fields []db.FormField, enabled bool) {
 	}
 }
 
-templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign, submissions []db.Submission) {
+templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign, submissions []db.Submission, settings db.CampaignSettings, filterOptions db.AnalyticsFilterOptions, filter db.AnalyticsFilter) {
 	@Layout(tr(ctx, "responses.title"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading"><div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "responses.title") }</h1></div></section>
+		if hasAnalyticsFilters(filterOptions) {
+			<form method="get" class="panel filter-form">
+				<div class="filter-grid">
+					if settings.CollectURLContext && len(filterOptions.AppVersions) > 0 {
+						@analyticsSelect("app_version", "analytics.filters.app_version", filter.AppVersion, filterOptions.AppVersions)
+					}
+					if settings.CollectURLContext && len(filterOptions.ExtensionVersions) > 0 {
+						@analyticsSelect("extension_version", "analytics.filters.extension_version", filter.ExtensionVersion, filterOptions.ExtensionVersions)
+					}
+					if settings.CollectURLContext && len(filterOptions.Platforms) > 0 {
+						@analyticsSelect("platform", "analytics.filters.platform", filter.Platform, filterOptions.Platforms)
+					}
+					if settings.CollectCoarseBrowser && len(filterOptions.Browsers) > 0 {
+						@analyticsSelect("browser", "analytics.filters.browser", filter.Browser, filterOptions.Browsers)
+					}
+					if settings.CollectCoarseOS && len(filterOptions.OSFamilies) > 0 {
+						@analyticsSelect("os", "analytics.filters.os", filter.OSFamily, filterOptions.OSFamilies)
+					}
+				</div>
+				<div class="actions compact"><button type="submit">{ tr(ctx, "common.apply") }</button><a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "analytics.filters.reset") }</a></div>
+			</form>
+		}
 		<section class="panel table-wrap">
 			<table>
 				<caption>{ tr(ctx, "responses.table_caption", campaign.Name) }</caption>

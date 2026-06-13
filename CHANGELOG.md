@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.1.14 - 2026-06-13
+
+### Added
+- Privacy-preserving funnel analytics for visits, first form interactions, and submissions.
+- Period, campaign, app, extension, platform, browser, and operating-system comparisons.
+- Configurable CSV columns and filter-aware CSV/JSON exports.
+- Campaign list filters, sorting by real activity, global campaign search, and a guided onboarding checklist.
+- Local action icons, active navigation states, unsaved-change warnings, and request loading states.
+
+### Changed
+- Analytics now include equal-length previous-period deltas and field-value trends.
+- Response and analytics filters expose only values present in authorized campaign data.
+- Responsive navigation, touch targets, reduced-motion behavior, and keyboard focus handling were refined.
+
+### Privacy
+- A form start is stored once per anonymous visit after the first form interaction; no field value, draft, cookie, IP address, or new visitor identifier is collected.
+- Diagnostic filters and export columns remain restricted by the campaign's enabled collection settings.
+
+### Accessibility
+- Added keyboard-operable global search, explicit current-page navigation, accessible table alternatives for charts, and improved mobile overflow behavior.
+- Documented the release accessibility review in `docs/audits/V0.1.14_ACCESSIBILITY_AUDIT.md`.
+
 ## v0.1.12 - 2026-06-13
 
 ### Added

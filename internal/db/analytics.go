@@ -6,24 +6,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 )
 
 type AnalyticsOverview struct {
-	RawVisits, UniqueVisits, Submissions        int64
-	CurrentMonthVisits, CurrentMonthSubmissions int64
-	LatestVisitAt, LatestSubmissionAt           sql.NullString
+	RawVisits, UniqueVisits, FormStarts, Submissions int64
+	CurrentMonthVisits, CurrentMonthSubmissions      int64
+	LatestVisitAt, LatestSubmissionAt                sql.NullString
 }
 
 type DailyTrend struct {
-	Day                                  string
-	RawVisits, UniqueVisits, Submissions int64
+	Day                                              string
+	RawVisits, UniqueVisits, FormStarts, Submissions int64
 }
 
 type ValueCount struct {
-	Value, Label string
-	Count        int64
-	Percentage   float64
+	Value, Label         string
+	Count, PreviousCount int64
+	Percentage, Change   float64
 }
 
 type FieldSummary struct {
@@ -42,61 +43,141 @@ type MetadataCount struct {
 
 type CampaignAnalytics struct {
 	Overview                        AnalyticsOverview
+	Previous                        AnalyticsOverview
 	Trend                           []DailyTrend
 	Fields                          []FieldSummary
 	Referrers, Browsers, OSFamilies []MetadataCount
 }
 
-func (q *Querier) CampaignAnalytics(ctx context.Context, campaignID int64, start *time.Time, now time.Time) (CampaignAnalytics, error) {
+type AnalyticsFilter struct {
+	Start, End                   *time.Time
+	AppVersion, ExtensionVersion string
+	Platform, Browser, OSFamily  string
+}
+
+type AnalyticsFilterOptions struct {
+	AppVersions, ExtensionVersions, Platforms, Browsers, OSFamilies []string
+}
+
+func (q *Querier) CampaignAnalyticsFilterOptions(ctx context.Context, campaignID int64) (AnalyticsFilterOptions, error) {
+	var options AnalyticsFilterOptions
+	for _, item := range []struct {
+		expression string
+		target     *[]string
+	}{
+		{"json_extract(context_json,'$.app_version')", &options.AppVersions},
+		{"json_extract(context_json,'$.extension_version')", &options.ExtensionVersions},
+		{"json_extract(context_json,'$.platform')", &options.Platforms},
+		{"coarse_browser", &options.Browsers},
+		{"coarse_os", &options.OSFamilies},
+	} {
+		rows, err := q.db.QueryContext(ctx, `SELECT DISTINCT `+item.expression+` FROM campaign_visits
+			WHERE campaign_id=? AND `+item.expression+` IS NOT NULL AND `+item.expression+`!=''
+			ORDER BY `+item.expression+` LIMIT 100`, campaignID)
+		if err != nil {
+			return options, err
+		}
+		for rows.Next() {
+			var value string
+			if err := rows.Scan(&value); err != nil {
+				rows.Close()
+				return options, err
+			}
+			*item.target = append(*item.target, value)
+		}
+		if err := rows.Close(); err != nil {
+			return options, err
+		}
+	}
+	return options, nil
+}
+
+func (q *Querier) CampaignAnalytics(ctx context.Context, campaignID int64, filter AnalyticsFilter, now time.Time) (CampaignAnalytics, error) {
 	var analytics CampaignAnalytics
 	monthStart := time.Date(now.UTC().Year(), now.UTC().Month(), 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339Nano)
+	where, args := analyticsVisitWhere(campaignID, filter)
 	err := q.db.QueryRowContext(ctx, `SELECT
 		COALESCE(SUM(counted_as_raw_visit),0),COALESCE(SUM(counted_as_unique_token_visit),0),
 		COALESCE(SUM(CASE WHEN created_at>=? THEN counted_as_raw_visit ELSE 0 END),0),MAX(created_at)
-		FROM campaign_visits WHERE campaign_id=?`, monthStart, campaignID).
+		FROM campaign_visits WHERE `+where, append([]any{monthStart}, args...)...).
 		Scan(&analytics.Overview.RawVisits, &analytics.Overview.UniqueVisits, &analytics.Overview.CurrentMonthVisits, &analytics.Overview.LatestVisitAt)
 	if err != nil {
 		return analytics, err
 	}
+	submissionWhere, submissionArgs := analyticsSubmissionWhere(campaignID, filter)
 	err = q.db.QueryRowContext(ctx, `SELECT COUNT(*),COALESCE(SUM(CASE WHEN submitted_at>=? THEN 1 ELSE 0 END),0),MAX(submitted_at)
-		FROM campaign_submissions WHERE campaign_id=?`, monthStart, campaignID).
+		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE `+submissionWhere,
+		append([]any{monthStart}, submissionArgs...)...).
 		Scan(&analytics.Overview.Submissions, &analytics.Overview.CurrentMonthSubmissions, &analytics.Overview.LatestSubmissionAt)
 	if err != nil {
 		return analytics, err
 	}
-	analytics.Trend, err = q.dailyTrend(ctx, campaignID, start, now)
+	startWhere, startArgs := analyticsStartWhere(campaignID, filter)
+	if err = q.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM campaign_form_starts fs JOIN campaign_visits v ON v.id=fs.visit_id WHERE `+startWhere, startArgs...).Scan(&analytics.Overview.FormStarts); err != nil {
+		return analytics, err
+	}
+	if filter.Start != nil && filter.End != nil {
+		duration := filter.End.Sub(*filter.Start)
+		previousEnd := filter.Start.UTC()
+		previousStart := previousEnd.Add(-duration)
+		previousFilter := filter
+		previousFilter.Start, previousFilter.End = &previousStart, &previousEnd
+		analytics.Previous, err = q.analyticsOverview(ctx, campaignID, previousFilter)
+		if err != nil {
+			return analytics, err
+		}
+	}
+	analytics.Trend, err = q.dailyTrend(ctx, campaignID, filter, now)
 	if err != nil {
 		return analytics, err
 	}
-	analytics.Fields, err = q.fieldSummaries(ctx, campaignID, start)
+	analytics.Fields, err = q.fieldSummaries(ctx, campaignID, filter)
 	if err != nil {
 		return analytics, err
 	}
-	analytics.Referrers, err = q.metadataSummary(ctx, campaignID, start, "referrer_domain")
+	analytics.Referrers, err = q.metadataSummary(ctx, campaignID, filter, "referrer_domain")
 	if err != nil {
 		return analytics, err
 	}
-	analytics.Browsers, err = q.metadataSummary(ctx, campaignID, start, "coarse_browser")
+	analytics.Browsers, err = q.metadataSummary(ctx, campaignID, filter, "coarse_browser")
 	if err != nil {
 		return analytics, err
 	}
-	analytics.OSFamilies, err = q.metadataSummary(ctx, campaignID, start, "coarse_os")
+	analytics.OSFamilies, err = q.metadataSummary(ctx, campaignID, filter, "coarse_os")
 	return analytics, err
 }
 
-func (q *Querier) dailyTrend(ctx context.Context, campaignID int64, start *time.Time, now time.Time) ([]DailyTrend, error) {
-	since := ""
-	var startDay time.Time
-	if start != nil {
-		startDay = time.Date(start.UTC().Year(), start.UTC().Month(), start.UTC().Day(), 0, 0, 0, 0, time.UTC)
-		since = startDay.Format(time.RFC3339Nano)
+func (q *Querier) analyticsOverview(ctx context.Context, campaignID int64, filter AnalyticsFilter) (AnalyticsOverview, error) {
+	var overview AnalyticsOverview
+	visitWhere, visitArgs := analyticsVisitWhere(campaignID, filter)
+	if err := q.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(counted_as_raw_visit),0),COALESCE(SUM(counted_as_unique_token_visit),0),MAX(created_at) FROM campaign_visits WHERE `+visitWhere, visitArgs...).
+		Scan(&overview.RawVisits, &overview.UniqueVisits, &overview.LatestVisitAt); err != nil {
+		return overview, err
 	}
-	rows, err := q.db.QueryContext(ctx, `SELECT day,SUM(raw),SUM(unique_count),SUM(submissions) FROM (
-		SELECT substr(created_at,1,10) day,counted_as_raw_visit raw,counted_as_unique_token_visit unique_count,0 submissions
-		FROM campaign_visits WHERE campaign_id=? AND (?='' OR created_at>=?)
+	submissionWhere, submissionArgs := analyticsSubmissionWhere(campaignID, filter)
+	if err := q.db.QueryRowContext(ctx, `SELECT COUNT(*),MAX(submitted_at) FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE `+submissionWhere, submissionArgs...).
+		Scan(&overview.Submissions, &overview.LatestSubmissionAt); err != nil {
+		return overview, err
+	}
+	startWhere, startArgs := analyticsStartWhere(campaignID, filter)
+	err := q.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM campaign_form_starts fs JOIN campaign_visits v ON v.id=fs.visit_id WHERE `+startWhere, startArgs...).Scan(&overview.FormStarts)
+	return overview, err
+}
+
+func (q *Querier) dailyTrend(ctx context.Context, campaignID int64, filter AnalyticsFilter, now time.Time) ([]DailyTrend, error) {
+	visitWhere, visitArgs := analyticsVisitWhere(campaignID, filter)
+	startWhere, startArgs := analyticsStartWhere(campaignID, filter)
+	submissionWhere, submissionArgs := analyticsSubmissionWhere(campaignID, filter)
+	query := `SELECT day,SUM(raw),SUM(unique_count),SUM(starts),SUM(submissions) FROM (
+		SELECT substr(created_at,1,10) day,counted_as_raw_visit raw,counted_as_unique_token_visit unique_count,0 starts,0 submissions
+		FROM campaign_visits WHERE ` + visitWhere + `
 		UNION ALL
-		SELECT substr(submitted_at,1,10) day,0,0,1 FROM campaign_submissions WHERE campaign_id=? AND (?='' OR submitted_at>=?)
-	) GROUP BY day ORDER BY day`, campaignID, since, since, campaignID, since, since)
+		SELECT substr(fs.started_at,1,10) day,0,0,1,0 FROM campaign_form_starts fs JOIN campaign_visits v ON v.id=fs.visit_id WHERE ` + startWhere + `
+		UNION ALL
+		SELECT substr(s.submitted_at,1,10) day,0,0,0,1 FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE ` + submissionWhere + `
+	) GROUP BY day ORDER BY day`
+	args := append(append(visitArgs, startArgs...), submissionArgs...)
+	rows, err := q.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +185,7 @@ func (q *Querier) dailyTrend(ctx context.Context, campaignID int64, start *time.
 	var trend []DailyTrend
 	for rows.Next() {
 		var point DailyTrend
-		if err := rows.Scan(&point.Day, &point.RawVisits, &point.UniqueVisits, &point.Submissions); err != nil {
+		if err := rows.Scan(&point.Day, &point.RawVisits, &point.UniqueVisits, &point.FormStarts, &point.Submissions); err != nil {
 			return nil, err
 		}
 		trend = append(trend, point)
@@ -112,9 +193,10 @@ func (q *Querier) dailyTrend(ctx context.Context, campaignID int64, start *time.
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if start == nil {
+	if filter.Start == nil {
 		return trend, nil
 	}
+	startDay := time.Date(filter.Start.UTC().Year(), filter.Start.UTC().Month(), filter.Start.UTC().Day(), 0, 0, 0, 0, time.UTC)
 	byDay := make(map[string]DailyTrend, len(trend))
 	for _, point := range trend {
 		byDay[point.Day] = point
@@ -130,18 +212,15 @@ func (q *Querier) dailyTrend(ctx context.Context, campaignID int64, start *time.
 	return trend, nil
 }
 
-func (q *Querier) metadataSummary(ctx context.Context, campaignID int64, start *time.Time, column string) ([]MetadataCount, error) {
+func (q *Querier) metadataSummary(ctx context.Context, campaignID int64, filter AnalyticsFilter, column string) ([]MetadataCount, error) {
 	allowed := map[string]bool{"referrer_domain": true, "coarse_browser": true, "coarse_os": true}
 	if !allowed[column] {
 		return nil, ErrForbidden
 	}
-	since := ""
-	if start != nil {
-		since = start.UTC().Format(time.RFC3339Nano)
-	}
+	where, args := analyticsVisitWhere(campaignID, filter)
 	rows, err := q.db.QueryContext(ctx, `SELECT `+column+`,COUNT(*) FROM campaign_visits
-		WHERE campaign_id=? AND `+column+` IS NOT NULL AND (?='' OR created_at>=?)
-		GROUP BY `+column+` ORDER BY COUNT(*) DESC,`+column+` LIMIT 10`, campaignID, since, since)
+		WHERE `+where+` AND `+column+` IS NOT NULL
+		GROUP BY `+column+` ORDER BY COUNT(*) DESC,`+column+` LIMIT 10`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +236,7 @@ func (q *Querier) metadataSummary(ctx context.Context, campaignID int64, start *
 	return out, rows.Err()
 }
 
-func (q *Querier) fieldSummaries(ctx context.Context, campaignID int64, start *time.Time) ([]FieldSummary, error) {
+func (q *Querier) fieldSummaries(ctx context.Context, campaignID int64, filter AnalyticsFilter) ([]FieldSummary, error) {
 	fields, err := q.ListFormFields(ctx, campaignID, true)
 	if err != nil {
 		return nil, err
@@ -166,17 +245,15 @@ func (q *Querier) fieldSummaries(ctx context.Context, campaignID int64, start *t
 	for _, field := range fields {
 		fieldMap[field.PublicID] = field
 	}
-	since := ""
-	if start != nil {
-		since = start.UTC().Format(time.RFC3339Nano)
-	}
+	where, args := analyticsSubmissionWhere(campaignID, filter)
 	var submissionCount int64
-	if err := q.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM campaign_submissions WHERE campaign_id=? AND (?='' OR submitted_at>=?)`, campaignID, since, since).Scan(&submissionCount); err != nil {
+	if err := q.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE `+where, args...).Scan(&submissionCount); err != nil {
 		return nil, err
 	}
 	rows, err := q.db.QueryContext(ctx, `SELECT a.field_public_id,a.field_type,a.field_label_snapshot,a.value_json
 		FROM campaign_submission_answers a JOIN campaign_submissions s ON s.id=a.submission_id
-		WHERE s.campaign_id=? AND (?='' OR s.submitted_at>=?) ORDER BY a.id`, campaignID, since, since)
+		LEFT JOIN campaign_visits v ON v.id=s.visit_id
+		WHERE `+where+` ORDER BY a.id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -234,6 +311,18 @@ func (q *Querier) fieldSummaries(ctx context.Context, campaignID int64, start *t
 		}
 	}
 	var summaries []FieldSummary
+	previousCounts := map[string]map[string]int64{}
+	if filter.Start != nil && filter.End != nil {
+		duration := filter.End.Sub(*filter.Start)
+		previousEnd := filter.Start.UTC()
+		previousStart := previousEnd.Add(-duration)
+		previousFilter := filter
+		previousFilter.Start, previousFilter.End = &previousStart, &previousEnd
+		previousCounts, err = q.fieldValueCounts(ctx, campaignID, previousFilter)
+		if err != nil {
+			return nil, err
+		}
+	}
 	for _, publicID := range order {
 		acc := accumulators[publicID]
 		acc.summary.Skipped = submissionCount - acc.summary.Answered
@@ -274,23 +363,171 @@ func (q *Querier) fieldSummaries(ctx context.Context, campaignID int64, start *t
 			if label == "" {
 				label = key
 			}
-			acc.summary.Values = append(acc.summary.Values, ValueCount{Value: key, Label: label, Count: acc.counts[key], Percentage: percentage})
+			previous := previousCounts[publicID][key]
+			change := 0.0
+			if previous > 0 {
+				change = float64(acc.counts[key]-previous) * 100 / float64(previous)
+			} else if acc.counts[key] > 0 {
+				change = 100
+			}
+			acc.summary.Values = append(acc.summary.Values, ValueCount{
+				Value: key, Label: label, Count: acc.counts[key], PreviousCount: previous,
+				Percentage: percentage, Change: change,
+			})
 		}
 		summaries = append(summaries, acc.summary)
 	}
 	return summaries, rows.Err()
 }
 
+func (q *Querier) fieldValueCounts(ctx context.Context, campaignID int64, filter AnalyticsFilter) (map[string]map[string]int64, error) {
+	where, args := analyticsSubmissionWhere(campaignID, filter)
+	rows, err := q.db.QueryContext(ctx, `SELECT a.field_public_id,a.field_type,a.value_json
+		FROM campaign_submission_answers a
+		JOIN campaign_submissions s ON s.id=a.submission_id
+		LEFT JOIN campaign_visits v ON v.id=s.visit_id
+		WHERE `+where, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]map[string]int64{}
+	for rows.Next() {
+		var publicID, fieldType, raw string
+		if err := rows.Scan(&publicID, &fieldType, &raw); err != nil {
+			return nil, err
+		}
+		if fieldType == "textarea" {
+			continue
+		}
+		if out[publicID] == nil {
+			out[publicID] = map[string]int64{}
+		}
+		var value any
+		if json.Unmarshal([]byte(raw), &value) != nil {
+			continue
+		}
+		switch typed := value.(type) {
+		case float64:
+			out[publicID][fmt.Sprint(int(typed))]++
+		case string:
+			out[publicID][typed]++
+		case []any:
+			for _, item := range typed {
+				out[publicID][fmt.Sprint(item)]++
+			}
+		}
+	}
+	return out, rows.Err()
+}
+
+func analyticsVisitWhere(campaignID int64, filter AnalyticsFilter) (string, []any) {
+	parts := []string{"campaign_id=?"}
+	args := []any{campaignID}
+	if filter.Start != nil {
+		parts = append(parts, "created_at>=?")
+		args = append(args, filter.Start.UTC().Format(time.RFC3339Nano))
+	}
+	if filter.End != nil {
+		parts = append(parts, "created_at<?")
+		args = append(args, filter.End.UTC().Format(time.RFC3339Nano))
+	}
+	if filter.AppVersion != "" {
+		parts = append(parts, "json_extract(context_json,'$.app_version')=?")
+		args = append(args, filter.AppVersion)
+	}
+	if filter.ExtensionVersion != "" {
+		parts = append(parts, "json_extract(context_json,'$.extension_version')=?")
+		args = append(args, filter.ExtensionVersion)
+	}
+	if filter.Platform != "" {
+		parts = append(parts, "json_extract(context_json,'$.platform')=?")
+		args = append(args, filter.Platform)
+	}
+	if filter.Browser != "" {
+		parts = append(parts, "coarse_browser=?")
+		args = append(args, filter.Browser)
+	}
+	if filter.OSFamily != "" {
+		parts = append(parts, "coarse_os=?")
+		args = append(args, filter.OSFamily)
+	}
+	return strings.Join(parts, " AND "), args
+}
+
+func analyticsSubmissionWhere(campaignID int64, filter AnalyticsFilter) (string, []any) {
+	parts := []string{"s.campaign_id=?"}
+	args := []any{campaignID}
+	if filter.Start != nil {
+		parts = append(parts, "s.submitted_at>=?")
+		args = append(args, filter.Start.UTC().Format(time.RFC3339Nano))
+	}
+	if filter.End != nil {
+		parts = append(parts, "s.submitted_at<?")
+		args = append(args, filter.End.UTC().Format(time.RFC3339Nano))
+	}
+	diagnosticWhere, diagnosticArgs := analyticsDiagnosticWhere(filter)
+	if diagnosticWhere != "" {
+		parts = append(parts, diagnosticWhere)
+		args = append(args, diagnosticArgs...)
+	}
+	return strings.Join(parts, " AND "), args
+}
+
+func analyticsStartWhere(campaignID int64, filter AnalyticsFilter) (string, []any) {
+	parts := []string{"fs.campaign_id=?"}
+	args := []any{campaignID}
+	if filter.Start != nil {
+		parts = append(parts, "fs.started_at>=?")
+		args = append(args, filter.Start.UTC().Format(time.RFC3339Nano))
+	}
+	if filter.End != nil {
+		parts = append(parts, "fs.started_at<?")
+		args = append(args, filter.End.UTC().Format(time.RFC3339Nano))
+	}
+	diagnosticWhere, diagnosticArgs := analyticsDiagnosticWhere(filter)
+	if diagnosticWhere != "" {
+		parts = append(parts, diagnosticWhere)
+		args = append(args, diagnosticArgs...)
+	}
+	return strings.Join(parts, " AND "), args
+}
+
+func analyticsDiagnosticWhere(filter AnalyticsFilter) (string, []any) {
+	var parts []string
+	var args []any
+	for _, item := range []struct {
+		value, expression string
+	}{
+		{filter.AppVersion, "json_extract(v.context_json,'$.app_version')=?"},
+		{filter.ExtensionVersion, "json_extract(v.context_json,'$.extension_version')=?"},
+		{filter.Platform, "json_extract(v.context_json,'$.platform')=?"},
+		{filter.Browser, "v.coarse_browser=?"},
+		{filter.OSFamily, "v.coarse_os=?"},
+	} {
+		if item.value != "" {
+			parts = append(parts, item.expression)
+			args = append(args, item.value)
+		}
+	}
+	return strings.Join(parts, " AND "), args
+}
+
 func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int64) ([]Submission, error) {
+	return q.ListSubmissionsWithAnswersFiltered(ctx, campaignID, AnalyticsFilter{})
+}
+
+func (q *Querier) ListSubmissionsWithAnswersFiltered(ctx context.Context, campaignID int64, filter AnalyticsFilter) ([]Submission, error) {
+	where, args := analyticsSubmissionWhere(campaignID, filter)
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT s.id, s.public_id, s.campaign_id, v.public_id, s.install_token_hash IS NOT NULL, s.submitted_at, v.context_json,
-		       a.field_public_id, a.field_type, a.field_label_snapshot, a.value_json
+		       a.field_public_id, a.field_type, a.field_label_snapshot, a.value_json, v.coarse_browser, v.coarse_os
 		FROM campaign_submissions s
 		LEFT JOIN campaign_visits v ON v.id = s.visit_id
 		LEFT JOIN campaign_submission_answers a ON a.submission_id = s.id
-		WHERE s.campaign_id = ?
+		WHERE `+where+`
 		ORDER BY s.id DESC, a.id ASC
-	`, campaignID)
+	`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -305,12 +542,13 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 		var sVisitPublicID sql.NullString
 		var sHasInstallTokenHash bool
 		var contextJSON sql.NullString
+		var coarseBrowser, coarseOS sql.NullString
 
 		var aFieldPublicID, aFieldType, aFieldLabelSnapshot, aValueJSON sql.NullString
 
 		err := rows.Scan(
 			&sID, &sPublicID, &sCampaignID, &sVisitPublicID, &sHasInstallTokenHash, &sSubmittedAt, &contextJSON,
-			&aFieldPublicID, &aFieldType, &aFieldLabelSnapshot, &aValueJSON,
+			&aFieldPublicID, &aFieldType, &aFieldLabelSnapshot, &aValueJSON, &coarseBrowser, &coarseOS,
 		)
 		if err != nil {
 			return nil, err
@@ -330,6 +568,8 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 				HasInstallTokenHash: sHasInstallTokenHash,
 				SubmittedAt:         sSubmittedAt,
 				URLContext:          urlContext,
+				CoarseBrowser:       coarseBrowser,
+				CoarseOS:            coarseOS,
 			}
 			submissions = append(submissions, sub)
 			idx = len(submissions) - 1

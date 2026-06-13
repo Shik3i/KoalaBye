@@ -7,6 +7,44 @@ document.documentElement.classList.add("js");
     }
 
     window.addEventListener("DOMContentLoaded", function() {
+        var commandDialog = document.querySelector("[data-command-dialog]");
+        var commandOpen = document.querySelector("[data-command-open]");
+        var commandClose = document.querySelector("[data-command-close]");
+        var commandInput = document.querySelector("[data-command-input]");
+        var commandReturnFocus = null;
+        var openCommand = function() {
+            if (!commandDialog || !commandDialog.showModal) return;
+            commandReturnFocus = document.activeElement;
+            commandDialog.showModal();
+            window.setTimeout(function() { if (commandInput) commandInput.focus(); }, 0);
+        };
+        var closeCommand = function() {
+            if (!commandDialog || !commandDialog.open) return;
+            commandDialog.close();
+            if (commandReturnFocus && commandReturnFocus.focus) commandReturnFocus.focus();
+        };
+        if (commandOpen && commandDialog) {
+            commandOpen.addEventListener("click", function(event) {
+                event.preventDefault();
+                openCommand();
+            });
+        }
+        if (commandClose) commandClose.addEventListener("click", closeCommand);
+        if (commandDialog) {
+            commandDialog.addEventListener("click", function(event) {
+                if (event.target === commandDialog) closeCommand();
+            });
+        }
+        document.addEventListener("keydown", function(event) {
+            if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+                event.preventDefault();
+                openCommand();
+            } else if (event.key === "Escape" && commandDialog && commandDialog.open) {
+                event.preventDefault();
+                closeCommand();
+            }
+        });
+
         var toggles = document.querySelectorAll(".theme-toggle");
         toggles.forEach(function(btn) {
             var updateThemeButton = function() {
@@ -71,12 +109,31 @@ document.documentElement.classList.add("js");
         });
 
         // Auto-submit public forms on choice selection (radio/rating) if all fields are answered
-        var publicForm = document.querySelector(".public-page form");
+        var publicForm = document.querySelector("[data-public-feedback-form]");
         if (publicForm) {
+            var startRecorded = false;
+            var recordStart = function() {
+                if (startRecorded) return;
+                startRecorded = true;
+                var visit = publicForm.querySelector("input[name='visit_public_id']");
+                var startURL = publicForm.getAttribute("data-start-url");
+                if (!visit || !visit.value || !startURL) return;
+                var body = new URLSearchParams();
+                body.set("visit_public_id", visit.value);
+                fetch(startURL, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
+                    body: body.toString(),
+                    credentials: "same-origin",
+                    keepalive: true
+                }).catch(function() {});
+            };
             var inputs = publicForm.querySelectorAll("input[name^='field_'], textarea[name^='field_']");
             var fieldNames = new Set();
             inputs.forEach(function(el) {
                 fieldNames.add(el.name);
+                el.addEventListener("input", recordStart, {once: true});
+                el.addEventListener("change", recordStart, {once: true});
             });
 
             publicForm.querySelectorAll("input[type='radio']").forEach(function(radio) {
@@ -128,6 +185,50 @@ document.documentElement.classList.add("js");
                 if (!window.confirm(form.getAttribute("data-confirm"))) {
                     event.preventDefault();
                 }
+            });
+        });
+
+        document.querySelectorAll(".page form[method='post'].form-stack").forEach(function(form) {
+            if (form.hasAttribute("data-no-dirty-guard")) return;
+            var initial = new FormData(form);
+            var snapshot = function() {
+                return Array.from(new FormData(form).entries()).map(function(entry) {
+                    return entry[0] + "=" + entry[1];
+                }).join("&");
+            };
+            var initialValue = Array.from(initial.entries()).map(function(entry) {
+                return entry[0] + "=" + entry[1];
+            }).join("&");
+            var submitted = false;
+            form.addEventListener("submit", function() {
+                submitted = true;
+                form.setAttribute("aria-busy", "true");
+                form.querySelectorAll("button[type='submit']").forEach(function(button) {
+                    button.disabled = true;
+                });
+            });
+            window.addEventListener("beforeunload", function(event) {
+                if (!submitted && snapshot() !== initialValue) {
+                    event.preventDefault();
+                    event.returnValue = "";
+                }
+            });
+        });
+
+        document.body.addEventListener("htmx:beforeRequest", function(event) {
+            var target = event.target;
+            target.setAttribute("aria-busy", "true");
+            target.querySelectorAll("button, input, select, textarea").forEach(function(control) {
+                control.dataset.htmxWasDisabled = control.disabled ? "true" : "false";
+                control.disabled = true;
+            });
+        });
+        document.body.addEventListener("htmx:afterRequest", function(event) {
+            var target = event.target;
+            target.removeAttribute("aria-busy");
+            target.querySelectorAll("[data-htmx-was-disabled]").forEach(function(control) {
+                control.disabled = control.dataset.htmxWasDisabled === "true";
+                delete control.dataset.htmxWasDisabled;
             });
         });
 

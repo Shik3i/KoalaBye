@@ -7,19 +7,23 @@ import (
 )
 
 templ CampaignNav(campaign db.Campaign) {
-	<nav class="subnav">
-		<a href={ templ.SafeURL(campaignPath(campaign)) }>{ tr(ctx, "campaign.overview") }</a>
-		<a href={ templ.SafeURL(campaignPath(campaign) + "/settings") }>{ tr(ctx, "campaign.settings") }</a>
-		<a href={ templ.SafeURL(campaignPath(campaign) + "/branding") }>{ tr(ctx, "campaign.branding.title") }</a>
-		<a href={ templ.SafeURL(campaignPath(campaign) + "/privacy") }>{ tr(ctx, "campaign.privacy.title") }</a>
-		<a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a>
-		<a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a>
-		<a href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.title") }</a>
-		<a href={ templ.SafeURL(campaignPath(campaign) + "/access") }>{ tr(ctx, "campaign.access.title") }</a>
+	<nav class="subnav" aria-label={ tr(ctx, "campaign.nav.aria") }>
+		<a href={ templ.SafeURL(campaignPath(campaign)) } aria-current={ campaignNavCurrent(ctx, "overview") }>{ tr(ctx, "campaign.overview") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/settings") } aria-current={ campaignNavCurrent(ctx, "settings") }>{ tr(ctx, "campaign.settings") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/branding") } aria-current={ campaignNavCurrent(ctx, "branding") }>{ tr(ctx, "campaign.branding.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/privacy") } aria-current={ campaignNavCurrent(ctx, "privacy") }>{ tr(ctx, "campaign.privacy.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/form") } aria-current={ campaignNavCurrent(ctx, "form") }>{ tr(ctx, "form.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/responses") } aria-current={ campaignNavCurrent(ctx, "responses") }>{ tr(ctx, "responses.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/analytics") } aria-current={ campaignNavCurrent(ctx, "analytics") }>{ tr(ctx, "analytics.title") }</a>
+		<a href={ templ.SafeURL(campaignPath(campaign) + "/access") } aria-current={ campaignNavCurrent(ctx, "access") }>{ tr(ctx, "campaign.access.title") }</a>
 	</nav>
 }
 
-templ CampaignList(instanceName string, user db.User, org db.Organization, campaigns []db.Campaign, redirects map[int64]db.CampaignRedirect, limits db.OrganizationLimits, count int64, canCreate bool) {
+type CampaignListOptions struct {
+	Query, Status, Redirect, Sort string
+}
+
+templ CampaignList(instanceName string, user db.User, org db.Organization, campaigns []db.Campaign, redirects map[int64]db.CampaignRedirect, activity map[int64]string, limits db.OrganizationLimits, count int64, canCreate bool, filters CampaignListOptions) {
 	@Layout(tr(ctx, "campaign.title"), instanceName, &user) {
 		<section class="page-heading">
 			<div><div class="eyebrow">{ org.Name }</div><h1>{ tr(ctx, "campaign.title") }</h1><p class="muted">{ tr(ctx, "campaign.list.description") }</p></div>
@@ -30,12 +34,39 @@ templ CampaignList(instanceName string, user db.User, org db.Organization, campa
 		if count >= limits.MaxCampaigns {
 			<div class="notice">{ tr(ctx, "campaign.limit.message") }</div>
 		}
+		<form method="get" class="panel filter-form">
+			<div class="filter-grid">
+				<label>{ tr(ctx, "campaign.filters.search") }<input type="search" name="q" value={ filters.Query }/></label>
+				<label>
+					{ tr(ctx, "campaign.status") }
+					<select name="status">
+						<option value="all">{ tr(ctx, "campaign.filters.all") }</option>
+						for _, status := range []string{"draft", "active", "paused", "archived"} {
+							<option value={ status } selected?={ filters.Status == status }>{ tr(ctx, "campaign.status." + status) }</option>
+						}
+					</select>
+				</label>
+				<label>{ tr(ctx, "campaign.filters.redirect") }<select name="redirect"><option value="all">{ tr(ctx, "campaign.filters.all") }</option><option value="active" selected?={ filters.Redirect == "active" }>{ tr(ctx, "campaign.filters.redirect_active") }</option><option value="none" selected?={ filters.Redirect == "none" }>{ tr(ctx, "campaign.filters.redirect_none") }</option></select></label>
+				<label>
+					{ tr(ctx, "campaign.filters.sort") }
+					<select name="sort">
+						for _, item := range []string{"updated_desc", "updated_asc", "created_desc", "created_asc", "name_asc", "activity_desc"} {
+							<option value={ item } selected?={ filters.Sort == item || filters.Sort == "" && item == "updated_desc" }>{ tr(ctx, "campaign.filters.sort." + item) }</option>
+						}
+					</select>
+				</label>
+			</div>
+			<div class="actions compact"><button type="submit">{ tr(ctx, "common.apply") }</button><a class="button secondary" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns") }>{ tr(ctx, "campaign.filters.reset") }</a></div>
+		</form>
 		<div class="grid two">
 			for _, campaign := range campaigns {
 				<a class="panel card-link" href={ templ.SafeURL("/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID) }>
 					<h2>{ campaign.Name }</h2>
 					<p>{ campaign.Description.String }</p>
 					<div class="stats"><span class="badge">{ tr(ctx, "campaign.status." + campaign.Status) }</span><span>{ campaign.Slug }</span></div>
+					if activity[campaign.ID] != "" {
+						<p class="muted">{ tr(ctx, "campaign.filters.last_activity", activity[campaign.ID]) }</p>
+					}
 					if redirect, ok := redirects[campaign.ID]; ok {
 						<p class="redirect-status">{ tr(ctx, "campaign.redirect.status", redirect.TargetCampaignName) }</p>
 					}
@@ -43,8 +74,13 @@ templ CampaignList(instanceName string, user db.User, org db.Organization, campa
 			}
 			if len(campaigns) == 0 {
 				<div class="panel empty-state">
-					<h2>{ tr(ctx, "campaign.empty_title") }</h2>
-					<p>{ tr(ctx, "campaign.empty_explanation") }</p>
+					if filters.Query != "" || (filters.Status != "" && filters.Status != "all") || (filters.Redirect != "" && filters.Redirect != "all") {
+						<h2>{ tr(ctx, "campaign.filters.no_results") }</h2>
+						<p>{ tr(ctx, "campaign.filters.no_results_help") }</p>
+					} else {
+						<h2>{ tr(ctx, "campaign.empty_title") }</h2>
+						<p>{ tr(ctx, "campaign.empty_explanation") }</p>
+					}
 					<ul>
 						<li>{ tr(ctx, "campaign.example.chrome") }</li>
 						<li>{ tr(ctx, "campaign.example.firefox") }</li>
@@ -120,13 +156,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<!-- ONBOARDING MODE: Checklist and snippet at the top to guide setup -->
 			<section class="panel checklist">
 				<h2>{ tr(ctx, "campaign.checklist.title") }</h2>
-				<ul class="checklist-list">
-					@checklistItem(true, "campaign.checklist.privacy", campaignPath(campaign)+"/privacy")
-					@checklistItem(fieldCount > 0, "campaign.checklist.form", campaignPath(campaign)+"/form")
-					@checklistItem(campaign.PublicLinkEnabled, "campaign.checklist.public_link", campaignPath(campaign)+"/settings")
-					@checklistItem(campaign.PublicLinkEnabled, "campaign.checklist.uninstall_url", "#extension-integration")
-					@checklistItem(campaign.Status == "active" && campaign.PublicLinkEnabled && fieldCount > 0, "campaign.checklist.test", baseURL+"/c/"+campaign.PublicID)
-				</ul>
+				@CampaignChecklist(campaign, settings, fieldCount, submissionStats.Total, baseURL)
 				<p class="muted">{ tr(ctx, "campaign.checklist.derived") }</p>
 			</section>
 			<section class="panel" id="extension-integration">
@@ -201,13 +231,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				<details class="integration-details">
 					<summary>{ tr(ctx, "campaign.checklist.title.collapsed") }</summary>
 					<div style="padding-top: 12px;">
-						<ul class="checklist-list">
-							@checklistItem(true, "campaign.checklist.privacy", campaignPath(campaign)+"/privacy")
-							@checklistItem(fieldCount > 0, "campaign.checklist.form", campaignPath(campaign)+"/form")
-							@checklistItem(campaign.PublicLinkEnabled, "campaign.checklist.public_link", campaignPath(campaign)+"/settings")
-							@checklistItem(campaign.PublicLinkEnabled, "campaign.checklist.uninstall_url", "#extension-integration")
-							@checklistItem(campaign.Status == "active" && campaign.PublicLinkEnabled && fieldCount > 0, "campaign.checklist.test", baseURL+"/c/"+campaign.PublicID)
-						</ul>
+						@CampaignChecklist(campaign, settings, fieldCount, submissionStats.Total, baseURL)
 						<p class="muted" style="margin-top: 12px; font-size: 0.85rem;">{ tr(ctx, "campaign.checklist.derived") }</p>
 					</div>
 				</details>
@@ -450,6 +474,82 @@ templ checklistItem(done bool, key, href string) {
 			}
 		</span>
 	</li>
+}
+
+templ CampaignChecklist(campaign db.Campaign, settings db.CampaignSettings, fieldCount int, submissions int64, baseURL string) {
+	{{ completed, current := checklistProgress(campaign, settings, fieldCount, submissions) }}
+	<div class="progress-summary">
+		<label for="campaign-progress">{ tr(ctx, "campaign.checklist.progress", completed, 5) }</label>
+		<progress id="campaign-progress" value={ fmt.Sprint(completed) } max="5">{ fmt.Sprint(completed) } / 5</progress>
+	</div>
+	<ul class="checklist-list">
+		@checklistStep(0, current, settings.ShowPrivacyNotice && settings.HashInstallToken, "campaign.checklist.privacy", campaignPath(campaign)+"/privacy")
+		@checklistStep(1, current, fieldCount > 0, "campaign.checklist.form", campaignPath(campaign)+"/form")
+		@checklistStep(2, current, fieldCount > 0, "campaign.checklist.preview", campaignPath(campaign)+"/preview")
+		@checklistStep(3, current, campaign.Status == "active" && campaign.PublicLinkEnabled, "campaign.checklist.public_link", campaignPath(campaign)+"/settings")
+		@checklistStep(4, current, submissions > 0, "campaign.checklist.test", baseURL+"/c/"+campaign.PublicID)
+	</ul>
+	if current < 5 {
+		<a class="button checklist-next" href={ templ.SafeURL(checklistHref(current, campaign, baseURL)) }>{ tr(ctx, "campaign.checklist.next") }</a>
+	}
+}
+
+templ checklistStep(index, current int, done bool, key, href string) {
+	<li class={ templ.KV("current", !done && index == current) }>
+		<span class={ templ.KV("checklist-status", true), templ.KV("done", done) } aria-hidden="true">
+			if done {
+				✓
+			} else if index == current {
+				→
+			} else {
+				○
+			}
+		</span>
+		<a href={ templ.SafeURL(href) } aria-current={ currentPage(!done && index == current) }>{ tr(ctx, key) }</a>
+		<span class="visually-hidden">
+			if done {
+				{ tr(ctx, "campaign.checklist.complete") }
+			} else if index == current {
+				{ tr(ctx, "campaign.checklist.current") }
+			} else {
+				{ tr(ctx, "campaign.checklist.incomplete") }
+			}
+		</span>
+	</li>
+}
+
+func checklistProgress(campaign db.Campaign, settings db.CampaignSettings, fieldCount int, submissions int64) (int, int) {
+	steps := []bool{
+		settings.ShowPrivacyNotice && settings.HashInstallToken,
+		fieldCount > 0,
+		fieldCount > 0,
+		campaign.Status == "active" && campaign.PublicLinkEnabled,
+		submissions > 0,
+	}
+	completed, current := 0, len(steps)
+	for index, done := range steps {
+		if done {
+			completed++
+		} else if current == len(steps) {
+			current = index
+		}
+	}
+	return completed, current
+}
+
+func checklistHref(step int, campaign db.Campaign, baseURL string) string {
+	switch step {
+	case 0:
+		return campaignPath(campaign) + "/privacy"
+	case 1:
+		return campaignPath(campaign) + "/form"
+	case 2:
+		return campaignPath(campaign) + "/preview"
+	case 3:
+		return campaignPath(campaign) + "/settings"
+	default:
+		return baseURL + "/c/" + campaign.PublicID
+	}
 }
 
 templ languageSelect(selected string) {

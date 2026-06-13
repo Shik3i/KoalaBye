@@ -51,7 +51,7 @@ func Routes(
 	r.Use(web.FlashMiddleware(cfg.Secret, cfg.SecureCookies))
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
+			ctx := templates.WithCurrentPath(r.Context(), r.URL.Path)
 			if settings, err := queries.Settings(ctx); err == nil {
 				ctx = templates.WithInstanceSettings(ctx, settings)
 			}
@@ -117,6 +117,8 @@ func Routes(
 	r.Get("/join/{inviteCode}", organizationsHandler.JoinGet)
 	r.Get("/c/{campaignPublicID}", campaignsHandler.PublicByID)
 	r.Get("/u/{orgSlug}/{campaignSlug}", campaignsHandler.PublicBySlug)
+	r.Post("/c/{campaignPublicID}/start", campaignsHandler.PublicFormStartByID)
+	r.Post("/u/{orgSlug}/{campaignSlug}/start", campaignsHandler.PublicFormStartBySlug)
 	r.Post("/c/{campaignPublicID}/submit", campaignsHandler.PublicSubmitByID)
 	r.Post("/u/{orgSlug}/{campaignSlug}/submit", campaignsHandler.PublicSubmitBySlug)
 	r.With(auth.RequireUser(csrf), auth.ValidatePosts(csrf)).Post("/join/{inviteCode}", organizationsHandler.JoinPost)
@@ -155,6 +157,7 @@ func Routes(
 		protected.Use(auth.ValidatePosts(csrf))
 		protected.Post("/logout", authHandler.LogoutPost)
 		protected.Get("/app", dashboardHandler.Get)
+		protected.Get("/app/search", dashboardHandler.Search)
 		protected.Get("/app/orgs", organizationsHandler.List)
 		protected.Get("/app/orgs/new", organizationsHandler.New)
 		protected.Post("/app/orgs", organizationsHandler.Create)

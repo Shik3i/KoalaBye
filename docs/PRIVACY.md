@@ -6,7 +6,7 @@ KoalaBye is designed for useful uninstall feedback without building visitor prof
 
 ### Strict
 
-Strict is the default for new campaigns. It can count visits and submissions, store submitted answers, and HMAC-hash an optional install token. It does not collect referrer domains, coarse browser or operating-system families, URL context, partial responses, IP addresses, raw user agents, raw tokens, full referrer URLs, cookies, or fingerprints.
+Strict is the default for new campaigns. It can count visits, first form interactions, and submissions, store submitted answers, and HMAC-hash an optional install token. It does not collect referrer domains, coarse browser or operating-system families, URL context, partial responses, IP addresses, raw user agents, raw tokens, full referrer URLs, cookies, or fingerprints.
 
 ### Balanced Diagnostics
 
@@ -22,6 +22,8 @@ Raw User-Agent values are parsed in memory and discarded. Unknown values become 
 ### Partial Responses
 
 Partial response collection is not implemented and is effectively `off`. KoalaBye does not autosave text drafts or non-text answers before final submission.
+
+The first interaction with a public feedback form records one form-start event against the already-created anonymous visit. The event contains no field name, field value, draft, cookie, or new identifier. Repeated interactions for the same visit do not create additional form-start events.
 
 A future `structured_only` mode must be explicit, publicly disclosed, body-limited, option-validated, cookie-free, and restricted to checkbox, radio, rating, last-touched-field, and completion-state data. Text and textarea drafts must remain excluded unless a separate, clearly warned setting is deliberately designed and reviewed.
 
@@ -65,6 +67,7 @@ Authorized CSV and JSON exports can include sanitized URL context attached to th
 - no paid-tier data lock-in
 - no custom JavaScript on public forms
 - no hidden autosave of text fields
+- no field-level data in form-start events
 - privacy controls visible to campaign owners
 - enabled diagnostics disclosed on public pages
 

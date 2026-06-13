@@ -72,3 +72,46 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 		</section>
 	}
 }
+
+templ GlobalSearch(instanceName string, user db.User, query string, organizations []db.Organization, campaigns []db.Campaign) {
+	@Layout(tr(ctx, "search.title"), instanceName, &user) {
+		<section class="page-heading"><div><div class="eyebrow">{ tr(ctx, "search.eyebrow") }</div><h1>{ tr(ctx, "search.title") }</h1></div></section>
+		<form method="get" action="/app/search" class="panel form-stack search-page-form">
+			<label>{ tr(ctx, "search.label") }<input type="search" name="q" value={ query } autofocus/></label>
+			<button type="submit">{ tr(ctx, "search.submit") }</button>
+		</form>
+		if query == "" {
+			<div class="notice">{ tr(ctx, "search.empty_query") }</div>
+		} else if len(organizations) == 0 && len(campaigns) == 0 {
+			<div class="panel empty-state"><h2>{ tr(ctx, "search.no_results") }</h2><p>{ tr(ctx, "search.no_results_help", query) }</p></div>
+		} else {
+			if len(organizations) > 0 {
+				<section>
+					<h2>{ tr(ctx, "nav.organizations") }</h2>
+					<div class="grid two">
+						for _, organization := range organizations {
+							<a class="panel card-link" href={ templ.SafeURL("/app/orgs/" + organization.PublicID) }><h3>{ organization.Name }</h3><p>{ organization.Slug }</p></a>
+						}
+					</div>
+				</section>
+			}
+			if len(campaigns) > 0 {
+				<section>
+					<h2>{ tr(ctx, "campaign.title") }</h2>
+					for _, campaign := range campaigns {
+						<article class="panel search-result">
+							<div><h3>{ campaign.Name }</h3><p>{ campaign.OrganizationName } · { campaign.Slug }</p></div>
+							<nav aria-label={ tr(ctx, "search.campaign_links", campaign.Name) }>
+								<a href={ templ.SafeURL(campaignPath(campaign)) }>{ tr(ctx, "campaign.overview") }</a>
+								<a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a>
+								<a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a>
+								<a href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.title") }</a>
+								<a href={ templ.SafeURL(campaignPath(campaign) + "/settings") }>{ tr(ctx, "campaign.settings") }</a>
+							</nav>
+						</article>
+					}
+				</section>
+			}
+		}
+	}
+}

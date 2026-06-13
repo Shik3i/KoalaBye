@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -25,21 +25,50 @@ func (h *Handler) Analytics(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	rangeKey, start := analyticsRange(r.FormValue("range"), time.Now().UTC())
-	analytics, err := h.q.CampaignAnalytics(r.Context(), campaign.ID, start, time.Now().UTC())
-	if err != nil {
-		http.Error(w, "load analytics", http.StatusInternalServerError)
-		return
-	}
 	settings, err := h.q.GetCampaignSettings(r.Context(), campaign.ID)
 	if err != nil {
 		http.Error(w, "load settings", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignAnalyticsPage(h.cfg.InstanceName, user, campaign, settings, analytics, rangeKey, role == "owner", ""))
+	filterOptions, err := h.q.CampaignAnalyticsFilterOptions(r.Context(), campaign.ID)
+	if err != nil {
+		http.Error(w, "load analytics filters", http.StatusInternalServerError)
+		return
+	}
+	rangeKey, filter := analyticsFilter(r.URL.Query(), settings, filterOptions, time.Now().UTC())
+	analytics, err := h.q.CampaignAnalytics(r.Context(), campaign.ID, filter, time.Now().UTC())
+	if err != nil {
+		http.Error(w, "load analytics", http.StatusInternalServerError)
+		return
+	}
+	campaigns, _ := h.q.ListCampaignsForUser(r.Context(), campaign.OrganizationID, user.ID)
+	var comparison *db.CampaignAnalytics
+	comparisonName := ""
+	compareID := r.URL.Query().Get("compare_campaign")
+	for _, candidate := range campaigns {
+		if candidate.PublicID == compareID && candidate.ID != campaign.ID {
+			if allowed, _ := h.permissions.CanViewCampaign(r.Context(), user.ID, candidate.ID); allowed {
+				value, compareErr := h.q.CampaignAnalytics(r.Context(), candidate.ID, filter, time.Now().UTC())
+				if compareErr == nil {
+					comparison, comparisonName = &value, candidate.Name
+				}
+			}
+			break
+		}
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignAnalyticsPage(
+		h.cfg.InstanceName, user, campaign, settings, analytics,
+		templates.AnalyticsPageOptions{
+			RangeKey: rangeKey, Filter: filter, FilterOptions: filterOptions,
+			CompareCampaigns: campaigns, CompareCampaignID: compareID,
+			Comparison: comparison, ComparisonName: comparisonName,
+			CanDelete: role == "owner",
+		},
+		"",
+	))
 }
 
-func analyticsRange(value string, now time.Time) (string, *time.Time) {
+func analyticsRange(value string, now time.Time) (string, *time.Time, *time.Time) {
 	days := 30
 	key := "30"
 	switch value {
@@ -48,10 +77,37 @@ func analyticsRange(value string, now time.Time) (string, *time.Time) {
 	case "90":
 		days, key = 90, "90"
 	case "all":
-		return "all", nil
+		return "all", nil, nil
 	}
 	start := time.Date(now.UTC().Year(), now.UTC().Month(), now.UTC().Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -(days - 1))
-	return key, &start
+	end := time.Date(now.UTC().Year(), now.UTC().Month(), now.UTC().Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, 1)
+	return key, &start, &end
+}
+
+func analyticsFilter(values url.Values, settings db.CampaignSettings, options db.AnalyticsFilterOptions, now time.Time) (string, db.AnalyticsFilter) {
+	key, start, end := analyticsRange(values.Get("range"), now)
+	filter := db.AnalyticsFilter{Start: start, End: end}
+	if settings.CollectURLContext {
+		filter.AppVersion = allowedFilterValue(values.Get("app_version"), options.AppVersions)
+		filter.ExtensionVersion = allowedFilterValue(values.Get("extension_version"), options.ExtensionVersions)
+		filter.Platform = allowedFilterValue(values.Get("platform"), options.Platforms)
+	}
+	if settings.CollectCoarseBrowser {
+		filter.Browser = allowedFilterValue(values.Get("browser"), options.Browsers)
+	}
+	if settings.CollectCoarseOS {
+		filter.OSFamily = allowedFilterValue(values.Get("os"), options.OSFamilies)
+	}
+	return key, filter
+}
+
+func allowedFilterValue(value string, allowed []string) string {
+	for _, candidate := range allowed {
+		if value == candidate {
+			return value
+		}
+	}
+	return ""
 }
 
 func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
@@ -60,22 +116,62 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	submissions, err := h.q.ListSubmissionsWithAnswers(r.Context(), campaign.ID)
+	settings, err := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	if err != nil {
+		http.Error(w, "load export settings", http.StatusInternalServerError)
+		return
+	}
+	filterOptions, _ := h.q.CampaignAnalyticsFilterOptions(r.Context(), campaign.ID)
+	_, filter := analyticsFilter(r.URL.Query(), settings, filterOptions, time.Now().UTC())
+	submissions, err := h.q.ListSubmissionsWithAnswersFiltered(r.Context(), campaign.ID, filter)
 	if err != nil {
 		http.Error(w, "load export", http.StatusInternalServerError)
 		return
 	}
+	selected := selectedExportColumns(r.URL.Query()["column"], settings)
 	columns, labels := exportColumns(submissions)
-	contextColumns := exportContextColumns(submissions)
-	var output bytes.Buffer
-	writer := csv.NewWriter(&output)
-	header := []string{"submission_public_id", "submitted_at", "visit_public_id", "has_install_token_hash"}
-	for _, key := range contextColumns {
-		header = append(header, "context_"+key)
+	contextColumns := []string{}
+	if selected["diagnostics"] && settings.CollectURLContext {
+		contextColumns = exportContextColumns(submissions)
 	}
-	for _, publicID := range columns {
-		header = append(header, "field_"+publicID+"_"+sanitizeExportLabel(labels[publicID]))
+	header := []string{}
+	if selected["submitted_at"] {
+		header = append(header, "submitted_at")
 	}
+	if selected["submission_id"] {
+		header = append(header, "submission_id")
+	}
+	if selected["visit_id"] {
+		header = append(header, "visit_id")
+	}
+	if selected["diagnostics"] {
+		if settings.CollectCoarseBrowser {
+			header = append(header, "browser_family")
+		}
+		if settings.CollectCoarseOS {
+			header = append(header, "operating_system")
+		}
+		for _, key := range contextColumns {
+			header = append(header, "context_"+key)
+		}
+	}
+	if selected["answers"] {
+		for _, publicID := range columns {
+			header = append(header, "field_"+publicID+"_"+sanitizeExportLabel(labels[publicID]))
+		}
+	}
+	if len(header) == 0 {
+		http.Error(w, "select at least one export column", http.StatusUnprocessableEntity)
+		return
+	}
+	if err := h.q.AuditCampaignExport(r.Context(), user.ID, campaign, "csv", len(submissions)); err != nil {
+		http.Error(w, "audit export", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+safeExportFilename(campaign.Slug)+`-submissions.csv"`)
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+	writer := csv.NewWriter(w)
 	if err := writer.Write(header); err != nil {
 		return
 	}
@@ -84,12 +180,34 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		for _, answer := range submission.Answers {
 			values[answer.FieldPublicID] = exportAnswerValue(answer.ValueJSON)
 		}
-		row := []string{submission.PublicID, submission.SubmittedAt, submission.VisitPublicID.String, strconv.FormatBool(submission.HasInstallTokenHash)}
-		for _, key := range contextColumns {
-			row = append(row, submission.URLContext[key])
+		row := []string{}
+		if selected["submitted_at"] {
+			row = append(row, submission.SubmittedAt)
 		}
-		for _, publicID := range columns {
-			row = append(row, values[publicID])
+		if selected["submission_id"] {
+			row = append(row, submission.PublicID)
+		}
+		if selected["visit_id"] {
+			row = append(row, submission.VisitPublicID.String)
+		}
+		if selected["diagnostics"] {
+			if settings.CollectCoarseBrowser {
+				row = append(row, submission.CoarseBrowser.String)
+			}
+			if settings.CollectCoarseOS {
+				row = append(row, submission.CoarseOS.String)
+			}
+			for _, key := range contextColumns {
+				row = append(row, submission.URLContext[key])
+			}
+		}
+		if selected["answers"] {
+			for _, publicID := range columns {
+				row = append(row, values[publicID])
+			}
+		}
+		for index := range row {
+			row[index] = safeCSVCell(row[index])
 		}
 		if err := writer.Write(row); err != nil {
 			return
@@ -100,13 +218,35 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "create export", http.StatusInternalServerError)
 		return
 	}
-	if err := h.q.AuditCampaignExport(r.Context(), user.ID, campaign, "csv", len(submissions)); err != nil {
-		http.Error(w, "audit export", http.StatusInternalServerError)
-		return
+}
+
+func selectedExportColumns(values []string, settings db.CampaignSettings) map[string]bool {
+	allowed := map[string]bool{"submitted_at": true, "submission_id": true, "visit_id": true, "answers": true}
+	if settings.CollectURLContext || settings.CollectCoarseBrowser || settings.CollectCoarseOS {
+		allowed["diagnostics"] = true
 	}
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="`+safeExportFilename(campaign.Slug)+`-submissions.csv"`)
-	_, _ = w.Write(output.Bytes())
+	selected := map[string]bool{}
+	if len(values) == 0 {
+		selected = map[string]bool{"submitted_at": true, "submission_id": true, "visit_id": true, "answers": true}
+		if allowed["diagnostics"] {
+			selected["diagnostics"] = true
+		}
+		return selected
+	}
+	for _, value := range values {
+		if allowed[value] {
+			selected[value] = true
+		}
+	}
+	return selected
+}
+
+func safeCSVCell(value string) string {
+	trimmed := strings.TrimLeft(value, " \t\r\n")
+	if trimmed != "" && strings.ContainsRune("=+-@", rune(trimmed[0])) {
+		return "'" + value
+	}
+	return value
 }
 
 type jsonExport struct {
@@ -139,7 +279,14 @@ func (h *Handler) ExportJSON(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	submissions, err := h.q.ListSubmissionsWithAnswers(r.Context(), campaign.ID)
+	settings, err := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	if err != nil {
+		http.Error(w, "load export settings", http.StatusInternalServerError)
+		return
+	}
+	filterOptions, _ := h.q.CampaignAnalyticsFilterOptions(r.Context(), campaign.ID)
+	_, filter := analyticsFilter(r.URL.Query(), settings, filterOptions, time.Now().UTC())
+	submissions, err := h.q.ListSubmissionsWithAnswersFiltered(r.Context(), campaign.ID, filter)
 	if err != nil {
 		http.Error(w, "load export", http.StatusInternalServerError)
 		return
@@ -151,7 +298,10 @@ func (h *Handler) ExportJSON(w http.ResponseWriter, r *http.Request) {
 	for _, submission := range submissions {
 		item := jsonExportSubmission{
 			SubmissionPublicID: submission.PublicID, SubmittedAt: submission.SubmittedAt,
-			HasInstallTokenHash: submission.HasInstallTokenHash, URLContext: submission.URLContext,
+			HasInstallTokenHash: submission.HasInstallTokenHash,
+		}
+		if settings.CollectURLContext {
+			item.URLContext = submission.URLContext
 		}
 		if submission.VisitPublicID.Valid {
 			value := submission.VisitPublicID.String
@@ -314,8 +464,11 @@ func (h *Handler) deleteAll(w http.ResponseWriter, r *http.Request, responses bo
 }
 
 func (h *Handler) renderAnalyticsMessage(w http.ResponseWriter, r *http.Request, user db.User, campaign db.Campaign, role, key string) {
-	rangeKey, start := analyticsRange(r.FormValue("range"), time.Now().UTC())
-	analytics, _ := h.q.CampaignAnalytics(r.Context(), campaign.ID, start, time.Now().UTC())
 	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
-	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignAnalyticsPage(h.cfg.InstanceName, user, campaign, settings, analytics, rangeKey, role == "owner", key))
+	filterOptions, _ := h.q.CampaignAnalyticsFilterOptions(r.Context(), campaign.ID)
+	rangeKey, filter := analyticsFilter(r.URL.Query(), settings, filterOptions, time.Now().UTC())
+	analytics, _ := h.q.CampaignAnalytics(r.Context(), campaign.ID, filter, time.Now().UTC())
+	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignAnalyticsPage(h.cfg.InstanceName, user, campaign, settings, analytics, templates.AnalyticsPageOptions{
+		RangeKey: rangeKey, Filter: filter, FilterOptions: filterOptions, CanDelete: role == "owner",
+	}, key))
 }

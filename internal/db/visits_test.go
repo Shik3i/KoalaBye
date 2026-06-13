@@ -129,3 +129,30 @@ func TestRecordCampaignVisitStoresNothingWhenCollectionIsDisabled(t *testing.T) 
 		t.Fatalf("disabled collection stored %d visits", count)
 	}
 }
+
+func TestRecordFormStartDeduplicatesByVisit(t *testing.T) {
+	t.Parallel()
+	q, owner, org := phase3DB(t)
+	campaign := createCampaignForTest(t, q, owner, org, "camp_form_start", "form-start", "strict")
+	ctx := context.Background()
+	now := time.Date(2026, 6, 12, 10, 0, 0, 0, time.UTC)
+	if err := q.RecordCampaignVisit(ctx, RecordVisitInput{
+		PublicID: "visit_form_start", CampaignID: campaign.ID, OrganizationID: org.ID,
+		CountRaw: true, CreatedAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.RecordFormStart(ctx, campaign.ID, "visit_form_start", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := q.RecordFormStart(ctx, campaign.ID, "visit_form_start", now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := q.RawDB().QueryRow(`SELECT COUNT(*) FROM campaign_form_starts WHERE campaign_id=?`, campaign.ID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("form starts=%d, want 1", count)
+	}
+}

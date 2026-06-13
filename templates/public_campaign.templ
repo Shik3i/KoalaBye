@@ -96,9 +96,9 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 				if errorKey != "" {
 					<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
 				}
-				<form method="post" action={ templ.SafeURL("/c/" + campaign.PublicID + "/submit?lang=" + string(localeFromContext(ctx).Locale)) } class="form-stack">
+				<form method="post" action={ templ.SafeURL("/c/" + campaign.PublicID + "/submit?lang=" + string(localeFromContext(ctx).Locale)) } class="form-stack" data-public-feedback-form data-start-url={ "/c/" + campaign.PublicID + "/start" }>
 					<input type="hidden" name="visit_public_id" value={ visitPublicID }/>
-					<div class="honeypot" aria-hidden="true"><label>{ tr(ctx, "public.form.honeypot") }<input name="website" tabindex="-1" autocomplete="off"/></label></div>
+					<div class="honeypot" aria-hidden="true" inert><label>{ tr(ctx, "public.form.honeypot") }<input name="website" tabindex="-1" autocomplete="off"/></label></div>
 					@PublicFields(fields, true)
 					<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.submit") }>{ tr(ctx, "public.form.submit") }</button>
 				</form>
