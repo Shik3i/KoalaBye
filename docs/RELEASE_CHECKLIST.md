@@ -45,6 +45,7 @@
 - [ ] Verify partial responses and text drafts are not saved before final submission.
 - [ ] Search for missing i18n markers and legal-compliance overclaims.
 - [ ] Verify HTTPS deployment uses `KOALABYE_SECURE_COOKIES=true`.
+- [ ] Verify HTTPS deployment uses `KOALABYE_SECURE_COOKIES=true`.
 - [ ] Verify `/healthz` and the Docker healthcheck.
 - [ ] Test a SQLite backup and restore.
 - [ ] Start against the restored database and verify expected sample data.
@@ -53,6 +54,7 @@
 
 ## Publish
 
+- [ ] **CRITICAL**: Obtain explicit permission and approval from the user before committing, tagging, or pushing any release.
 - [ ] Update release notes.
 - [ ] Confirm legal placeholders have been replaced for any public production deployment.
 - [ ] Tag the release.

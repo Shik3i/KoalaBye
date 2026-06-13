@@ -72,6 +72,7 @@ These rules apply to human contributors and coding agents.
 
 ## Contributor and Agent Checklist
 
+- NEVER commit, push, or create release tags without explicit permission and approval from the user.
 - Before adding a page, add its translation keys in every supported UI locale.
 - Before adding a handler, decide and test its authentication and permission requirements.
 - Before adding a table, add a goose migration and migration tests.

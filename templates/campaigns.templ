@@ -289,14 +289,16 @@ templ CampaignAccess(instanceName string, user db.User, campaign db.Campaign, me
 								}
 							</td>
 							<td>
-								<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access") }>
-									<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="user_public_id" value={ member.PublicID }/>
-									<select name="role" aria-label={ tr(ctx, "campaign.access.role") }><option value="viewer">{ tr(ctx, "campaign.role.viewer") }</option><option value="analyst">{ tr(ctx, "campaign.role.analyst") }</option><option value="editor">{ tr(ctx, "campaign.role.editor") }</option><option value="owner">{ tr(ctx, "campaign.role.owner") }</option></select>
-									<button class="link-button" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.grant") }>{ tr(ctx, "campaign.access.grant") }</button>
-								</form>
-								if member.Role.Valid {
-									<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access/" + member.PublicID + "/remove") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "members.remove") }</button></form>
-								}
+								<div class="heading-actions" style="justify-content: flex-start; gap: 8px;">
+									<form class="control-switcher" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access") }>
+										<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="user_public_id" value={ member.PublicID }/>
+										<select name="role" aria-label={ tr(ctx, "campaign.access.role") }><option value="viewer">{ tr(ctx, "campaign.role.viewer") }</option><option value="analyst">{ tr(ctx, "campaign.role.analyst") }</option><option value="editor">{ tr(ctx, "campaign.role.editor") }</option><option value="owner">{ tr(ctx, "campaign.role.owner") }</option></select>
+										<button class="compact-button" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.grant") }>{ tr(ctx, "campaign.access.grant") }</button>
+									</form>
+									if member.Role.Valid {
+										<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/access/" + member.PublicID + "/remove") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="compact-button" style="background: var(--danger);" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "members.remove") }</button></form>
+									}
+								</div>
 							</td>
 						</tr>
 					}
