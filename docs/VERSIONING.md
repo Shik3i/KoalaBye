@@ -9,6 +9,10 @@ Releases with versions `< v1.0.0` are considered experimental/early.
 - Database migrations should be treated carefully.
 - We do not use RC naming unless we explicitly choose to later.
 
+### Tag Immutability
+- **NEVER force-push or overwrite release tags** (e.g., `git push origin vX.Y.Z --force`) once they have been pushed to the remote repository. Overwriting tags causes check-sum mismatches in Go module caches and disrupts downstream automation.
+- If a tag is pushed with bugs, build failures, or formatting issues, increment the patch version and push a new tag instead (e.g., from `v0.1.5` to `v0.1.6`).
+
 Privacy and diagnostics work in this branch prepares the next experimental release after v0.1.2. The wording does not create a release, tag, or compatibility guarantee.
 
 ## Docker Images
