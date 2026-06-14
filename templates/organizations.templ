@@ -40,8 +40,8 @@ templ OrganizationNew(instanceName string, user db.User, errorKey string) {
 			}
 			<form method="post" action="/app/orgs" class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-				<label><div class="field-header"><span>{ tr(ctx, "org.name") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="The public-facing name of the organization.">i</span></div><input name="name" required maxlength="100"/></label>
-				<label><div class="field-header"><span>{ tr(ctx, "org.slug") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip="The URL-safe identifier for the organization.">i</span></div><input name="slug" required maxlength="60" pattern="[A-Za-z0-9_-]+"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "org.name") }<span aria-hidden="true">*</span></span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.org_name") } data-tooltip={ tr(ctx, "tooltip.field.org_name") }>i</span></div><input name="name" required maxlength="100"/></label>
+				<label><div class="field-header"><span>{ tr(ctx, "org.slug") }<span aria-hidden="true">*</span></span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.org_slug") } data-tooltip={ tr(ctx, "tooltip.field.org_slug") }>i</span></div><input name="slug" required maxlength="60" pattern="[A-Za-z0-9_-]+" title={ tr(ctx, "tooltip.field.slug_pattern") }/></label>
 				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.create") }>{ tr(ctx, "org.create") }</button>
 			</form>
 		</section>
@@ -110,7 +110,7 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 			<div class="table-wrap">
 				<table>
 					<caption>{ tr(ctx, "members.table_caption", org.Name) }</caption>
-					<thead><tr><th>{ tr(ctx, "auth.login.username") }</th><th>{ tr(ctx, "setup.display_name") }</th><th>{ tr(ctx, "members.role") }</th><th></th></tr></thead>
+					<thead><tr><th>{ tr(ctx, "auth.login.username") }</th><th>{ tr(ctx, "setup.display_name") }</th><th>{ tr(ctx, "members.role") }</th><th aria-label={ tr(ctx, "common.actions") }></th></tr></thead>
 					<tbody>
 						for _, member := range members {
 							<tr>
@@ -137,6 +137,6 @@ templ OrganizationDetail(instanceName string, user db.User, org db.Organization,
 templ OrganizationSettings(instanceName string, user db.User, org db.Organization, role string, limits db.OrganizationLimits, instanceOwner bool) {
 	@Layout(tr(ctx, "org.settings"), instanceName, &user) {
 		<section class="page-heading"><div><div class="eyebrow">{ org.Name }</div><h1>{ tr(ctx, "org.settings") }</h1></div></section>
-		<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/settings") } class="panel form-stack"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><label><div class="field-header"><span>{ tr(ctx, "org.name") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.org_name") }>i</span></div><input name="name" value={ org.Name } required/></label><label><div class="field-header"><span>{ tr(ctx, "org.slug") }</span><span class="info-icon" tabindex="0" role="img" aria-label="Help info" data-tooltip={ tr(ctx, "tooltip.field.org_slug") }>i</span></div><input name="slug" value={ org.Slug } required/></label><button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button></form>
+		<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/settings") } class="panel form-stack"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><label><div class="field-header"><span>{ tr(ctx, "org.name") }<span aria-hidden="true">*</span></span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.org_name") } data-tooltip={ tr(ctx, "tooltip.field.org_name") }>i</span></div><input name="name" value={ org.Name } required/></label><label><div class="field-header"><span>{ tr(ctx, "org.slug") }<span aria-hidden="true">*</span></span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.org_slug") } data-tooltip={ tr(ctx, "tooltip.field.org_slug") }>i</span></div><input name="slug" value={ org.Slug } required title={ tr(ctx, "tooltip.field.slug_pattern") }/></label><button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button></form>
 	}
 }

@@ -167,7 +167,7 @@ templ dangerForm(action, key string, confirmation bool) {
 		if confirmation {
 			<label>{ tr(ctx, "deletion.confirmation") }<input name="confirmation" required/></label>
 		}
-		<button class="destructive" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, key) }</button>
+		<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, key) }</button>
 	</form>
 }
 

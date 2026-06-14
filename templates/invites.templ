@@ -28,7 +28,8 @@ templ OrganizationInvites(instanceName string, user db.User, org db.Organization
 			<h2>{ tr(ctx, "invite.existing") }</h2>
 			<div class="table-wrap">
 				<table>
-					<thead><tr><th>{ tr(ctx, "members.role") }</th><th>{ tr(ctx, "invite.uses") }</th><th>{ tr(ctx, "invite.expiry") }</th><th></th></tr></thead>
+					<caption>{ tr(ctx, "invites.table_caption") }</caption>
+					<thead><tr><th>{ tr(ctx, "members.role") }</th><th>{ tr(ctx, "invite.uses") }</th><th>{ tr(ctx, "invite.expiry") }</th><th aria-label={ tr(ctx, "common.actions") }></th></tr></thead>
 					<tbody>
 						for _, invite := range invites {
 							<tr>

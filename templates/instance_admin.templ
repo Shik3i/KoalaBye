@@ -7,7 +7,7 @@ import (
 )
 
 templ InstanceNav() {
-	<nav class="subnav">
+	<nav class="subnav" aria-label={ tr(ctx, "instance.nav_aria") }>
 		<a href="/instance">{ tr(ctx, "instance.overview") }</a>
 		<a href="/instance/users">{ tr(ctx, "instance.users") }</a>
 		<a href="/instance/organizations">{ tr(ctx, "nav.organizations") }</a>
@@ -23,7 +23,8 @@ templ InstanceCampaigns(instanceName string, user db.User, campaigns []db.Campai
 		<section class="page-heading"><h1>{ tr(ctx, "instance.campaigns") }</h1></section>
 		<section class="panel table-wrap">
 			<table>
-				<thead><tr><th>{ tr(ctx, "campaign.name") }</th><th>{ tr(ctx, "campaign.organization") }</th><th>{ tr(ctx, "campaign.status") }</th><th>{ tr(ctx, "campaign.creator") }</th><th>{ tr(ctx, "campaign.privacy.summary") }</th><th>{ tr(ctx, "campaign.public_link") }</th><th></th></tr></thead>
+				<caption>{ tr(ctx, "instance.campaigns.table_caption") }</caption>
+				<thead><tr><th>{ tr(ctx, "campaign.name") }</th><th>{ tr(ctx, "campaign.organization") }</th><th>{ tr(ctx, "campaign.status") }</th><th>{ tr(ctx, "campaign.creator") }</th><th>{ tr(ctx, "campaign.privacy.summary") }</th><th>{ tr(ctx, "campaign.public_link") }</th><th aria-label={ tr(ctx, "common.actions") }></th></tr></thead>
 				<tbody>
 					for _, campaign := range campaigns {
 						<tr>
@@ -48,7 +49,8 @@ templ InstanceUsers(instanceName string, user db.User, users []db.InstanceUser) 
 		<section class="page-heading"><h1>{ tr(ctx, "instance.users") }</h1></section>
 		<section class="panel table-wrap">
 			<table>
-				<thead><tr><th>{ tr(ctx, "auth.login.username") }</th><th>{ tr(ctx, "setup.display_name") }</th><th>{ tr(ctx, "register.email") }</th><th>{ tr(ctx, "members.role") }</th><th></th></tr></thead>
+				<caption>{ tr(ctx, "instance.users.table_caption") }</caption>
+				<thead><tr><th>{ tr(ctx, "auth.login.username") }</th><th>{ tr(ctx, "setup.display_name") }</th><th>{ tr(ctx, "register.email") }</th><th>{ tr(ctx, "members.role") }</th><th aria-label={ tr(ctx, "common.actions") }></th></tr></thead>
 				<tbody>
 					for _, item := range users {
 						<tr><td>{ item.Username }</td><td>{ item.DisplayName }</td><td>{ nullable(item.Email) }</td><td>{ nullable(item.InstanceRole) }</td><td><form method="post" action="/instance/users/status"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="public_id" value={ item.PublicID }/><input type="hidden" name="disabled" value={ fmt.Sprint(!item.DisabledAt.Valid) }/><button class="link-button" type="submit" data-tooltip={ statusTooltip(ctx, item.DisabledAt.Valid) }>{ statusAction(ctx, item.DisabledAt.Valid) }</button></form></td></tr>
@@ -65,7 +67,8 @@ templ InstanceOrganizations(instanceName string, user db.User, orgs []db.Organiz
 		<section class="page-heading"><h1>{ tr(ctx, "nav.organizations") }</h1></section>
 		<section class="panel table-wrap">
 			<table>
-				<thead><tr><th>{ tr(ctx, "org.name") }</th><th>{ tr(ctx, "org.slug") }</th><th>{ tr(ctx, "limits.owners") }</th><th>{ tr(ctx, "limits.members") }</th><th></th></tr></thead>
+				<caption>{ tr(ctx, "instance.organizations.table_caption") }</caption>
+				<thead><tr><th>{ tr(ctx, "org.name") }</th><th>{ tr(ctx, "org.slug") }</th><th>{ tr(ctx, "limits.owners") }</th><th>{ tr(ctx, "limits.members") }</th><th aria-label={ tr(ctx, "common.actions") }></th></tr></thead>
 				<tbody>
 					for _, org := range orgs {
 						<tr><td>{ org.Name }</td><td>{ org.Slug }</td><td>{ fmt.Sprint(org.OwnerCount) }</td><td>{ fmt.Sprint(org.MemberCount) }</td><td><a href={ templ.SafeURL("/instance/organizations/limits?org=" + org.PublicID) }>{ tr(ctx, "limits.edit") }</a> <form class="inline-form" method="post" action="/instance/organizations/status"><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="public_id" value={ org.PublicID }/><input type="hidden" name="disabled" value={ fmt.Sprint(!org.DisabledAt.Valid) }/><button class="link-button" type="submit" data-tooltip={ statusTooltip(ctx, org.DisabledAt.Valid) }>{ statusAction(ctx, org.DisabledAt.Valid) }</button></form></td></tr>
@@ -135,6 +138,7 @@ templ InstanceAudit(instanceName string, user db.User, events []db.AuditEvent) {
 		<section class="page-heading"><h1>{ tr(ctx, "instance.audit") }</h1></section>
 		<section class="panel table-wrap">
 			<table>
+				<caption>{ tr(ctx, "instance.audit.table_caption") }</caption>
 				<thead><tr><th>{ tr(ctx, "instance.audit_action") }</th><th>{ tr(ctx, "instance.audit_target") }</th><th>{ tr(ctx, "instance.audit_created") }</th></tr></thead>
 				<tbody>
 					for _, event := range events {
@@ -147,7 +151,7 @@ templ InstanceAudit(instanceName string, user db.User, events []db.AuditEvent) {
 }
 
 templ limitInput(name, key string, value int64) {
-	<label>{ tr(ctx, key) }<input type="number" min={ limitMinimum(name) } max={ limitMaximum(name) } name={ name } value={ fmt.Sprint(value) } required/></label>
+	<label>{ tr(ctx, key) }<span aria-hidden="true">*</span><input type="number" min={ limitMinimum(name) } max={ limitMaximum(name) } name={ name } value={ fmt.Sprint(value) } required/></label>
 }
 
 templ settingInput(settings map[string]string, name, key string) {

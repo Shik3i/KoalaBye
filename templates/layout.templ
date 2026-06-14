@@ -9,7 +9,7 @@ import (
 )
 
 templ LanguageSelector() {
-	<form method="get" class="control-switcher language-switcher">
+	<form method="get" class="control-switcher language-switcher" aria-live="polite">
 		<img class="language-flag" src={ currentLanguage(ctx).FlagAsset } alt=""/>
 		<label>
 			<span class="visually-hidden">{ tr(ctx, "language.label") }</span>
@@ -98,7 +98,7 @@ templ Layout(title string, instanceName string, user *db.User) {
 		</head>
 		<body>
 			<a class="skip-link" href="#main-content">{ tr(ctx, "common.skip") }</a>
-			<header class="site-header">
+			<header class="site-header" role="banner">
 				<a class="brand" href="/">{ instanceName }</a>
 				<div class="header-actions">
 					if user != nil {
@@ -127,6 +127,19 @@ templ Layout(title string, instanceName string, user *db.User) {
 			<main class="page" id="main-content">
 				{ children... }
 			</main>
+			<script>
+				document.querySelectorAll('.subnav a').forEach(function(link) {
+					if (link.getAttribute('href') === window.location.pathname) {
+						link.setAttribute('aria-current', 'page');
+					}
+				});
+				document.querySelectorAll('form').forEach(function(form) {
+					form.addEventListener('submit', function() {
+						var btn = form.querySelector('button[type="submit"]');
+						if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
+					});
+				});
+			</script>
 			@SiteFooter()
 		</body>
 	</html>

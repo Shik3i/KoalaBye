@@ -20,7 +20,7 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 		</head>
 		<body class={ bodyClass(branding) }>
 			<a class="skip-link" href="#main-content">{ tr(ctx, "common.skip") }</a>
-			<header class="public-header">
+			<header class="public-header" role="banner">
 				if branding == nil || branding.ShowKoalabyeBranding {
 					<a class="brand" href="/">{ instanceName }</a>
 				} else if branding.BrandName.Valid && branding.BrandName.String != "" {

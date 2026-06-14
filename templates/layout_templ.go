@@ -37,7 +37,7 @@ func LanguageSelector() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form method=\"get\" class=\"control-switcher language-switcher\"><img class=\"language-flag\" src=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<form method=\"get\" class=\"control-switcher language-switcher\" aria-live=\"polite\"><img class=\"language-flag\" src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -545,7 +545,7 @@ func Layout(title string, instanceName string, user *db.User) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</a><header class=\"site-header\"><a class=\"brand\" href=\"/\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</a><header class=\"site-header\" role=\"banner\"><a class=\"brand\" href=\"/\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -730,7 +730,7 @@ func Layout(title string, instanceName string, user *db.User) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</main><script>\n\t\t\t\tdocument.querySelectorAll('.subnav a').forEach(function(link) {\n\t\t\t\t\tif (link.getAttribute('href') === window.location.pathname) {\n\t\t\t\t\t\tlink.setAttribute('aria-current', 'page');\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t\tdocument.querySelectorAll('form').forEach(function(form) {\n\t\t\t\t\tform.addEventListener('submit', function() {\n\t\t\t\t\t\tvar btn = form.querySelector('button[type=\"submit\"]');\n\t\t\t\t\t\tif (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

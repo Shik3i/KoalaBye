@@ -37,6 +37,7 @@ templ Instance(instanceName string, user db.User, registrationEnabled string, ev
 			} else {
 				<div class="table-wrap">
 					<table>
+						<caption>{ tr(ctx, "instance.audit_events.table_caption") }</caption>
 						<thead><tr><th>{ tr(ctx, "instance.audit_action") }</th><th>{ tr(ctx, "instance.audit_target") }</th><th>{ tr(ctx, "instance.audit_created") }</th></tr></thead>
 						<tbody>
 							for _, event := range events {
