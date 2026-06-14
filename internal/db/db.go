@@ -56,7 +56,41 @@ func Migrate(database *sql.DB) error {
 	if err := goose.Up(database, "."); err != nil {
 		return fmt.Errorf("run migrations: %w", err)
 	}
+	if err := ensureSchema(database); err != nil {
+		return fmt.Errorf("ensure schema: %w", err)
+	}
 	return nil
+}
+
+func ensureSchema(database *sql.DB) error {
+	ctx := context.Background()
+	missing, err := missingColumns(ctx, database, "campaign_branding",
+		"public_heading", "public_intro")
+	if err != nil {
+		return err
+	}
+	for _, col := range missing {
+		if _, err := database.ExecContext(ctx,
+			fmt.Sprintf("ALTER TABLE campaign_branding ADD COLUMN %s TEXT NULL", col)); err != nil {
+			return fmt.Errorf("add column %s: %w", col, err)
+		}
+	}
+	return nil
+}
+
+func missingColumns(ctx context.Context, database *sql.DB, table string, cols ...string) ([]string, error) {
+	var missing []string
+	for _, col := range cols {
+		var n int
+		if err := database.QueryRowContext(ctx,
+			"SELECT COUNT(*) FROM pragma_table_info(?) WHERE name=?", table, col).Scan(&n); err != nil {
+			return nil, err
+		}
+		if n == 0 {
+			missing = append(missing, col)
+		}
+	}
+	return missing, nil
 }
 
 func Now() string {
