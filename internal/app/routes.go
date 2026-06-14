@@ -215,6 +215,7 @@ func Routes(
 		protected.Get("/instance/settings", instanceHandler.Settings)
 		protected.Post("/instance/settings", instanceHandler.SettingsPost)
 		protected.Get("/instance/audit", instanceHandler.Audit)
+		protected.Get("/instance/error-logs", instanceHandler.ErrorLogs)
 	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {

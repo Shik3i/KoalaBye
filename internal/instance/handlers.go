@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/mail"
@@ -22,6 +23,12 @@ type Handler struct {
 	cfg         config.Config
 	queries     *db.Querier
 	permissions *permissions.Service
+}
+
+func (h *Handler) logError(ctx context.Context, msg string, err error) {
+	if err != nil {
+		h.queries.CreateErrorLog(ctx, "error", msg+": "+err.Error(), map[string]string{"error": err.Error()})
+	}
 }
 
 func (h *Handler) Users(w http.ResponseWriter, r *http.Request) {
@@ -196,6 +203,15 @@ func (h *Handler) Audit(w http.ResponseWriter, r *http.Request) {
 	}
 	events, _ := h.queries.ListRecentAuditEvents(r.Context(), 100)
 	web.Render(w, r, 200, templates.InstanceAudit(h.cfg.InstanceName, u, events))
+}
+
+func (h *Handler) ErrorLogs(w http.ResponseWriter, r *http.Request) {
+	u, ok := h.authorize(w, r)
+	if !ok {
+		return
+	}
+	logs, _ := h.queries.ListRecentErrorLogs(r.Context(), 100)
+	web.Render(w, r, 200, templates.InstanceErrorLogs(h.cfg.InstanceName, u, logs))
 }
 func (h *Handler) authorize(w http.ResponseWriter, r *http.Request) (db.User, bool) {
 	u, _ := auth.UserFromContext(r.Context())

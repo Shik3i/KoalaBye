@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
@@ -49,6 +50,12 @@ type Handler struct {
 
 func New(cfg config.Config, q *db.Querier, p *permissions.Service) *Handler {
 	return &Handler{cfg: cfg, q: q, permissions: p}
+}
+
+func (h *Handler) logError(ctx context.Context, msg string, err error) {
+	if err != nil {
+		h.q.CreateErrorLog(ctx, "error", msg+": "+err.Error(), map[string]string{"error": err.Error()})
+	}
 }
 
 func (h *Handler) PublicByID(w http.ResponseWriter, r *http.Request) {
@@ -216,6 +223,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		items, err = h.q.ListCampaignsForOrg(r.Context(), org.ID)
 	}
 	if err != nil {
+		h.logError(r.Context(), "load campaigns", err)
 		http.Error(w, "load campaigns", http.StatusInternalServerError)
 		return
 	}
@@ -253,6 +261,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	publicID, err := ids.New("camp")
 	if err != nil {
+		h.logError(r.Context(), "create campaign", err)
 		http.Error(w, "create campaign", http.StatusInternalServerError)
 		return
 	}
@@ -285,21 +294,25 @@ func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 	}
 	settings, err := h.q.GetCampaignSettings(r.Context(), campaign.ID)
 	if err != nil {
+		h.logError(r.Context(), "load settings", err)
 		http.Error(w, "load settings", http.StatusInternalServerError)
 		return
 	}
 	stats, err := h.q.CampaignVisitStats(r.Context(), campaign.ID, time.Now())
 	if err != nil {
+		h.logError(r.Context(), "load campaign visits", err)
 		http.Error(w, "load campaign visits", http.StatusInternalServerError)
 		return
 	}
 	submissionStats, err := h.q.SubmissionStats(r.Context(), campaign.ID, time.Now())
 	if err != nil {
+		h.logError(r.Context(), "load campaign submissions", err)
 		http.Error(w, "load campaign submissions", http.StatusInternalServerError)
 		return
 	}
 	fields, err := h.q.ListFormFields(r.Context(), campaign.ID, false)
 	if err != nil {
+		h.logError(r.Context(), "load campaign form", err)
 		http.Error(w, "load campaign form", http.StatusInternalServerError)
 		return
 	}
@@ -345,6 +358,7 @@ func (h *Handler) BrandingPost(w http.ResponseWriter, r *http.Request) {
 		PublicIntro:          nullableString(strings.TrimSpace(r.FormValue("public_intro"))),
 	}
 	if err := h.q.UpdateCampaignBranding(r.Context(), campaign, branding, user.ID); err != nil {
+		h.logError(r.Context(), "branding update failed", err)
 		http.Error(w, "branding update failed", http.StatusInternalServerError)
 		return
 	}

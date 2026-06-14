@@ -14,6 +14,7 @@ templ InstanceNav() {
 		<a href="/instance/campaigns">{ tr(ctx, "campaign.title") }</a>
 		<a href="/instance/settings">{ tr(ctx, "instance.settings") }</a>
 		<a href="/instance/audit">{ tr(ctx, "instance.audit") }</a>
+		<a href="/instance/error-logs">{ tr(ctx, "instance.error_logs") }</a>
 	</nav>
 }
 
@@ -143,6 +144,27 @@ templ InstanceAudit(instanceName string, user db.User, events []db.AuditEvent) {
 				<tbody>
 					for _, event := range events {
 						<tr><td>{ translatedAuditAction(ctx, event.Action) }</td><td>{ nullable(event.TargetID) }</td><td>{ event.CreatedAt }</td></tr>
+					}
+				</tbody>
+			</table>
+		</section>
+	}
+}
+
+templ InstanceErrorLogs(instanceName string, user db.User, logs []db.ErrorLogEntry) {
+	@Layout(tr(ctx, "instance.error_logs"), instanceName, &user) {
+		@InstanceNav()
+		<section class="page-heading"><h1>{ tr(ctx, "instance.error_logs") }</h1></section>
+		<section class="panel table-wrap">
+			<table>
+				<caption>{ tr(ctx, "instance.error_logs.table_caption") }</caption>
+				<thead><tr><th>{ tr(ctx, "instance.error_level") }</th><th>{ tr(ctx, "instance.error_message") }</th><th>{ tr(ctx, "instance.error_context") }</th><th>{ tr(ctx, "instance.audit_created") }</th></tr></thead>
+				<tbody>
+					for _, entry := range logs {
+						<tr><td><span class="badge badge-error">{ entry.Level }</span></td><td>{ entry.Message }</td><td>{ nullable(entry.Context) }</td><td>{ entry.CreatedAt }</td></tr>
+					}
+					if len(logs) == 0 {
+						<tr><td colspan="4" class="muted">{ tr(ctx, "instance.error_logs.empty") }</td></tr>
 					}
 				</tbody>
 			</table>
