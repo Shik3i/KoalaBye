@@ -110,7 +110,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 		if campaign.Status == "archived" {
 			<div class="notice">{ tr(ctx, "campaign.archived.read_only") }</div>
 		}
-
 		if stats.RawTotal == 0 && submissionStats.Total == 0 {
 			<!-- ONBOARDING MODE: Checklist and snippet at the top to guide setup -->
 			<section class="panel checklist">
@@ -124,7 +123,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				</ul>
 				<p class="muted">{ tr(ctx, "campaign.checklist.derived") }</p>
 			</section>
-
 			<section class="panel" id="extension-integration">
 				<h2>{ tr(ctx, "campaign.snippet.title") }</h2>
 				<p>{ tr(ctx, "campaign.snippet.explanation") }</p>
@@ -140,7 +138,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 					<pre tabindex="0" aria-label={ tr(ctx, "campaign.snippet.no_token.title") }><code>{ chromeNoTokenSnippet(baseURL + "/c/" + campaign.PublicID) }</code></pre>
 				</details>
 			</section>
-
 			<section class="grid two">
 				<article class="panel">
 					<h2>{ tr(ctx, "campaign.public_link") }</h2>
@@ -172,9 +169,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				<article class="panel"><h2>{ tr(ctx, "submissions.current_month") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.CurrentMonth) }</strong></article>
 				<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(submissionStats.LatestAt) }</p><p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a> · <a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a></p></article>
 			</section>
-
 			<section class="panel"><h2>{ tr(ctx, "analytics.title") }</h2><p>{ tr(ctx, "analytics.description") }</p><a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.open") }</a></section>
-
 			<section class="grid two">
 				<article class="panel">
 					<h2>{ tr(ctx, "campaign.public_link") }</h2>
@@ -194,7 +189,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 					<ul><li>{ tr(ctx, "campaign.privacy.no_ip") }</li><li>{ tr(ctx, "campaign.privacy.no_fingerprint") }</li><li>{ tr(ctx, "campaign.privacy.no_raw_token") }</li><li>{ tr(ctx, "campaign.privacy.cookie_free") }</li></ul>
 				</article>
 			</section>
-
 			<!-- Collapsed onboarding/integration resources at the bottom -->
 			<section class="panel">
 				<h2>{ tr(ctx, "campaign.onboarding.title") }</h2>
@@ -230,7 +224,6 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				</details>
 			</section>
 		}
-
 		if campaign.Status != "archived" && role == "owner" {
 			<section class="panel">
 				<h2>{ tr(ctx, "campaign.lifecycle") }</h2>

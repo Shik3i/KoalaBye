@@ -65,7 +65,6 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, bran
 							<button type="submit" class="secondary">{ tr(ctx, "form.preset.load") }</button>
 						</div>
 					</form>
-
 					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields") } class="panel form-stack">
 						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 						<h2>{ tr(ctx, "form.add") }</h2>
