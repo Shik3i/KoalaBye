@@ -141,9 +141,9 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<section class="grid two">
 				<article class="panel">
 					<h2>{ tr(ctx, "campaign.public_link") }</h2>
-					<p>{ tr(ctx, "campaign.public_link.working") }</p>
-					<div class="copy-row"><a href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }><code id="campaign-public-url">{ baseURL + "/c/" + campaign.PublicID }</code></a><button class="button secondary copy-button" type="button" data-copy-target="campaign-public-url" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button></div>
-					<p><a href={ templ.SafeURL(baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug) }><code>{ baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug }</code></a></p>
+					<p>{ tr(ctx, "campaign.public_link.explanation") }</p>
+					@publicLinkRow("campaign-public-url", "campaign.public_link.stable", baseURL+"/c/"+campaign.PublicID)
+					@publicLinkRow("campaign-friendly-url", "campaign.public_link.friendly", baseURL+"/u/"+campaign.OrganizationSlug+"/"+campaign.Slug)
 					if campaign.PublicLinkEnabled {
 						<span class="badge">{ tr(ctx, "common.enabled") }</span>
 					} else {
@@ -173,9 +173,9 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<section class="grid two">
 				<article class="panel">
 					<h2>{ tr(ctx, "campaign.public_link") }</h2>
-					<p>{ tr(ctx, "campaign.public_link.working") }</p>
-					<div class="copy-row"><a href={ templ.SafeURL(baseURL + "/c/" + campaign.PublicID) }><code id="campaign-public-url">{ baseURL + "/c/" + campaign.PublicID }</code></a><button class="button secondary copy-button" type="button" data-copy-target="campaign-public-url" data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button></div>
-					<p><a href={ templ.SafeURL(baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug) }><code>{ baseURL + "/u/" + campaign.OrganizationSlug + "/" + campaign.Slug }</code></a></p>
+					<p>{ tr(ctx, "campaign.public_link.explanation") }</p>
+					@publicLinkRow("campaign-public-url", "campaign.public_link.stable", baseURL+"/c/"+campaign.PublicID)
+					@publicLinkRow("campaign-friendly-url", "campaign.public_link.friendly", baseURL+"/u/"+campaign.OrganizationSlug+"/"+campaign.Slug)
 					if campaign.PublicLinkEnabled {
 						<span class="badge">{ tr(ctx, "common.enabled") }</span>
 					} else {
@@ -227,7 +227,8 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 		if campaign.Status != "archived" && role == "owner" {
 			<section class="panel">
 				<h2>{ tr(ctx, "campaign.lifecycle") }</h2>
-				<div class="actions">
+				<p class="muted">{ tr(ctx, "campaign.lifecycle.explanation") }</p>
+				<div class="lifecycle-actions">
 					if campaign.Status == "draft" || campaign.Status == "paused" {
 						@statusForm(campaign, "active", "campaign.activate", "tooltip.btn.activate")
 					}
@@ -422,7 +423,17 @@ templ CampaignAccess(instanceName string, user db.User, campaign db.Campaign, me
 }
 
 templ statusForm(campaign db.Campaign, status, key, tooltip string) {
-	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/status") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="status" value={ status }/><button type="submit" data-tooltip={ tr(ctx, tooltip) }>{ tr(ctx, key) }</button></form>
+	<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/status") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><input type="hidden" name="status" value={ status }/><button class={ templ.KV("secondary", status == "paused"), templ.KV("danger-button", status == "archived") } type="submit" data-tooltip={ tr(ctx, tooltip) }>{ tr(ctx, key) }</button></form>
+}
+
+templ publicLinkRow(id, labelKey, url string) {
+	<div class="public-link-row">
+		<span class="public-link-label">{ tr(ctx, labelKey) }</span>
+		<div class="copy-row">
+			<a class="truncated-link" href={ templ.SafeURL(url) } title={ url }><code id={ id }>{ url }</code></a>
+			<button class="button secondary copy-button" type="button" data-copy-target={ id } data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button>
+		</div>
+	</div>
 }
 
 templ campaignCheck(name, key string, checked bool) {

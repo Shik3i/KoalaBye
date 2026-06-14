@@ -160,9 +160,14 @@ pre code { padding: 0; }
 .code-block { position: relative; }
 .code-block .copy-button { position: absolute; top: 8px; right: 8px; z-index: 1; }
 .copy-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.copy-row a { min-width: 0; overflow-wrap: anywhere; }
+.copy-row a { min-width: 0; }
 .copy-button { min-height: 34px !important; padding: 5px 10px !important; flex: 0 0 auto; font-size: .78rem; }
 .panel a code { overflow-wrap: anywhere; word-break: break-word; }
+.public-link-row { margin: 16px 0; }
+.public-link-label { display: block; margin-bottom: 6px; color: var(--muted); font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.truncated-link, .truncated-link code { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.lifecycle-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.danger-button { background: var(--danger) !important; }
 .public-body { display: flex; flex-direction: column; }
 .public-header { width: min(760px, calc(100% - 32px)); margin: 0 auto; padding: 22px 0; display: flex; align-items: center; justify-content: space-between; }
 .public-page { width: min(760px, calc(100% - 32px)); margin: 0 auto 72px; flex: 1; }
