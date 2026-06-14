@@ -337,7 +337,11 @@ func (h *Handler) Branding(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	branding, _ := h.q.GetCampaignBranding(r.Context(), campaign.ID)
+	branding, err := h.q.GetCampaignBranding(r.Context(), campaign.ID)
+	if err != nil {
+		h.logError(r.Context(), "load branding", err)
+		branding = db.CampaignBranding{AccentPreset: "default", BackgroundStyle: "theme-default", ShowKoalabyeBranding: true}
+	}
 	web.Render(w, r, http.StatusOK, templates.CampaignBrandingForm(h.cfg.InstanceName, user, campaign, branding, ""))
 }
 

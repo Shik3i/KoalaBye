@@ -237,6 +237,13 @@ func (q *Querier) GetCampaignBranding(ctx context.Context, campaignID int64) (Ca
 	if err == sql.ErrNoRows {
 		return CampaignBranding{AccentPreset: "default", BackgroundStyle: "theme-default", ShowKoalabyeBranding: true}, nil
 	}
+	if err != nil && (strings.Contains(err.Error(), "no such column") || strings.Contains(err.Error(), "has no column named")) {
+		err = q.db.QueryRowContext(ctx, `SELECT brand_name,brand_url,privacy_policy_url,legal_notice_url,support_url,contact_url,accent_preset,background_style,show_koalabye_branding FROM campaign_branding WHERE campaign_id=?`, campaignID).
+			Scan(&b.BrandName, &b.BrandURL, &b.PrivacyPolicyURL, &b.LegalNoticeURL, &b.SupportURL, &b.ContactURL, &b.AccentPreset, &b.BackgroundStyle, &b.ShowKoalabyeBranding)
+		if err == sql.ErrNoRows {
+			return CampaignBranding{AccentPreset: "default", BackgroundStyle: "theme-default", ShowKoalabyeBranding: true}, nil
+		}
+	}
 	return b, err
 }
 
