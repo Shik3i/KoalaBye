@@ -624,4 +624,11 @@ func nullable(value sql.NullString) string {
 	return "-"
 }
 
+func nullableOr(value sql.NullString, fallback string) string {
+	if value.Valid && value.String != "" {
+		return value.String
+	}
+	return fallback
+}
+
 var _ = templruntime.GeneratedTemplate

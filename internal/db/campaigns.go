@@ -62,6 +62,8 @@ type CampaignBranding struct {
 	AccentPreset         string
 	BackgroundStyle      string
 	ShowKoalabyeBranding bool
+	PublicHeading        sql.NullString
+	PublicIntro          sql.NullString
 }
 
 type CampaignMember struct {
@@ -229,8 +231,8 @@ func (q *Querier) GetCampaignSettings(ctx context.Context, campaignID int64) (Ca
 
 func (q *Querier) GetCampaignBranding(ctx context.Context, campaignID int64) (CampaignBranding, error) {
 	var b CampaignBranding
-	err := q.db.QueryRowContext(ctx, `SELECT brand_name,brand_url,privacy_policy_url,legal_notice_url,support_url,contact_url,accent_preset,background_style,show_koalabye_branding FROM campaign_branding WHERE campaign_id=?`, campaignID).
-		Scan(&b.BrandName, &b.BrandURL, &b.PrivacyPolicyURL, &b.LegalNoticeURL, &b.SupportURL, &b.ContactURL, &b.AccentPreset, &b.BackgroundStyle, &b.ShowKoalabyeBranding)
+	err := q.db.QueryRowContext(ctx, `SELECT brand_name,brand_url,privacy_policy_url,legal_notice_url,support_url,contact_url,accent_preset,background_style,show_koalabye_branding,public_heading,public_intro FROM campaign_branding WHERE campaign_id=?`, campaignID).
+		Scan(&b.BrandName, &b.BrandURL, &b.PrivacyPolicyURL, &b.LegalNoticeURL, &b.SupportURL, &b.ContactURL, &b.AccentPreset, &b.BackgroundStyle, &b.ShowKoalabyeBranding, &b.PublicHeading, &b.PublicIntro)
 	if err == sql.ErrNoRows {
 		return CampaignBranding{AccentPreset: "default", BackgroundStyle: "theme-default", ShowKoalabyeBranding: true}, nil
 	}
@@ -272,7 +274,7 @@ func (q *Querier) UpdateCampaignBranding(ctx context.Context, campaign Campaign,
 	if campaign.Status == "archived" {
 		return ErrCampaignArchived
 	}
-	validPresets := map[string]bool{"default": true, "purple": true, "blue": true, "green": true, "orange": true, "gray": true}
+	validPresets := map[string]bool{"default": true, "purple": true, "blue": true, "green": true, "orange": true, "red": true, "gray": true}
 	if !validPresets[b.AccentPreset] {
 		b.AccentPreset = "default"
 	}
@@ -280,14 +282,15 @@ func (q *Querier) UpdateCampaignBranding(ctx context.Context, campaign Campaign,
 	if !validStyles[b.BackgroundStyle] {
 		b.BackgroundStyle = "theme-default"
 	}
-	_, err := q.db.ExecContext(ctx, `INSERT INTO campaign_branding (campaign_id, brand_name, brand_url, privacy_policy_url, legal_notice_url, support_url, contact_url, accent_preset, background_style, show_koalabye_branding, updated_at, updated_by_user_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	_, err := q.db.ExecContext(ctx, `INSERT INTO campaign_branding (campaign_id, brand_name, brand_url, privacy_policy_url, legal_notice_url, support_url, contact_url, accent_preset, background_style, show_koalabye_branding, public_heading, public_intro, updated_at, updated_by_user_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(campaign_id) DO UPDATE SET
 		brand_name=excluded.brand_name, brand_url=excluded.brand_url, privacy_policy_url=excluded.privacy_policy_url,
 		legal_notice_url=excluded.legal_notice_url, support_url=excluded.support_url, contact_url=excluded.contact_url,
 		accent_preset=excluded.accent_preset, background_style=excluded.background_style, show_koalabye_branding=excluded.show_koalabye_branding,
+		public_heading=excluded.public_heading, public_intro=excluded.public_intro,
 		updated_at=excluded.updated_at, updated_by_user_id=excluded.updated_by_user_id`,
-		campaign.ID, b.BrandName, b.BrandURL, b.PrivacyPolicyURL, b.LegalNoticeURL, b.SupportURL, b.ContactURL, b.AccentPreset, b.BackgroundStyle, b.ShowKoalabyeBranding, Now(), actorID)
+		campaign.ID, b.BrandName, b.BrandURL, b.PrivacyPolicyURL, b.LegalNoticeURL, b.SupportURL, b.ContactURL, b.AccentPreset, b.BackgroundStyle, b.ShowKoalabyeBranding, b.PublicHeading, b.PublicIntro, Now(), actorID)
 	if err != nil {
 		return err
 	}

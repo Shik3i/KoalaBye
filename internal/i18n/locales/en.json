@@ -135,7 +135,17 @@
   "legal.privacy.section.contact.text": "Privacy contact: admin@koalastuff.net.",
   "legal.imprint.page_title": "Legal notice",
   "legal.imprint.title": "Legal notice",
-  "legal.imprint.text": "Project: KoalaBye / KoalaStuff\nResponsible contact: Timo, private non-commercial open-source project\nEmail: admin@koalastuff.net\nSource code: https://github.com/Shik3i/KoalaBye\n\nNo postal address is published on this project page. Whether a postal address or further provider information is legally required depends on the actual operator, jurisdiction, and manner in which an instance is offered. This notice does not claim a blanket exemption from statutory provider-identification duties. Self-hosted operators must review and replace this information for their own deployment.\n\nLiability for content:\nThe content is prepared with care, but no guarantee is given for completeness, accuracy, or continued availability. Mandatory statutory liability remains unaffected.\n\nCopyright and license:\nProject code is available under the MIT License. Third-party components remain subject to their respective licenses.",
+  "legal.imprint.text": "This information is voluntarily provided for transparency. As a purely private, non-commercial hobby project, this website is not subject to the imprint obligation under German law (§ 5 DDG). Self-hosted operators must review their own legal requirements.",
+  "legal.imprint.section.operator.title": "Operator & Contact",
+  "legal.imprint.section.operator.text": "Timo (KoalaDev) — Private Individual\nE-Mail: admin@koalastuff.net\nMastodon: @koalastuff\nSource code: https://github.com/Shik3i/KoalaBye",
+  "legal.imprint.section.nature.title": "Private Project Notice",
+  "legal.imprint.section.nature.text": "This is a purely private hobby project and does not serve any commercial purposes. Therefore there is no obligation to provide a legal notice according to § 5 DDG (formerly TMG). This information is provided voluntarily for transparency towards the community.",
+  "legal.imprint.section.liability_content.title": "Liability for Content",
+  "legal.imprint.section.liability_content.text": "According to § 7 Abs.1 DDG we are responsible for our own content. According to §§ 8 to 10 DDG, however, we are not obligated to monitor transmitted or stored third-party information.",
+  "legal.imprint.section.liability_links.title": "Liability for Links",
+  "legal.imprint.section.liability_links.text": "Our offer contains links to external third-party websites. We have no influence on their content and therefore cannot assume any liability for these external contents.",
+  "legal.imprint.section.copyright.title": "Copyright",
+  "legal.imprint.section.copyright.text": "The content and works created by the site operators on these pages are subject to copyright law. Duplication, processing, and any kind of exploitation outside the limits of copyright require written consent. Project code is available under the MIT License.",
   "legal.placeholder": "Legal placeholder",
   "legal.language_notice": "Legal pages are currently available in English and German only. English is shown as the fallback.",
   "legal.privacy.link": "Privacy",
@@ -609,5 +619,8 @@
   "branding.preview.heading": "We're sorry to see you go",
   "branding.preview.intro": "Please take a moment to tell us why you are uninstalling.",
   "branding.preview.submit": "Submit Feedback",
-  "tooltip.field.slug_pattern": "Use only letters, numbers, and hyphens."
+  "tooltip.field.slug_pattern": "Use only letters, numbers, and hyphens.",
+  "campaign.branding.public_text": "Public page text",
+  "campaign.branding.public_heading": "Page heading (overrides \"Optional feedback\")",
+  "campaign.branding.public_intro": "Intro paragraph (overrides the default intro)"
 }

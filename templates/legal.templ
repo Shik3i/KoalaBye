@@ -32,6 +32,18 @@ templ Legal(instanceName, page string, settings map[string]string) {
 					<hr/>
 				}
 				<p class="whitespace-pre-wrap">{ tr(ctx, "legal." + page + ".text") }</p>
+				if page == "imprint" {
+					for _, section := range []string{
+						"operator",
+						"nature",
+						"liability_content",
+						"liability_links",
+						"copyright",
+					} {
+						<h2>{ tr(ctx, "legal.imprint.section." + section + ".title") }</h2>
+						<p>{ tr(ctx, "legal.imprint.section." + section + ".text") }</p>
+					}
+				}
 				if page == "privacy" {
 					for _, section := range []string{
 						"operator",

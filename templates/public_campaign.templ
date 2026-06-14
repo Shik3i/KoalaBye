@@ -68,17 +68,8 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 	@PublicLayout(campaign.Name, instanceName, &branding) {
 		<section class="public-hero">
 			<div class="eyebrow">{ campaign.Name }</div>
-			<h1>{ tr(ctx, "public.heading") }</h1>
-			<p class="lede">{ tr(ctx, "public.intro") }</p>
-		</section>
-		<section class="panel public-card">
-			<h2>{ tr(ctx, "public.privacy.title") }</h2>
-			<p>{ tr(ctx, "public.privacy.text") }</p>
-			<p>{ publicCollectionSummary(ctx, settings) }</p>
-			if settings.CollectURLContext {
-				<p>{ tr(ctx, "public.privacy.url_context") }</p>
-			}
-			<p class="muted">{ tr(ctx, "public.privacy.free_text") }</p>
+			<h1>{ nullableOr(branding.PublicHeading, tr(ctx, "public.heading")) }</h1>
+			<p class="lede">{ nullableOr(branding.PublicIntro, tr(ctx, "public.intro")) }</p>
 		</section>
 		<section class="panel public-card">
 			if len(fields) == 0 {
@@ -98,6 +89,15 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 				</form>
 			}
 		</section>
+		<details class="panel public-card">
+			<summary class="font-bold-750"><h2 style="display:inline">{ tr(ctx, "public.privacy.title") }</h2></summary>
+			<p>{ tr(ctx, "public.privacy.text") }</p>
+			<p>{ publicCollectionSummary(ctx, settings) }</p>
+			if settings.CollectURLContext {
+				<p>{ tr(ctx, "public.privacy.url_context") }</p>
+			}
+			<p class="muted">{ tr(ctx, "public.privacy.free_text") }</p>
+		</details>
 	}
 }
 

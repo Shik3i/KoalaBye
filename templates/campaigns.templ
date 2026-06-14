@@ -275,6 +275,11 @@ templ CampaignBrandingForm(instanceName string, user db.User, campaign db.Campai
 					<label>{ tr(ctx, "campaign.branding.legal_notice_url") }<input type="url" name="legal_notice_url" value={ branding.LegalNoticeURL.String }/></label>
 					<label>{ tr(ctx, "campaign.branding.contact_url") }<input type="url" name="contact_url" value={ branding.ContactURL.String }/></label>
 					<label>{ tr(ctx, "campaign.branding.support_url") }<input type="url" name="support_url" value={ branding.SupportURL.String }/></label>
+					<hr/>
+					<h2>{ tr(ctx, "campaign.branding.public_text") }</h2>
+					<label>{ tr(ctx, "campaign.branding.public_heading") }<input name="public_heading" value={ branding.PublicHeading.String }/></label>
+					<label>{ tr(ctx, "campaign.branding.public_intro") }<textarea name="public_intro">{ branding.PublicIntro.String }</textarea></label>
+					<hr/>
 					<label>
 						{ tr(ctx, "campaign.branding.accent") }
 						<select name="accent_preset">

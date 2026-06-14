@@ -135,7 +135,17 @@
   "legal.privacy.section.contact.text": "Datenschutzkontakt: admin@koalastuff.net.",
   "legal.imprint.page_title": "Impressum",
   "legal.imprint.title": "Impressum",
-  "legal.imprint.text": "Projekt: KoalaBye / KoalaStuff\nVerantwortlicher Kontakt: Timo, privates nicht-kommerzielles Open-Source-Projekt\nE-Mail: admin@koalastuff.net\nQuellcode: https://github.com/Shik3i/KoalaBye\n\nAuf dieser Projektseite wird keine Postanschrift veröffentlicht. Ob eine ladungsfähige Anschrift oder weitere Anbieterangaben gesetzlich erforderlich sind, hängt vom tatsächlichen Betreiber, der Rechtsordnung und der konkreten Art des Angebots ab. Dieser Hinweis beansprucht keine pauschale Befreiung von gesetzlichen Anbieterkennzeichnungspflichten. Self-Hosting-Betreiber müssen die Angaben für ihre eigene Bereitstellung prüfen und ersetzen.\n\nHaftung für Inhalte:\nDie Inhalte werden sorgfältig erstellt; eine Gewähr für Vollständigkeit, Richtigkeit oder dauerhafte Verfügbarkeit wird jedoch nicht übernommen. Zwingende gesetzliche Haftung bleibt unberührt.\n\nUrheberrecht und Lizenz:\nDer Projektcode steht unter der MIT-Lizenz. Für Bestandteile Dritter gelten deren jeweilige Lizenzbedingungen.",
+  "legal.imprint.text": "Diese Angaben erfolgen freiwillig im Sinne der Transparenz. Als rein privates, nicht-kommerzielles Hobbyprojekt unterliegt diese Webseite keiner Impressumspflicht nach § 5 DDG. Self-Hosting-Betreiber müssen ihre eigenen rechtlichen Anforderungen prüfen.",
+  "legal.imprint.section.operator.title": "Betreiber & Kontakt",
+  "legal.imprint.section.operator.text": "Timo (KoalaDev) — Privatperson\nE-Mail: admin@koalastuff.net\nMastodon: @koalastuff\nQuellcode: https://github.com/Shik3i/KoalaBye",
+  "legal.imprint.section.nature.title": "Hinweis zum privaten Projekt",
+  "legal.imprint.section.nature.text": "Dies ist ein rein privates Hobbyprojekt und dient keinen kommerziellen Zwecken. Daher besteht keine Impressumspflicht nach § 5 DDG (ehemals TMG). Diese Angaben erfolgen freiwillig zur Transparenz gegenüber der Community.",
+  "legal.imprint.section.liability_content.title": "Haftung für Inhalte",
+  "legal.imprint.section.liability_content.text": "Gemäß § 7 Abs.1 DDG sind wir für eigene Inhalte verantwortlich. Nach §§ 8 bis 10 DDG sind wir jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen.",
+  "legal.imprint.section.liability_links.title": "Haftung für Links",
+  "legal.imprint.section.liability_links.text": "Unser Angebot enthält Links zu externen Webseiten Dritter. Auf deren Inhalte haben wir keinen Einfluss und übernehmen daher keine Haftung für diese fremden Inhalte.",
+  "legal.imprint.section.copyright.title": "Urheberrecht",
+  "legal.imprint.section.copyright.text": "Die durch die Seitenbetreiber erstellten Inhalte und Werke unterliegen dem deutschen Urheberrecht. Vervielfältigung, Bearbeitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechts bedürfen der schriftlichen Zustimmung. Der Projektcode steht unter der MIT-Lizenz.",
   "legal.placeholder": "Rechtlicher Platzhalter",
   "legal.language_notice": "Rechtliche Seiten sind derzeit nur auf Deutsch und Englisch verfügbar. Als Rückfall wird Englisch angezeigt.",
   "legal.privacy.link": "Datenschutz",
@@ -609,5 +619,8 @@
   "branding.preview.heading": "Wir bedauern, dass du gehst",
   "branding.preview.intro": "Nimm dir einen Moment Zeit, um uns zu sagen, warum du deinstallierst.",
   "branding.preview.submit": "Feedback absenden",
-  "tooltip.field.slug_pattern": "Nur Buchstaben, Zahlen und Bindestriche verwenden."
+  "tooltip.field.slug_pattern": "Nur Buchstaben, Zahlen und Bindestriche verwenden.",
+  "campaign.branding.public_text": "Öffentlicher Seitentext",
+  "campaign.branding.public_heading": "Seitenüberschrift (überschreibt \"Optional feedback\")",
+  "campaign.branding.public_intro": "Einleitungstext (überschreibt den Standardtext)"
 }

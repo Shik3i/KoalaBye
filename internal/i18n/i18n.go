@@ -121,11 +121,17 @@ func (c *Catalog) ValidateParity() error {
 	baseline := c.messages[DefaultLocale]
 	for _, locale := range Supported {
 		for key := range baseline {
+			if strings.HasPrefix(key, "legal.") && !IsLegalSupported(locale) {
+				continue
+			}
 			if _, ok := c.messages[locale][key]; !ok {
 				return fmt.Errorf("locale %s is missing translation key %s", locale, key)
 			}
 		}
 		for key := range c.messages[locale] {
+			if strings.HasPrefix(key, "legal.") && !IsLegalSupported(locale) {
+				continue
+			}
 			if _, ok := baseline[key]; !ok {
 				return fmt.Errorf("locale %s has unknown translation key %s", locale, key)
 			}
