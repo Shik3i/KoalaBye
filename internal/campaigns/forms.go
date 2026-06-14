@@ -74,7 +74,10 @@ func (h *Handler) FormFieldLoadPreset(w http.ResponseWriter, r *http.Request) {
 	case "uninstall":
 		f1, _ := ids.New("field")
 		fields = append(fields, db.SaveFormFieldInput{CampaignID: campaign.ID, PublicID: f1, Label: i18n.T(ctx, "preset.uninstall.reason.label"), FieldType: "radio_group", Required: true})
-		o1, _ := ids.New("option"); o2, _ := ids.New("option"); o3, _ := ids.New("option"); o4, _ := ids.New("option")
+		o1, _ := ids.New("option")
+		o2, _ := ids.New("option")
+		o3, _ := ids.New("option")
+		o4, _ := ids.New("option")
 		options = append(options, []db.FormOption{
 			{PublicID: o1, Label: i18n.T(ctx, "preset.uninstall.reason.opt1"), Value: "missing-features"},
 			{PublicID: o2, Label: i18n.T(ctx, "preset.uninstall.reason.opt2"), Value: "bugs"},

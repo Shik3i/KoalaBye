@@ -9,6 +9,7 @@ RUN apk add --no-cache ca-certificates
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+RUN go run ./cmd/templgenerate
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath \
     -ldflags="-s -w -X github.com/koalastuff/koalabye/internal/version.Version=${VERSION} -X github.com/koalastuff/koalabye/internal/version.Commit=${COMMIT} -X github.com/koalastuff/koalabye/internal/version.BuildDate=${BUILD_DATE}" \
     -o /out/koalabye ./cmd/koalabye
