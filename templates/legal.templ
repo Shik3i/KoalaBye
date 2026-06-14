@@ -22,10 +22,13 @@ templ Legal(instanceName, page string, settings map[string]string) {
 				if settings["instance_contact_url"] != "" {
 					<p><strong>{ tr(ctx, "instance.legal.contact") }</strong>: <a href={ templ.SafeURL(settings["instance_contact_url"]) }>{ settings["instance_contact_url"] }</a></p>
 				}
+				if settings["instance_contact_email"] != "" {
+					<p><strong>{ tr(ctx, "instance.legal.contact_email") }</strong>: <a href={ templ.SafeURL("mailto:" + settings["instance_contact_email"]) }>{ settings["instance_contact_email"] }</a></p>
+				}
 				if settings["instance_source_url"] != "" {
 					<p><strong>{ tr(ctx, "instance.legal.source") }</strong>: <a href={ templ.SafeURL(settings["instance_source_url"]) }>{ settings["instance_source_url"] }</a></p>
 				}
-				if settings["instance_operator_name"] != "" || settings["instance_operator_url"] != "" || settings["instance_contact_url"] != "" || settings["instance_source_url"] != "" {
+				if settings["instance_operator_name"] != "" || settings["instance_operator_url"] != "" || settings["instance_contact_url"] != "" || settings["instance_contact_email"] != "" || settings["instance_source_url"] != "" {
 					<hr/>
 				}
 				<p class="whitespace-pre-wrap">{ tr(ctx, "legal." + page + ".text") }</p>
@@ -33,6 +36,7 @@ templ Legal(instanceName, page string, settings map[string]string) {
 					for _, section := range []string{
 						"operator",
 						"purpose",
+						"legal_basis",
 						"account_data",
 						"feedback_data",
 						"optional_diagnostics",
@@ -40,7 +44,9 @@ templ Legal(instanceName, page string, settings map[string]string) {
 						"partial_responses",
 						"not_collected",
 						"storage",
+						"hosting_logs",
 						"retention",
+						"rights",
 						"self_hosting",
 						"campaign_owner",
 						"contact",

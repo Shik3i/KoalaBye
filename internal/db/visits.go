@@ -10,6 +10,8 @@ import (
 
 var ErrVisitLimitReached = errors.New("monthly visit safety limit reached")
 
+const visitDeduplicationWindow = 30 * time.Minute
+
 type PublicCampaign struct {
 	Campaign             Campaign
 	Settings             CampaignSettings
@@ -92,27 +94,46 @@ func (c PublicCampaign) Available() bool {
 }
 
 func (q *Querier) RecordCampaignVisit(ctx context.Context, in RecordVisitInput) error {
+	_, err := q.RecordCampaignVisitWithPublicID(ctx, in)
+	return err
+}
+
+func (q *Querier) RecordCampaignVisitWithPublicID(ctx context.Context, in RecordVisitInput) (string, error) {
 	tx, err := q.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer tx.Rollback()
 	if !in.CountRaw && !in.CountUnique && in.ReferrerDomain == "" && in.CoarseBrowser == "" && in.CoarseOS == "" && len(in.URLContext) == 0 {
-		return tx.Commit()
+		return "", tx.Commit()
 	}
 	createdAt := in.CreatedAt.UTC()
+	if in.CollectToken && in.TokenHash != "" {
+		var existingPublicID string
+		err = tx.QueryRowContext(ctx, `SELECT public_id FROM campaign_visits
+			WHERE campaign_id=? AND install_token_hash=? AND created_at>=?
+			ORDER BY created_at DESC LIMIT 1`,
+			in.CampaignID, in.TokenHash, createdAt.Add(-visitDeduplicationWindow).Format(time.RFC3339Nano)).
+			Scan(&existingPublicID)
+		if err == nil {
+			return existingPublicID, tx.Commit()
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return "", err
+		}
+	}
 	monthStart := time.Date(createdAt.Year(), createdAt.Month(), 1, 0, 0, 0, 0, time.UTC)
 	monthEnd := monthStart.AddDate(0, 1, 0)
 	var limit, current int64
 	if err = tx.QueryRowContext(ctx, `SELECT max_monthly_visits FROM organization_limits WHERE organization_id=?`, in.OrganizationID).Scan(&limit); err != nil {
-		return err
+		return "", err
 	}
 	if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM campaign_visits cv JOIN campaigns c ON c.id=cv.campaign_id WHERE c.organization_id=? AND cv.created_at>=? AND cv.created_at<?`,
 		in.OrganizationID, monthStart.Format(time.RFC3339Nano), monthEnd.Format(time.RFC3339Nano)).Scan(&current); err != nil {
-		return err
+		return "", err
 	}
 	if current >= limit {
-		return ErrVisitLimitReached
+		return "", ErrVisitLimitReached
 	}
 	tokenHash := any(nil)
 	unique := false
@@ -121,7 +142,7 @@ func (q *Querier) RecordCampaignVisit(ctx context.Context, in RecordVisitInput) 
 		if in.CountUnique {
 			var exists int
 			if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM campaign_visits WHERE campaign_id=? AND install_token_hash=? AND counted_as_unique_token_visit=1)`, in.CampaignID, in.TokenHash).Scan(&exists); err != nil {
-				return err
+				return "", err
 			}
 			unique = exists == 0
 		}
@@ -130,7 +151,7 @@ func (q *Querier) RecordCampaignVisit(ctx context.Context, in RecordVisitInput) 
 	if len(in.URLContext) > 0 {
 		encoded, marshalErr := json.Marshal(in.URLContext)
 		if marshalErr != nil {
-			return marshalErr
+			return "", marshalErr
 		}
 		contextJSON = string(encoded)
 	}
@@ -139,9 +160,9 @@ func (q *Querier) RecordCampaignVisit(ctx context.Context, in RecordVisitInput) 
 		in.PublicID, in.CampaignID, tokenHash, unique, in.CountRaw, nullableText(in.ReferrerDomain),
 		nullableText(in.CoarseBrowser), nullableText(in.CoarseOS), contextJSON, createdAt.Format(time.RFC3339Nano))
 	if err != nil {
-		return err
+		return "", err
 	}
-	return tx.Commit()
+	return in.PublicID, tx.Commit()
 }
 
 func (q *Querier) CampaignVisitStats(ctx context.Context, campaignID int64, now time.Time) (CampaignVisitStats, error) {

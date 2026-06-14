@@ -3,6 +3,7 @@ package instance
 import (
 	"errors"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"strconv"
 	"strings"
@@ -149,6 +150,15 @@ func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
 		"instance_operator_name":                strings.TrimSpace(r.FormValue("instance_operator_name")),
 		"instance_legal_pages_are_placeholders": boolString(r.FormValue("instance_legal_pages_are_placeholders") == "on"),
 	}
+	contactEmail := strings.TrimSpace(r.FormValue("instance_contact_email"))
+	if contactEmail != "" {
+		address, err := mail.ParseAddress(contactEmail)
+		if err != nil || address.Address != contactEmail {
+			http.Error(w, "invalid contact email", http.StatusUnprocessableEntity)
+			return
+		}
+	}
+	values["instance_contact_email"] = contactEmail
 	for _, key := range []string{"instance_operator_url", "instance_legal_notice_url", "instance_privacy_policy_url", "instance_source_url", "instance_contact_url", "instance_support_url"} {
 		value, valid := safeURL(r.FormValue(key))
 		if !valid {

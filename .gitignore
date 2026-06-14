@@ -11,6 +11,7 @@
 # Build caches
 .go-cache/
 .cache/
+node_modules/
 
 # Local Compiled Binaries
 /koalabye

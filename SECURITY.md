@@ -19,6 +19,7 @@ Please do not open a public issue for an exploitable vulnerability. Contact the 
 - Campaign privacy settings make token hashing mandatory and keep IP storage and fingerprinting outside the data model.
 - Cookie-free public campaign pages require no session and use URL-based language selection.
 - Optional install tokens are length-bounded and HMAC-SHA256 hashed with the instance secret; raw values are never stored or rendered.
+- Recent requests with the same campaign and install-token hash reuse one visit record for 30 minutes, preventing retry/reload double counting without cookies or IP-based identifiers.
 - Referrers are reduced to hostnames and user agents to coarse browser/OS families before storage.
 - Optional URL context accepts only documented keys and validated values; unknown parameters and the raw query string are discarded.
 - Monthly visit safety limits are enforced before a visit row is inserted.

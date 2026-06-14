@@ -50,13 +50,13 @@
 - [ ] Test a SQLite backup and restore.
 - [ ] Start against the restored database and verify expected sample data.
 - [ ] Review deployment, security, and release documentation.
-- [ ] Review `docs/PRIVACY.md` and remaining operator legal placeholders.
+- [ ] Review `docs/PRIVACY.md` and configured operator/contact details.
 
 ## Publish
 
 - [ ] **CRITICAL**: Obtain explicit permission and approval from the user before committing, tagging, or pushing any release.
 - [ ] Update release notes.
-- [ ] Confirm legal placeholders have been replaced for any public production deployment.
+- [ ] Confirm the bundled legal baseline has been reviewed and operator details are configured for production.
 - [ ] Tag the release.
 - [ ] Publish a container image when the registry process is ready.
 - [ ] Record known limitations, especially manual-only retention deletion.
@@ -67,7 +67,7 @@
 - [ ] Run local checks.
 - [ ] Ensure `govulncheck` clean.
 - [ ] Ensure Docker build passes locally or in CI.
-- [ ] Ensure legal placeholders are acceptable for staging.
+- [ ] Ensure legal notices and operator details are appropriate for staging.
 - [ ] Backup current DB if upgrading.
 - [ ] Create tag only after CI green.
 - [ ] Verify release workflow.

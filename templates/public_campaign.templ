@@ -14,11 +14,7 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<meta name="description" content={ tr(ctx, "public.meta") }/>
 			<title>{ title } · { instanceName }</title>
-			<link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg"/>
-			<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32x32.png"/>
-			<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16x16.png"/>
-			<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png"/>
-			<link rel="manifest" href="/assets/site.webmanifest"/>
+			@HeadAssets()
 			<link rel="stylesheet" href={ "/assets/app.css?v=" + version.Current().Version }/>
 			<script src={ "/assets/app.js?v=" + version.Current().Version } defer></script>
 		</head>
@@ -44,9 +40,11 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 			<main class="public-page" id="main-content">
 				{ children... }
 			</main>
-			<footer class="site-footer">
-				if branding != nil && (branding.PrivacyPolicyURL.Valid || branding.LegalNoticeURL.Valid || branding.ContactURL.Valid || branding.SupportURL.Valid) {
-					<nav aria-label={ tr(ctx, "nav.aria") }>
+			if branding == nil || branding.ShowKoalabyeBranding {
+				@SiteFooter()
+			} else if branding.PrivacyPolicyURL.Valid || branding.LegalNoticeURL.Valid || branding.ContactURL.Valid || branding.SupportURL.Valid {
+				<footer class="site-footer site-footer--campaign" role="contentinfo">
+					<nav class="campaign-footer-links" aria-label={ tr(ctx, "nav.aria") }>
 						if branding.PrivacyPolicyURL.Valid && branding.PrivacyPolicyURL.String != "" {
 							<a href={ templ.SafeURL(branding.PrivacyPolicyURL.String) }>{ tr(ctx, "legal.privacy.link") }</a>
 						}
@@ -60,18 +58,8 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 							<a href={ templ.SafeURL(branding.SupportURL.String) }>{ tr(ctx, "nav.support") }</a>
 						}
 					</nav>
-				}
-				if branding == nil || branding.ShowKoalabyeBranding {
-					<p>{ tr(ctx, "public.footer") }</p>
-					<nav aria-label={ tr(ctx, "nav.aria") }>
-						<a href="/legal/privacy">{ tr(ctx, "legal.privacy.link") }</a>
-						<a href="/legal/imprint">{ tr(ctx, "legal.imprint.link") }</a>
-						if url := instanceSourceURL(ctx); url != "" {
-							<a href={ templ.SafeURL(url) }>{ tr(ctx, "instance.legal.source") }</a>
-						}
-					</nav>
-				}
-			</footer>
+				</footer>
+			}
 		</body>
 	</html>
 }

@@ -1,8 +1,12 @@
 package templates
 
-import "context"
+import (
+	"context"
+	"strings"
 
-import "github.com/koalastuff/koalabye/internal/i18n"
+	"github.com/koalastuff/koalabye/internal/i18n"
+	"github.com/koalastuff/koalabye/internal/version"
+)
 
 type csrfContextKey struct{}
 type instanceSettingsContextKey struct{}
@@ -53,6 +57,27 @@ func instanceSourceURL(ctx context.Context) string {
 		return settings["instance_source_url"]
 	}
 	return ""
+}
+
+func repositoryURL(ctx context.Context) string {
+	if sourceURL := instanceSourceURL(ctx); sourceURL != "" {
+		return sourceURL
+	}
+	return "https://github.com/Shik3i/KoalaBye"
+}
+
+func buildIdentifier() string {
+	info := version.Current()
+	if commit := strings.TrimSpace(info.Commit); commit != "" && commit != "unknown" {
+		if len(commit) > 12 {
+			return commit[:12]
+		}
+		return commit
+	}
+	if release := strings.TrimSpace(info.Version); release != "" {
+		return release
+	}
+	return "dev"
 }
 
 func instanceAdmin(ctx context.Context) bool {

@@ -10,10 +10,6 @@ KoalaBye is a privacy-focused, 100% free, open-source, self-hostable platform fo
 
 > **Status:** experimental while below v1.0.0. Authentication, organizations, campaigns, forms, cookie-free feedback pages, anonymous submissions, privacy-first visits, response inboxes, built-in analytics, audited CSV/JSON exports, retention controls, permissions, and deployment packaging are present.
 
-## Preview
-
-> Screenshot placeholder: the polished authenticated dashboard will be captured for the first stable release.
-
 ## Quick Start
 
 ```bash
@@ -82,7 +78,7 @@ Go, chi, templ, SQLite, sqlc, goose, server-rendered HTML, and locally vendored 
 
 The application UI supports English (`en`), German (`de`), and Spanish (`es`). English is the default and fallback language. Locale selection follows `?lang=xx`, the `koalabye_lang` cookie, `Accept-Language`, then English. The language switcher preserves the current path.
 
-Legal placeholders under `/legal/privacy` and `/legal/imprint` currently support English and German only. Spanish requests clearly fall back to English. **These are placeholders and must be reviewed/replaced before running a public official instance.**
+The bundled legal pages under `/legal/privacy` and `/legal/imprint` provide a privacy-focused baseline in English and German; Spanish requests visibly fall back to English. Instance operators must configure their own operator and contact details and review whether their deployment requires additional provider information or jurisdiction-specific wording.
 
 ## Docker Quick Start
 

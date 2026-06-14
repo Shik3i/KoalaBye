@@ -444,6 +444,16 @@ func TestLegalSpanishFallsBackToEnglish(t *testing.T) {
 	if !strings.Contains(body, `<html lang="en"`) || !strings.Contains(body, "English is shown as the fallback") {
 		t.Fatalf("expected english fallback, got %s", body)
 	}
+	for _, expected := range []string{
+		`class="site-footer"`,
+		`href="https://github.com/Shik3i/KoalaBye"`,
+		"Build",
+		"admin@koalastuff.net",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("legal page missing %q: %s", expected, body)
+		}
+	}
 }
 
 func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
@@ -472,6 +482,16 @@ func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
 	if strings.Contains(body, `<script src="http`) || strings.Contains(body, `<link rel="stylesheet" href="http`) || strings.Contains(body, `<img src="http`) {
 		t.Fatal("rendered HTML contains an external asset URL")
 	}
+	for _, expected := range []string{
+		`rel="manifest" href="/assets/site.webmanifest"`,
+		`rel="apple-touch-icon" sizes="180x180"`,
+		`class="site-footer__github-icon"`,
+		`href="https://github.com/Shik3i/KoalaBye"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("rendered HTML missing %q", expected)
+		}
+	}
 
 	assetRequest := httptest.NewRequest(http.MethodGet, "/assets/app.css", nil)
 	assetResponse := httptest.NewRecorder()
@@ -485,6 +505,21 @@ func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
 		application.Handler.ServeHTTP(flagResponse, flagRequest)
 		if flagResponse.Code != http.StatusOK || !strings.Contains(flagResponse.Body.String(), "<svg") {
 			t.Fatalf("local flag asset %s was not served", flag)
+		}
+	}
+	for _, asset := range []string{
+		"site.webmanifest",
+		"img/favicon-16x16.png",
+		"img/favicon-32x32.png",
+		"img/apple-touch-icon.png",
+		"img/android-chrome-192x192.png",
+		"img/android-chrome-512x512.png",
+	} {
+		assetRequest := httptest.NewRequest(http.MethodGet, "/assets/"+asset, nil)
+		assetResponse := httptest.NewRecorder()
+		application.Handler.ServeHTTP(assetResponse, assetRequest)
+		if assetResponse.Code != http.StatusOK || assetResponse.Body.Len() == 0 {
+			t.Fatalf("local site asset %s was not served", asset)
 		}
 	}
 }
@@ -1116,7 +1151,7 @@ func TestPublicCampaignRoutesPrivacyAndVisitCounting(t *testing.T) {
 	if err := application.Database.QueryRow(`SELECT SUM(counted_as_raw_visit),SUM(counted_as_unique_token_visit) FROM campaign_visits WHERE campaign_id=?`, campaign.ID).Scan(&rawTotal, &uniqueTotal); err != nil {
 		t.Fatal(err)
 	}
-	if rawTotal != 3 || uniqueTotal != 1 {
+	if rawTotal != 1 || uniqueTotal != 1 {
 		t.Fatalf("repeat token counting wrong: raw=%d unique=%d", rawTotal, uniqueTotal)
 	}
 

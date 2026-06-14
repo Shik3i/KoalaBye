@@ -119,6 +119,7 @@ templ InstanceSettings(instanceName string, user db.User, settings map[string]st
 				<label>{ tr(ctx, "instance.legal.privacy_url") }<input type="url" name="instance_privacy_policy_url" value={ settings["instance_privacy_policy_url"] }/></label>
 				<label>{ tr(ctx, "instance.legal.imprint_url") }<input type="url" name="instance_legal_notice_url" value={ settings["instance_legal_notice_url"] }/></label>
 				<label>{ tr(ctx, "instance.legal.contact_url") }<input type="url" name="instance_contact_url" value={ settings["instance_contact_url"] }/></label>
+				<label>{ tr(ctx, "instance.legal.contact_email") }<input type="email" name="instance_contact_email" value={ settings["instance_contact_email"] } autocomplete="email"/></label>
 				<label>{ tr(ctx, "instance.legal.support_url") }<input type="url" name="instance_support_url" value={ settings["instance_support_url"] }/></label>
 				<label>{ tr(ctx, "instance.legal.source_url") }<input type="url" name="instance_source_url" value={ settings["instance_source_url"] }/></label>
 				@checkInput("instance_legal_pages_are_placeholders", "instance.legal.placeholders", settings["instance_legal_pages_are_placeholders"] == "true" || settings["instance_legal_pages_are_placeholders"] == "")

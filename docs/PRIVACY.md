@@ -8,6 +8,8 @@ KoalaBye is designed for useful uninstall feedback without building visitor prof
 
 Strict is the default for new campaigns. It can count visits and submissions, store submitted answers, and HMAC-hash an optional install token. It does not collect referrer domains, coarse browser or operating-system families, URL context, partial responses, IP addresses, raw user agents, raw tokens, full referrer URLs, cookies, or fingerprints.
 
+When an optional install token is present, repeated requests for the same campaign and token hash within 30 minutes reuse the first minimized visit record. This prevents reloads and browser retries from inflating visit analytics without introducing cookies, IP-based identifiers, or fingerprinting. Tokenless requests remain independent anonymous page views because KoalaBye deliberately has no privacy-invasive identifier available to link them.
+
 ### Balanced Diagnostics
 
 Balanced is optional per campaign. The owner can independently enable:
@@ -70,4 +72,4 @@ Authorized CSV and JSON exports can include sanitized URL context attached to th
 
 ## Retention and Responsibility
 
-Campaign owners can configure manual retention thresholds and hard-delete visits or responses. Automated scheduling is not implemented. Operators must protect the SQLite database and backups, choose suitable retention periods, replace the bundled legal placeholders, and ensure campaign questions and URL parameters do not request unnecessary personal data.
+Campaign owners can configure manual retention thresholds and hard-delete visits or responses. Automated scheduling is not implemented. Operators must protect the SQLite database and backups, choose suitable retention periods, configure and legally review the bundled operator notices, and ensure campaign questions and URL parameters do not request unnecessary personal data.

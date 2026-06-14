@@ -48,7 +48,7 @@ The image runs as the non-root `koalabye` user. `/data` must be writable by that
 
 ## Legal Pages
 
-The bundled privacy and imprint pages are explicitly placeholders, available in English and German with an English fallback for Spanish. They are not final legal advice or deploy-ready legal text. Replace them before a public production launch.
+The bundled privacy and legal-notice pages provide a conservative baseline in English and German with an English fallback for Spanish. Before a public launch, configure the operator name, contact email, website, source URL, and any external legal URLs under Instance Settings. Review the text for the operator's jurisdiction and deployment; the project does not claim that a private or non-commercial label automatically removes provider-identification duties.
 
 Review [PRIVACY.md](PRIVACY.md) before enabling Balanced diagnostics. Campaign owners must not encode personal data in URL context parameters. Public campaign pages disclose enabled collection and remain cookie-free.
 

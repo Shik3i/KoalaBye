@@ -21,6 +21,7 @@ func TestRecordCampaignVisitCountsRawAndUnique(t *testing.T) {
 		t.Fatal(err)
 	}
 	first.PublicID = "visit_two"
+	first.CreatedAt = now.Add(31 * time.Minute)
 	if err := q.RecordCampaignVisit(context.Background(), first); err != nil {
 		t.Fatal(err)
 	}
@@ -51,6 +52,37 @@ func TestRecordCampaignVisitCountsRawAndUnique(t *testing.T) {
 	}
 	if len(uniqueFlags) != 3 || uniqueFlags[0] != 1 || uniqueFlags[1] != 0 || uniqueFlags[2] != 0 {
 		t.Fatalf("unexpected unique flags: %v", uniqueFlags)
+	}
+}
+
+func TestRecordCampaignVisitDeduplicatesRecentTokenWithoutExtraStorage(t *testing.T) {
+	t.Parallel()
+	q, owner, org := phase3DB(t)
+	campaign := createCampaignForTest(t, q, owner, org, "camp_dedupe", "dedupe", "balanced")
+	now := time.Date(2026, 6, 12, 10, 0, 0, 0, time.UTC)
+	first := RecordVisitInput{
+		PublicID: "visit_original", CampaignID: campaign.ID, OrganizationID: org.ID,
+		TokenHash: "same-token-hash", CountRaw: true, CountUnique: true, CollectToken: true,
+		URLContext: map[string]string{"utm_campaign": "uninstall"}, CreatedAt: now,
+	}
+	firstPublicID, err := q.RecordCampaignVisitWithPublicID(context.Background(), first)
+	if err != nil || firstPublicID != first.PublicID {
+		t.Fatalf("first visit=%q err=%v", firstPublicID, err)
+	}
+	duplicate := first
+	duplicate.PublicID = "visit_duplicate"
+	duplicate.CreatedAt = now.Add(5 * time.Minute)
+	duplicate.URLContext = map[string]string{"utm_campaign": "reload"}
+	duplicatePublicID, err := q.RecordCampaignVisitWithPublicID(context.Background(), duplicate)
+	if err != nil || duplicatePublicID != first.PublicID {
+		t.Fatalf("duplicate visit=%q err=%v", duplicatePublicID, err)
+	}
+	var count int
+	if err := q.RawDB().QueryRow(`SELECT COUNT(*) FROM campaign_visits WHERE campaign_id=?`, campaign.ID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("recent duplicate stored %d rows", count)
 	}
 }
 
@@ -102,6 +134,7 @@ func TestRecordCampaignVisitRespectsDisabledCountersAndQuota(t *testing.T) {
 		t.Fatalf("disabled raw counter stored wrong flags: raw=%d unique=%d", raw, unique)
 	}
 	input.PublicID = "visit_over"
+	input.TokenHash = "different-hash"
 	if err := q.RecordCampaignVisit(context.Background(), input); !errors.Is(err, ErrVisitLimitReached) {
 		t.Fatalf("monthly quota not enforced: %v", err)
 	}

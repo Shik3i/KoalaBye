@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -80,12 +81,16 @@ func (h *Handler) public(w http.ResponseWriter, r *http.Request, resolve func() 
 		return
 	}
 	input.PublicID = publicID
-	if err = h.q.RecordCampaignVisit(r.Context(), input); errors.Is(err, db.ErrVisitLimitReached) {
+	recordedPublicID, err := h.q.RecordCampaignVisitWithPublicID(r.Context(), input)
+	if errors.Is(err, db.ErrVisitLimitReached) {
 		h.publicUnavailable(w, r, http.StatusServiceUnavailable, true, publicCampaign.Settings.PublicLanguageDefault)
 		return
 	} else if err != nil {
 		h.publicUnavailable(w, r, http.StatusServiceUnavailable, false, publicCampaign.Settings.PublicLanguageDefault)
 		return
+	}
+	if recordedPublicID != "" {
+		publicID = recordedPublicID
 	}
 	fields, err := h.q.ListFormFields(r.Context(), publicCampaign.Campaign.ID, false)
 	if err != nil {
@@ -266,8 +271,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	formPreset := r.FormValue("form_preset")
 	if formPreset != "" && formPreset != "none" {
 		if err := ApplyFormPreset(r.Context(), h.q, campaign.ID, formPreset, language, user.ID); err != nil {
-			// If it fails, log and redirect anyway or return an error. Let's log it and redirect since the campaign is created.
-			// Or we could return an error. But campaign creation succeeded, so redirecting is better UX.
+			slog.ErrorContext(r.Context(), "apply campaign form preset", "campaign_public_id", campaign.PublicID, "preset", formPreset, "error", err)
 		}
 	}
 	http.Redirect(w, r, campaignURL(org.PublicID, campaign.PublicID), http.StatusSeeOther)

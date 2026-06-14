@@ -30,6 +30,59 @@ templ ThemeSelector() {
 	</button>
 }
 
+templ HeadAssets() {
+	<meta name="theme-color" content="#196b45"/>
+	<link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg"/>
+	<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32x32.png"/>
+	<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16x16.png"/>
+	<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png"/>
+	<link rel="manifest" href="/assets/site.webmanifest"/>
+}
+
+templ SiteFooter() {
+	<footer class="site-footer" role="contentinfo">
+		<div class="site-footer__container">
+			<div class="site-footer__inner">
+				<div class="site-footer__brand-group">
+					<div class="site-footer__brand">
+						<span class="site-footer__logo" aria-hidden="true">
+							<img src="/assets/img/favicon-32x32.png" alt="" width="24" height="24"/>
+						</span>
+						<span>KoalaBye</span>
+					</div>
+					<p class="site-footer__tagline">{ tr(ctx, "footer.tagline") }</p>
+				</div>
+				<div class="site-footer__info-group">
+					<div class="site-footer__links-group">
+						<span>© { strconv.Itoa(time.Now().Year()) } KoalaStuff</span>
+						<span class="sep" aria-hidden="true">·</span>
+						<span>{ tr(ctx, "footer.madeBy") } <a href="https://github.com/Shik3i" target="_blank" rel="noopener noreferrer">Timo</a></span>
+						<span class="sep" aria-hidden="true">·</span>
+						<span>{ tr(ctx, "footer.license") }</span>
+					</div>
+					<div class="site-footer__links-group site-footer__links-group--bottom">
+						<a href="https://ko-fi.com/koaladev" target="_blank" rel="noopener noreferrer">{ tr(ctx, "footer.kofi") }</a>
+						<span class="sep" aria-hidden="true">·</span>
+						<a href="/legal/privacy">{ tr(ctx, "legal.privacy.link") }</a>
+						<span class="sep" aria-hidden="true">·</span>
+						<a href="/legal/imprint">{ tr(ctx, "legal.imprint.link") }</a>
+						<span class="sep" aria-hidden="true">·</span>
+						<span class="site-footer__version">
+							<a href={ templ.SafeURL(repositoryURL(ctx)) } target="_blank" rel="noopener noreferrer" title={ tr(ctx, "footer.github") }>
+								<svg class="site-footer__github-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+									<path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+								</svg>
+								<span>{ tr(ctx, "footer.build") }</span>
+								<code>{ buildIdentifier() }</code>
+							</a>
+						</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</footer>
+}
+
 templ Layout(title string, instanceName string, user *db.User) {
 	<!DOCTYPE html>
 	<html lang={ string(localeFromContext(ctx).Locale) }>
@@ -38,11 +91,7 @@ templ Layout(title string, instanceName string, user *db.User) {
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<meta name="description" content={ tr(ctx, "meta.description") }/>
 			<title>{ title } · { instanceName }</title>
-			<link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg"/>
-			<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32x32.png"/>
-			<link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16x16.png"/>
-			<link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png"/>
-			<link rel="manifest" href="/assets/site.webmanifest"/>
+			@HeadAssets()
 			<link rel="stylesheet" href={ "/assets/app.css?v=" + version.Current().Version }/>
 			<script src={ "/assets/htmx.min.js?v=" + version.Current().Version } defer></script>
 			<script src={ "/assets/app.js?v=" + version.Current().Version } defer></script>
@@ -78,53 +127,7 @@ templ Layout(title string, instanceName string, user *db.User) {
 			<main class="page" id="main-content">
 				{ children... }
 			</main>
-			<footer class="site-footer" role="contentinfo">
-				<div class="container">
-					<div class="site-footer__inner">
-						<div class="site-footer__brand-group">
-							<div class="site-footer__brand">
-								<span class="site-footer__logo" aria-hidden="true">
-									<img src="/assets/img/favicon-32x32.png" alt="" width="20" height="20" />
-								</span>
-								<span>KoalaBye</span>
-							</div>
-							<p class="site-footer__tagline">
-								Private, self-hosted uninstall feedback without tracking.
-							</p>
-						</div>
-
-						<div class="site-footer__info-group">
-							<div class="site-footer__links-group">
-								<span>© { strconv.Itoa(time.Now().Year()) } KoalaStuff</span>
-								<span class="sep" aria-hidden="true">·</span>
-								<span>{ tr(ctx, "footer.madeBy") } <a href="https://github.com/Shik3i" rel="noopener noreferrer">Timo</a></span>
-								<span class="sep" aria-hidden="true">·</span>
-								<span>MIT License</span>
-							</div>
-							<div class="site-footer__links-group site-footer__links-group--bottom">
-								<a href="https://ko-fi.com/koaladev" target="_blank" rel="noopener noreferrer">Ko-fi ☕</a>
-								<span class="sep" aria-hidden="true">·</span>
-								<a href="/legal/privacy">{ tr(ctx, "legal.privacy.link") }</a>
-								<span class="sep" aria-hidden="true">·</span>
-								<a href="/legal/imprint">{ tr(ctx, "legal.imprint.link") }</a>
-								if url := instanceSourceURL(ctx); url != "" {
-									<span class="sep" aria-hidden="true">·</span>
-									<a href={ templ.SafeURL(url) }>{ tr(ctx, "instance.legal.source") }</a>
-								}
-								<span class="sep" aria-hidden="true">·</span>
-								<span class="site-footer__version">
-									<a href="https://github.com/Shik3i/KoalaBye" class="flex items-center gap-8" target="_blank" rel="noopener noreferrer" title="View repository on GitHub">
-										Build: <code>{ version.Current().Version }</code>
-										<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" width="12" height="12">
-											<path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-										</svg>
-									</a>
-								</span>
-							</div>
-						</div>
-					</div>
-				</div>
-			</footer>
+			@SiteFooter()
 		</body>
 	</html>
 }

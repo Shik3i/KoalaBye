@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.2.10 - 2026-06-14
+
+### Added
+- Professional favicon set, web app manifest, and reproducible favicon generation script.
+- Configurable public contact email for the privacy and imprint pages.
+- Shared responsive footer with project, legal, support, repository, and build links.
+
+### Changed
+- Polished the legal pages and localized footer content in English, German, and Spanish.
+- Improved footer consistency and restored a clearly visible light/dark mode toggle icon.
+- Documented production, privacy, operations, and release requirements more precisely.
+
+### Privacy
+- Deduplicate repeated campaign visits for the same privacy-preserving install-token hash within 30 minutes.
+- Continue to store no IP addresses, raw user agents, unknown URL parameters, or other direct identifiers.
+- Reuse the original public visit identifier for duplicate requests without consuming campaign quotas.
+
+### Security
+- Validate configured public contact email addresses before storing them.
+- Keep all icons, fonts, and frontend assets self-hosted.
+
 ## v0.1.12 - 2026-06-13
 
 ### Added
