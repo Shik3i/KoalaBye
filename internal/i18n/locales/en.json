@@ -361,6 +361,7 @@
   "instance.campaigns_description": "Review campaign status and ownership across the instance.",
   "instance.safety_limits_text": "Adjust abuse-prevention limits for organizations and public traffic.",
   "instance.audit_description": "Inspect security-sensitive administrative activity.",
+  "instance.error_logs_description": "View application errors and stack traces logged by the system.",
   "audit.action.campaign_created": "Campaign created",
   "audit.action.campaign_updated": "Campaign updated",
   "audit.action.campaign_privacy_updated": "Campaign privacy updated",

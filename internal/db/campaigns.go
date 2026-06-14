@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -292,7 +293,19 @@ func (q *Querier) UpdateCampaignBranding(ctx context.Context, campaign Campaign,
 		updated_at=excluded.updated_at, updated_by_user_id=excluded.updated_by_user_id`,
 		campaign.ID, b.BrandName, b.BrandURL, b.PrivacyPolicyURL, b.LegalNoticeURL, b.SupportURL, b.ContactURL, b.AccentPreset, b.BackgroundStyle, b.ShowKoalabyeBranding, b.PublicHeading, b.PublicIntro, Now(), actorID)
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "no such column") {
+			_, err = q.db.ExecContext(ctx, `INSERT INTO campaign_branding (campaign_id, brand_name, brand_url, privacy_policy_url, legal_notice_url, support_url, contact_url, accent_preset, background_style, show_koalabye_branding, updated_at, updated_by_user_id)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				ON CONFLICT(campaign_id) DO UPDATE SET
+				brand_name=excluded.brand_name, brand_url=excluded.brand_url, privacy_policy_url=excluded.privacy_policy_url,
+				legal_notice_url=excluded.legal_notice_url, support_url=excluded.support_url, contact_url=excluded.contact_url,
+				accent_preset=excluded.accent_preset, background_style=excluded.background_style, show_koalabye_branding=excluded.show_koalabye_branding,
+				updated_at=excluded.updated_at, updated_by_user_id=excluded.updated_by_user_id`,
+				campaign.ID, b.BrandName, b.BrandURL, b.PrivacyPolicyURL, b.LegalNoticeURL, b.SupportURL, b.ContactURL, b.AccentPreset, b.BackgroundStyle, b.ShowKoalabyeBranding, Now(), actorID)
+		}
+		if err != nil {
+			return err
+		}
 	}
 	return q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign_branding_updated", "campaign", campaign.PublicID, nil, nil)
 }

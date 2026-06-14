@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -25,6 +26,9 @@ func (q *Querier) CreateErrorLog(ctx context.Context, level, message string, con
 	_, err := q.db.ExecContext(ctx, `
 		INSERT INTO error_logs (level, message, context, created_at)
 		VALUES (?, ?, ?, ?)`, level, message, contextJSON, Now())
+	if err != nil && strings.Contains(err.Error(), "no such table") {
+		return nil
+	}
 	return err
 }
 

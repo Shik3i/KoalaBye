@@ -316,6 +316,7 @@
   "instance.campaigns_description": "Revisa el estado y la propiedad de las campañas de la instancia.",
   "instance.safety_limits_text": "Ajusta los límites contra abusos para organizaciones y tráfico público.",
   "instance.audit_description": "Revisa la actividad administrativa sensible para la seguridad.",
+  "instance.error_logs_description": "Ver los errores de la aplicación registrados por el sistema.",
   "audit.action.campaign_created": "Campaña creada",
   "audit.action.campaign_updated": "Campaña actualizada",
   "audit.action.campaign_privacy_updated": "Privacidad de campaña actualizada",
