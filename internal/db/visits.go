@@ -55,7 +55,7 @@ func (q *Querier) scanPublicCampaign(ctx context.Context, predicate string, args
 		(SELECT COUNT(*) FROM campaign_members owners WHERE owners.campaign_id=c.id AND owners.role='owner'),
 		o.disabled_at,
 		cs.collect_install_token,cs.hash_install_token,cs.count_raw_visits,cs.count_unique_token_visits,cs.collect_referrer_domain,cs.collect_coarse_browser,cs.collect_coarse_os,cs.collect_url_context,cs.public_language_default,cs.show_privacy_notice,cs.retention_enabled,cs.retention_days,cs.updated_at,cs.updated_by_user_id,
-		cb.brand_name,cb.brand_url,cb.privacy_policy_url,cb.legal_notice_url,cb.support_url,cb.contact_url,COALESCE(cb.accent_preset, 'default'),COALESCE(cb.background_style, 'theme-default'),COALESCE(cb.show_koalabye_branding, 1)
+		cb.brand_name,cb.brand_url,cb.privacy_policy_url,cb.legal_notice_url,cb.support_url,cb.contact_url,COALESCE(cb.accent_preset, 'default'),COALESCE(cb.background_style, 'theme-default'),COALESCE(cb.show_koalabye_branding, 1),cb.public_heading,cb.public_intro
 		FROM campaigns c
 		JOIN organizations o ON o.id=c.organization_id
 		JOIN users u ON u.id=c.created_by_user_id
@@ -81,6 +81,7 @@ func (q *Querier) scanPublicCampaign(ctx context.Context, predicate string, args
 		&result.Branding.BrandName, &result.Branding.BrandURL, &result.Branding.PrivacyPolicyURL,
 		&result.Branding.LegalNoticeURL, &result.Branding.SupportURL, &result.Branding.ContactURL,
 		&result.Branding.AccentPreset, &result.Branding.BackgroundStyle, &result.Branding.ShowKoalabyeBranding,
+		&result.Branding.PublicHeading, &result.Branding.PublicIntro,
 	)
 	result.OrganizationDisabled = orgDisabled.Valid
 	return result, err

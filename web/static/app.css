@@ -113,7 +113,7 @@ button, input, select, textarea { font: inherit; }
 .text-xs { font-size: 0.8rem; }
 .overflow-hidden { overflow: hidden; }
 .font-bold-750 { font-weight: 750; }
-.flex-gap-8-mt-8 { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+
 .flex-gap-12 { display: flex; gap: 12px; }
 .flex { display: flex; }
 .gap-16 { gap: 16px; }
@@ -186,9 +186,13 @@ th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-s
 .public-field { border: 0; border-top: 1px solid var(--line); padding: 20px 0; margin: 0; }
 .public-field legend { font-weight: 750; padding: 0 8px 0 0; }
 .public-field textarea { width: 100%; min-height: 120px; border: 1px solid #cbd4ca; border-radius: 9px; padding: 11px 12px; }
+details.public-card > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.public-brand { display: flex; align-items: center; gap: 8px; }
+.brand-logo { font-size: 1.5rem; line-height: 1; }
 .choice { min-height: 44px; display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.flex-gap-8-mt-8 { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .choice-row { display: flex; flex-wrap: wrap; gap: 14px; }
-.choice-row label { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.choice-row label { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; gap: 5px; }
 .honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .response-answer { margin: 16px 0; white-space: pre-wrap; }
 .range-nav { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
