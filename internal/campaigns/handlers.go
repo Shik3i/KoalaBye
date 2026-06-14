@@ -54,7 +54,10 @@ func New(cfg config.Config, q *db.Querier, p *permissions.Service) *Handler {
 
 func (h *Handler) logError(ctx context.Context, msg string, err error) {
 	if err != nil {
-		h.q.CreateErrorLog(ctx, "error", msg+": "+err.Error(), map[string]string{"error": err.Error()})
+		slog.ErrorContext(ctx, msg, "error", err.Error())
+		if dbErr := h.q.CreateErrorLog(ctx, "error", msg+": "+err.Error(), map[string]string{"error": err.Error()}); dbErr != nil {
+			slog.ErrorContext(ctx, "failed to write error log", "db_err", dbErr.Error())
+		}
 	}
 }
 
