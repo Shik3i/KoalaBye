@@ -283,7 +283,7 @@ templ CampaignBrandingForm(instanceName string, user db.User, campaign db.Campai
 					<label>
 						{ tr(ctx, "campaign.branding.accent") }
 						<select name="accent_preset">
-							for _, preset := range []string{"default", "purple", "blue", "green", "orange", "red", "gray"} {
+							for _, preset := range []string{"default", "purple", "blue", "green", "orange", "gray"} {
 								<option value={ preset } selected?={ branding.AccentPreset == preset }>{ tr(ctx, "campaign.branding.accent." + preset) }</option>
 							}
 						</select>

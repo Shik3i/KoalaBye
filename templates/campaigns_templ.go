@@ -3190,7 +3190,7 @@ func CampaignBrandingForm(instanceName string, user db.User, campaign db.Campaig
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			for _, preset := range []string{"default", "purple", "blue", "green", "orange", "red", "gray"} {
+			for _, preset := range []string{"default", "purple", "blue", "green", "orange", "gray"} {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 247, "<option value=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err

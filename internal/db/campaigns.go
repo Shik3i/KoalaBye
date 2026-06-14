@@ -274,7 +274,7 @@ func (q *Querier) UpdateCampaignBranding(ctx context.Context, campaign Campaign,
 	if campaign.Status == "archived" {
 		return ErrCampaignArchived
 	}
-	validPresets := map[string]bool{"default": true, "purple": true, "blue": true, "green": true, "orange": true, "red": true, "gray": true}
+	validPresets := map[string]bool{"default": true, "purple": true, "blue": true, "green": true, "orange": true, "gray": true}
 	if !validPresets[b.AccentPreset] {
 		b.AccentPreset = "default"
 	}

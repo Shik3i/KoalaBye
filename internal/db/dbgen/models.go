@@ -45,6 +45,8 @@ type CampaignBranding struct {
 	ShowKoalabyeBranding int64       `json:"show_koalabye_branding"`
 	UpdatedAt            string      `json:"updated_at"`
 	UpdatedByUserID      interface{} `json:"updated_by_user_id"`
+	PublicHeading        interface{} `json:"public_heading"`
+	PublicIntro          interface{} `json:"public_intro"`
 }
 
 type CampaignFormField struct {
