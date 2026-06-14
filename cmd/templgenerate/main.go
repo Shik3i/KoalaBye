@@ -36,7 +36,7 @@ func main() {
 			fail("read %s: %v", source, err)
 		}
 		tempSource := filepath.Join(tempDir, filepath.Base(source))
-		if err := os.WriteFile(tempSource, sourceContent, 0o644); err != nil {
+		if err := os.WriteFile(tempSource, normalizeLines(sourceContent), 0o644); err != nil {
 			fail("copy %s for deterministic generation: %v", source, err)
 		}
 		command := exec.Command("go", "run", "github.com/a-h/templ/cmd/templ@"+templVersion, "generate", "-f", tempSource, "-stdout")
