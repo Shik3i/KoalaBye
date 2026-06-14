@@ -115,5 +115,45 @@ document.documentElement.classList.add("js");
             fieldTypeSelect.addEventListener("change", updateFieldVisibility);
             updateFieldVisibility();
         }
+
+        // Branding form live preview
+        var brandingForm = document.getElementById("branding-form");
+        if (brandingForm) {
+            var previewBody = document.getElementById("preview-body");
+            var previewBrandName = document.getElementById("preview-brand-name");
+            var previewHeading = document.getElementById("preview-heading");
+            var previewIntro = document.getElementById("preview-intro");
+            var brandNameInput = brandingForm.querySelector('[name="brand_name"]');
+            var headingInput = brandingForm.querySelector('[name="public_heading"]');
+            var introInput = brandingForm.querySelector('[name="public_intro"]');
+
+            function updateBrandingPreview() {
+                var accent = brandingForm.querySelector('[name="accent_preset"]').value || "default";
+                var theme = brandingForm.querySelector('[name="background_style"]').value || "theme-default";
+                if (previewBody) previewBody.className = "public-body accent-" + accent + " " + theme;
+                if (previewBrandName) previewBrandName.textContent = brandNameInput ? (brandNameInput.value || "KoalaBye") : "KoalaBye";
+                if (previewHeading) previewHeading.textContent = headingInput ? (headingInput.value || previewHeading.dataset.fallback) : previewHeading.dataset.fallback;
+                if (previewIntro) previewIntro.textContent = introInput ? (introInput.value || previewIntro.dataset.fallback) : previewIntro.dataset.fallback;
+            }
+
+            brandingForm.addEventListener("input", updateBrandingPreview);
+            brandingForm.addEventListener("change", updateBrandingPreview);
+            updateBrandingPreview();
+        }
+
+        // Subnav aria-current detection
+        document.querySelectorAll(".subnav a").forEach(function(link) {
+            if (link.getAttribute("href") === window.location.pathname) {
+                link.setAttribute("aria-current", "page");
+            }
+        });
+
+        // Form submit loading state
+        document.querySelectorAll("form").forEach(function(form) {
+            form.addEventListener("submit", function() {
+                var btn = form.querySelector('button[type="submit"]');
+                if (btn) { btn.disabled = true; btn.setAttribute("aria-busy", "true"); }
+            });
+        });
     });
 })();

@@ -308,8 +308,8 @@ templ CampaignBrandingForm(instanceName string, user db.User, campaign db.Campai
 								<div class="public-brand"><span class="brand-logo" aria-hidden="true">🐨</span> <span id="preview-brand-name">{ branding.BrandName.String }</span></div>
 							</div>
 							<div class="public-hero pt-20">
-								<h1 class="preview-h1">{ tr(ctx, "branding.preview.heading") }</h1>
-								<p>{ tr(ctx, "branding.preview.intro") }</p>
+								<h1 id="preview-heading" class="preview-h1" data-fallback={ tr(ctx, "branding.preview.heading") }>{ tr(ctx, "branding.preview.heading") }</h1>
+								<p id="preview-intro" data-fallback={ tr(ctx, "branding.preview.intro") }>{ tr(ctx, "branding.preview.intro") }</p>
 							</div>
 							<div class="public-card panel mt-20">
 								<fieldset class="public-field border-0 p-0">
@@ -322,25 +322,6 @@ templ CampaignBrandingForm(instanceName string, user db.User, campaign db.Campai
 						</div>
 					</div>
 				</section>
-				<script>
-					document.addEventListener("DOMContentLoaded", () => {
-						const form = document.getElementById("branding-form");
-						const previewBody = document.getElementById("preview-body");
-						const brandNameInput = form.querySelector('[name="brand_name"]');
-						const previewBrandName = document.getElementById("preview-brand-name");
-						
-						function updatePreview() {
-							const accent = form.querySelector('[name="accent_preset"]').value || "default";
-							const theme = form.querySelector('[name="background_style"]').value || "theme-default";
-							previewBody.className = "public-body accent-" + accent + " " + theme;
-							previewBrandName.textContent = brandNameInput.value || "KoalaBye";
-						}
-						
-						form.addEventListener("input", updatePreview);
-						form.addEventListener("change", updatePreview);
-						updatePreview();
-					});
-				</script>
 			</div>
 		</section>
 	}

@@ -730,7 +730,7 @@ func Layout(title string, instanceName string, user *db.User) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</main><script>\n\t\t\t\tdocument.querySelectorAll('.subnav a').forEach(function(link) {\n\t\t\t\t\tif (link.getAttribute('href') === window.location.pathname) {\n\t\t\t\t\t\tlink.setAttribute('aria-current', 'page');\n\t\t\t\t\t}\n\t\t\t\t});\n\t\t\t\tdocument.querySelectorAll('form').forEach(function(form) {\n\t\t\t\t\tform.addEventListener('submit', function() {\n\t\t\t\t\t\tvar btn = form.querySelector('button[type=\"submit\"]');\n\t\t\t\t\t\tif (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
