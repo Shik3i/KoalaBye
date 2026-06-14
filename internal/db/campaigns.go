@@ -293,7 +293,7 @@ func (q *Querier) UpdateCampaignBranding(ctx context.Context, campaign Campaign,
 		updated_at=excluded.updated_at, updated_by_user_id=excluded.updated_by_user_id`,
 		campaign.ID, b.BrandName, b.BrandURL, b.PrivacyPolicyURL, b.LegalNoticeURL, b.SupportURL, b.ContactURL, b.AccentPreset, b.BackgroundStyle, b.ShowKoalabyeBranding, b.PublicHeading, b.PublicIntro, Now(), actorID)
 	if err != nil {
-		if strings.Contains(err.Error(), "no such column") {
+		if strings.Contains(err.Error(), "no such column") || strings.Contains(err.Error(), "has no column named") {
 			_, err = q.db.ExecContext(ctx, `INSERT INTO campaign_branding (campaign_id, brand_name, brand_url, privacy_policy_url, legal_notice_url, support_url, contact_url, accent_preset, background_style, show_koalabye_branding, updated_at, updated_by_user_id)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				ON CONFLICT(campaign_id) DO UPDATE SET
