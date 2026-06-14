@@ -189,7 +189,8 @@ th { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-s
 details.public-card > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .public-brand { display: flex; align-items: center; gap: 8px; }
 .brand-logo { font-size: 1.5rem; line-height: 1; }
-.choice { min-height: 44px; display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.choice, .form-stack .choice { min-height: 44px; display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.public-field input[type="radio"], .public-field input[type="checkbox"] { width: auto; flex: 0 0 auto; }
 .flex-gap-8-mt-8 { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .choice-row { display: flex; flex-wrap: wrap; gap: 14px; }
 .choice-row label { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; gap: 5px; }
