@@ -137,6 +137,14 @@ type CampaignVisit struct {
 	ContextJson               interface{} `json:"context_json"`
 }
 
+type ErrorLog struct {
+	ID        int64       `json:"id"`
+	Level     string      `json:"level"`
+	Message   string      `json:"message"`
+	Context   interface{} `json:"context"`
+	CreatedAt string      `json:"created_at"`
+}
+
 type InstanceRole struct {
 	ID              int64       `json:"id"`
 	UserID          int64       `json:"user_id"`
