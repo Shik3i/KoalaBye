@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.3.1 - 2026-06-15
+
+### UI & Design
+- Fixed `.grid.four` CSS bug (rendered 3 columns instead of 4)
+- Added disabled form input styling (`opacity: .55`)
+- Added skeleton shimmer animation for `[aria-busy]` loading states
+- Added password show/hide toggle on login form
+- Added pause-on-hover for toast notifications
+- Added `<hr>` theme styling and removed duplicate CSS rules
+- Added password-wrapper CSS for toggle button layout
+- Consolidated inline styles into CSS utility classes
+
+### QoL
+- Added `docs/audits/` to `.gitignore` to prevent audit bloat
+
 ## v0.2.10 - 2026-06-14
 
 ### Added
