@@ -45,7 +45,7 @@ func Load() (Config, error) {
 		RegistrationEnabled:                envBool("KOALABYE_REGISTRATION_ENABLED", false),
 		InviteOnly:                         envBool("KOALABYE_INVITE_ONLY", true),
 		InviteRegistrationEnabled:          envBool("KOALABYE_INVITE_REGISTRATION_ENABLED", true),
-		SecureCookies:                      envBool("KOALABYE_SECURE_COOKIES", false),
+		SecureCookies:                      envBool("KOALABYE_SECURE_COOKIES", true),
 		InstanceName:                       env("KOALABYE_INSTANCE_NAME", "KoalaBye"),
 		InstanceSourceURL:                  strings.TrimSpace(os.Getenv("KOALABYE_INSTANCE_SOURCE_URL")),
 		BootstrapUsername:                  strings.TrimSpace(os.Getenv("KOALABYE_BOOTSTRAP_ADMIN_USERNAME")),
@@ -125,7 +125,7 @@ func (c Config) isLocalDevelopment() bool {
 		return false
 	}
 	host := u.Hostname()
-	return !c.SecureCookies && (host == "localhost" || host == "127.0.0.1" || host == "::1")
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
 }
 
 func env(key, fallback string) string {

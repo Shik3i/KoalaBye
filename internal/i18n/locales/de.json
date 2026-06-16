@@ -631,5 +631,7 @@
   "tooltip.field.slug_pattern": "Nur Buchstaben, Zahlen und Bindestriche verwenden.",
   "campaign.branding.public_text": "Öffentlicher Seitentext",
   "campaign.branding.public_heading": "Seitenüberschrift (überschreibt \"Optional feedback\")",
-  "campaign.branding.public_intro": "Einleitungstext (überschreibt den Standardtext)"
+  "campaign.branding.public_intro": "Einleitungstext (überschreibt den Standardtext)",
+  "campaign.branding.custom_css": "Eigenes CSS",
+  "campaign.branding.custom_css_hint": "Optionales CSS, das in den <head> der öffentlichen Seite eingefügt wird"
 }

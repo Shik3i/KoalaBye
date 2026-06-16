@@ -47,6 +47,7 @@ type CampaignBranding struct {
 	UpdatedByUserID      interface{} `json:"updated_by_user_id"`
 	PublicHeading        interface{} `json:"public_heading"`
 	PublicIntro          interface{} `json:"public_intro"`
+	CustomCss            interface{} `json:"custom_css"`
 }
 
 type CampaignFormField struct {

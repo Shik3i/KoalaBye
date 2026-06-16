@@ -6,6 +6,7 @@ import (
 
 	"github.com/koalastuff/koalabye/internal/i18n"
 	"github.com/koalastuff/koalabye/internal/version"
+	"github.com/koalastuff/koalabye/internal/web"
 )
 
 type csrfContextKey struct{}
@@ -83,4 +84,12 @@ func buildIdentifier() string {
 func instanceAdmin(ctx context.Context) bool {
 	allowed, _ := ctx.Value(instanceAdminContextKey{}).(bool)
 	return allowed
+}
+
+func flashFromContext(ctx context.Context) (string, string, bool) {
+	flash, ok := web.FlashFromContext(ctx)
+	if !ok {
+		return "", "", false
+	}
+	return flash.Type, flash.Message, true
 }

@@ -584,5 +584,7 @@
   "tooltip.field.slug_pattern": "Usa solo letras, números y guiones.",
   "campaign.branding.public_text": "Texto de la página pública",
   "campaign.branding.public_heading": "Título (reemplaza \"Optional feedback\")",
-  "campaign.branding.public_intro": "Párrafo introductorio (reemplaza el texto predeterminado)"
+  "campaign.branding.public_intro": "Párrafo introductorio (reemplaza el texto predeterminado)",
+  "campaign.branding.custom_css": "CSS personalizado",
+  "campaign.branding.custom_css_hint": "CSS opcional inyectado en el <head> de la página pública"
 }

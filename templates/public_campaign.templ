@@ -17,6 +17,9 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 			@HeadAssets()
 			<link rel="stylesheet" href={ "/assets/app.css?v=" + version.Current().Version }/>
 			<script src={ "/assets/app.js?v=" + version.Current().Version } defer></script>
+			if branding != nil && branding.CustomCSS.Valid {
+				<style type="text/css">{ branding.CustomCSS.String }</style>
+			}
 		</head>
 		<body class={ bodyClass(branding) }>
 			<a class="skip-link" href="#main-content">{ tr(ctx, "common.skip") }</a>
@@ -59,6 +62,8 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 						}
 					</nav>
 				</footer>
+			} else {
+				@SiteFooter()
 			}
 		</body>
 	</html>

@@ -631,5 +631,7 @@
   "tooltip.field.slug_pattern": "Use only letters, numbers, and hyphens.",
   "campaign.branding.public_text": "Public page text",
   "campaign.branding.public_heading": "Page heading (overrides \"Optional feedback\")",
-  "campaign.branding.public_intro": "Intro paragraph (overrides the default intro)"
+  "campaign.branding.public_intro": "Intro paragraph (overrides the default intro)",
+  "campaign.branding.custom_css": "Custom CSS",
+  "campaign.branding.custom_css_hint": "Optional custom styles injected into the public page <head>"
 }

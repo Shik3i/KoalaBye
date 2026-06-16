@@ -363,6 +363,7 @@ func (h *Handler) BrandingPost(w http.ResponseWriter, r *http.Request) {
 		ShowKoalabyeBranding: r.FormValue("show_koalabye_branding") == "on",
 		PublicHeading:        nullableString(strings.TrimSpace(r.FormValue("public_heading"))),
 		PublicIntro:          nullableString(strings.TrimSpace(r.FormValue("public_intro"))),
+		CustomCSS:            nullableString(r.FormValue("custom_css")),
 	}
 	if err := h.q.UpdateCampaignBranding(r.Context(), campaign, branding, user.ID); err != nil {
 		h.logError(r.Context(), "branding update failed", err)

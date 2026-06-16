@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.4.0 - 2026-06-16
+
+### Design System
+- Added CSS custom properties for typography scale (`--text-xs` through `--text-4xl`)
+- Added CSS custom properties for spacing system (`--space-xs` through `--space-xl`)
+- Replaced hardcoded font-size values with semantic CSS variables throughout
+- Created reusable icon component library (`icons.templ`): Sun, Moon, EyeOpen, EyeClosed, GitHub, Info, Close
+- Unified icon rendering across theme toggle, password toggle, and footer
+- Consolidated `.compact-button` duplicate CSS rules
+
+### Features
+- Added server-side Toast/Flash API: `web.SetFlashCookie()`, `FlashMiddleware`, `FlashToasts` component
+- Added Custom CSS field to Campaign Branding (migration 00013)
+- Campaign owners can now inject custom CSS into public campaign pages
+- Campaign public pages render custom CSS via `<style>` tag in `<head>`
+- Added HSTS header (`Strict-Transport-Security`) to security headers
+- Added `Cache-Control: public, max-age=31536000, immutable` for static assets
+
+### Security
+- Changed `KOALABYE_SECURE_COOKIES` default from `false` to `true`
+- Updated `.env.example` to reflect secure defaults
+- Decoupled `isLocalDevelopment()` from `SecureCookies` flag
+
+### Housekeeping
+- Removed 22 unused CSS classes (icon, drag-handle, command-dialog, etc.)
+- Fixed `.skip-link` to use `:focus-visible` alongside `:focus`
+- Added `will-change: transform` to hover-animated cards
+- Added all i18n keys for custom CSS in EN, DE, ES
+
 ## v0.3.1 - 2026-06-15
 
 ### UI & Design

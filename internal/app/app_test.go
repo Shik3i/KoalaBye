@@ -463,9 +463,10 @@ func TestSecurityHeadersAssetsAndNoExternalCDN(t *testing.T) {
 	response := httptest.NewRecorder()
 	application.Handler.ServeHTTP(response, request)
 	for header, want := range map[string]string{
-		"X-Content-Type-Options": "nosniff",
-		"Referrer-Policy":        "no-referrer",
-		"X-Frame-Options":        "DENY",
+		"X-Content-Type-Options":    "nosniff",
+		"Referrer-Policy":           "no-referrer",
+		"X-Frame-Options":           "DENY",
+		"Strict-Transport-Security": "max-age=63072000; includeSubDomains",
 	} {
 		if got := response.Header().Get(header); got != want {
 			t.Fatalf("%s: expected %q, got %q", header, want, got)
