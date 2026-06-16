@@ -101,6 +101,8 @@ button, input, select, textarea { font: inherit; }
 .form-stack input:disabled, .form-stack select:disabled, .form-stack textarea:disabled { opacity: .55; cursor: not-allowed; }
 .form-stack .check { display: flex; grid-template-columns: none; align-items: center; gap: 10px; }
 .form-stack .check input { width: auto; }
+.form-stack .choice input[type="radio"],
+.form-stack .choice input[type="checkbox"] { width: auto; flex: none; }
 .site-footer__github-icon { width: 18px; height: 18px; }
 .alert { margin: 20px 0; background: var(--danger-soft); border: 1px solid #f0c5bb; color: var(--danger); padding: 12px 14px; border-radius: 10px; }
 .success { margin: 20px 0; background: var(--green-soft); border: 1px solid #b9ddc5; color: var(--green-dark); padding: 12px 14px; border-radius: 10px; overflow-wrap: anywhere; }
