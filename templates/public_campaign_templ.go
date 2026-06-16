@@ -695,7 +695,7 @@ func PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.C
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "</section><details class=\"panel public-card\"><summary class=\"font-bold-750\"><h2 style=\"display:inline\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "</section><details class=\"panel public-card\"><summary class=\"font-bold-750\"><h2 class=\"inline-heading\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

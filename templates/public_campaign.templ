@@ -95,7 +95,7 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 			}
 		</section>
 		<details class="panel public-card">
-			<summary class="font-bold-750"><h2 style="display:inline">{ tr(ctx, "public.privacy.title") }</h2></summary>
+			<summary class="font-bold-750"><h2 class="inline-heading">{ tr(ctx, "public.privacy.title") }</h2></summary>
 			<p>{ tr(ctx, "public.privacy.text") }</p>
 			<p>{ publicCollectionSummary(ctx, settings) }</p>
 			if settings.CollectURLContext {

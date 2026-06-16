@@ -120,6 +120,7 @@ button, input, select, textarea { font: inherit; }
 .badge.status-draft, .badge.status-paused { background: #fff3cd; color: #725500; }
 .badge.status-archived { background: #eef0ec; color: var(--muted); }
 .muted { color: var(--muted); }
+.inline-heading { display: inline; }
 .inline-form { display: inline; }
 .link-button { min-height: 44px; display: inline-flex; align-items: center; color: var(--green-dark); border: 0; background: transparent; padding: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .link-button.danger { color: var(--danger); }
@@ -419,6 +420,7 @@ details.integration-details .code-block {
 .password-toggle:hover, button.password-toggle:not(.link-button):hover { background: var(--line); color: var(--ink); }
 .password-toggle svg,
 .password-toggle .icon-svg { width: 18px; height: 18px; }
+.password-toggle .eye-closed { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
