@@ -334,7 +334,8 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, ""))
+	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusOK, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, settings, ""))
 }
 
 func (h *Handler) Branding(w http.ResponseWriter, r *http.Request) {
@@ -387,15 +388,27 @@ func (h *Handler) SettingsPost(w http.ResponseWriter, r *http.Request) {
 	}
 	name := strings.TrimSpace(r.FormValue("name"))
 	slug := strings.TrimSpace(strings.ToLower(r.FormValue("slug")))
-	if name == "" || len(name) > 120 || len(slug) < 2 || len(slug) > 80 || !slugPattern.MatchString(slug) {
-		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, "campaign.error.invalid"))
+	rawIssueURL := strings.TrimSpace(r.FormValue("dev_feedback_issue_url"))
+	issueURL := safeGitHubIssueURL(r.FormValue("dev_feedback_issue_url"))
+	if name == "" || len(name) > 120 || len(slug) < 2 || len(slug) > 80 || !slugPattern.MatchString(slug) || (rawIssueURL != "" && issueURL == "") {
+		settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+		settings.DevFeedbackIssueURL = nullableString(rawIssueURL)
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, settings, "campaign.error.invalid"))
 		return
 	}
 	campaign.Name, campaign.Slug = name, slug
 	campaign.Description = nullableString(strings.TrimSpace(r.FormValue("description")))
 	campaign.PublicLinkEnabled = r.FormValue("public_link_enabled") == "on"
 	if err := h.q.UpdateCampaign(r.Context(), campaign, user.ID); err != nil {
-		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, "campaign.error.slug"))
+		settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+		settings.DevFeedbackIssueURL = nullableString(issueURL)
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, settings, "campaign.error.slug"))
+		return
+	}
+	if err := h.q.UpdateCampaignDevFeedbackIssueURL(r.Context(), campaign, issueURL, user.ID); err != nil {
+		settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+		settings.DevFeedbackIssueURL = nullableString(issueURL)
+		web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignSettings(h.cfg.InstanceName, user, campaign, settings, "campaign.error.invalid"))
 		return
 	}
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID), http.StatusSeeOther)
@@ -578,6 +591,22 @@ func safeURL(raw string) string {
 		return raw
 	}
 	if parsed.Scheme == "http" && (parsed.Hostname() == "localhost" || parsed.Hostname() == "127.0.0.1") {
+		return raw
+	}
+	return ""
+}
+
+func safeGitHubIssueURL(raw string) string {
+	raw = safeURL(raw)
+	if raw == "" {
+		return ""
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || !strings.EqualFold(parsed.Hostname(), "github.com") {
+		return ""
+	}
+	parts := strings.Split(strings.Trim(parsed.EscapedPath(), "/"), "/")
+	if len(parts) >= 3 && parts[2] == "issues" {
 		return raw
 	}
 	return ""

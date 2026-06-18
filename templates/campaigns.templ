@@ -144,6 +144,9 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 					<p>{ tr(ctx, "campaign.public_link.explanation") }</p>
 					@publicLinkRow("campaign-public-url", "campaign.public_link.stable", baseURL+"/c/"+campaign.PublicID)
 					@publicLinkRow("campaign-friendly-url", "campaign.public_link.friendly", baseURL+"/u/"+campaign.OrganizationSlug+"/"+campaign.Slug)
+					if settings.DevFeedbackIssueURL.Valid {
+						@publicLinkRow("campaign-dev-feedback-url", "campaign.dev_feedback_issue_url", settings.DevFeedbackIssueURL.String)
+					}
 					if campaign.PublicLinkEnabled {
 						<span class="badge">{ tr(ctx, "common.enabled") }</span>
 					} else {
@@ -176,6 +179,9 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 					<p>{ tr(ctx, "campaign.public_link.explanation") }</p>
 					@publicLinkRow("campaign-public-url", "campaign.public_link.stable", baseURL+"/c/"+campaign.PublicID)
 					@publicLinkRow("campaign-friendly-url", "campaign.public_link.friendly", baseURL+"/u/"+campaign.OrganizationSlug+"/"+campaign.Slug)
+					if settings.DevFeedbackIssueURL.Valid {
+						@publicLinkRow("campaign-dev-feedback-url", "campaign.dev_feedback_issue_url", settings.DevFeedbackIssueURL.String)
+					}
 					if campaign.PublicLinkEnabled {
 						<span class="badge">{ tr(ctx, "common.enabled") }</span>
 					} else {
@@ -242,7 +248,7 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 	}
 }
 
-templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, errorKey string) {
+templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, errorKey string) {
 	@Layout(tr(ctx, "campaign.settings"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="auth-shell wide">
@@ -252,10 +258,20 @@ templ CampaignSettings(instanceName string, user db.User, campaign db.Campaign, 
 			}
 			<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/settings") } class="panel form-stack">
 				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
-				<label><div class="field-header"><span>{ tr(ctx, "campaign.name") }<span aria-hidden="true">*</span></span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.campaign_name") } data-tooltip={ tr(ctx, "tooltip.field.campaign_name") }>i</span></div><input name="name" value={ campaign.Name } required maxlength="120"/></label>
-				<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }<span aria-hidden="true">*</span></span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.campaign_slug") } data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*" title={ tr(ctx, "tooltip.field.slug_pattern") }/></label>
-				<label><div class="field-header"><span>{ tr(ctx, "campaign.description") }</span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.campaign_desc") } data-tooltip={ tr(ctx, "tooltip.field.campaign_desc") }>i</span></div><textarea name="description" maxlength="1000">{ campaign.Description.String }</textarea></label>
-				<label class="check"><input type="checkbox" name="public_link_enabled" checked?={ campaign.PublicLinkEnabled }/>{ tr(ctx, "campaign.public_link.enable") }</label>
+				<section class="settings-section">
+					<h2>{ tr(ctx, "campaign.settings.basics") }</h2>
+					<label><div class="field-header"><span>{ tr(ctx, "campaign.name") }<span aria-hidden="true">*</span></span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.campaign_name") } data-tooltip={ tr(ctx, "tooltip.field.campaign_name") }>i</span></div><input name="name" value={ campaign.Name } required maxlength="120"/></label>
+					<label><div class="field-header"><span>{ tr(ctx, "campaign.slug") }<span aria-hidden="true">*</span></span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.campaign_slug") } data-tooltip={ tr(ctx, "tooltip.field.campaign_slug") }>i</span></div><input name="slug" value={ campaign.Slug } required minlength="2" maxlength="80" pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*" title={ tr(ctx, "tooltip.field.slug_pattern") }/></label>
+					<label><div class="field-header"><span>{ tr(ctx, "campaign.description") }</span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.campaign_desc") } data-tooltip={ tr(ctx, "tooltip.field.campaign_desc") }>i</span></div><textarea name="description" maxlength="1000">{ campaign.Description.String }</textarea></label>
+				</section>
+				<section class="settings-section">
+					<h2>{ tr(ctx, "campaign.settings.public_access") }</h2>
+					<label class="check"><input type="checkbox" name="public_link_enabled" checked?={ campaign.PublicLinkEnabled }/>{ tr(ctx, "campaign.public_link.enable") }</label>
+				</section>
+				<section class="settings-section">
+					<h2>{ tr(ctx, "campaign.settings.developer_workflow") }</h2>
+					<label><div class="field-header"><span>{ tr(ctx, "campaign.dev_feedback_issue_url") }</span><span class="info-icon" tabindex="0" role="button" aria-label={ tr(ctx, "tooltip.field.dev_feedback_issue_url") } data-tooltip={ tr(ctx, "tooltip.field.dev_feedback_issue_url") }>i</span></div><input type="url" name="dev_feedback_issue_url" value={ settings.DevFeedbackIssueURL.String } maxlength="500" placeholder="https://github.com/org/repo/issues/new"/></label>
+				</section>
 				<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.save") }>{ tr(ctx, "common.save") }</button>
 			</form>
 		</section>

@@ -102,6 +102,7 @@ type CampaignSetting struct {
 	RetentionEnabled       int64       `json:"retention_enabled"`
 	RetentionDays          interface{} `json:"retention_days"`
 	CollectUrlContext      int64       `json:"collect_url_context"`
+	DevFeedbackIssueUrl    interface{} `json:"dev_feedback_issue_url"`
 }
 
 type CampaignSubmission struct {
@@ -111,6 +112,7 @@ type CampaignSubmission struct {
 	VisitID          interface{} `json:"visit_id"`
 	InstallTokenHash interface{} `json:"install_token_hash"`
 	SubmittedAt      string      `json:"submitted_at"`
+	TriageStatus     string      `json:"triage_status"`
 }
 
 type CampaignSubmissionAnswer struct {

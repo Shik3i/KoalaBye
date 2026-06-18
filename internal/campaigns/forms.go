@@ -407,12 +407,13 @@ func (h *Handler) Responses(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	submissions, err := h.q.ListSubmissions(r.Context(), campaign.ID)
+	submissions, err := h.q.ListSubmissionsWithAnswers(r.Context(), campaign.ID)
 	if err != nil {
 		http.Error(w, "load responses", http.StatusInternalServerError)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignResponses(h.cfg.InstanceName, user, campaign, submissions))
+	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusOK, templates.CampaignResponses(h.cfg.InstanceName, user, campaign, settings, submissions))
 }
 
 func (h *Handler) ResponseDetail(w http.ResponseWriter, r *http.Request) {
@@ -426,7 +427,23 @@ func (h *Handler) ResponseDetail(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.CampaignResponseDetail(h.cfg.InstanceName, user, campaign, submission))
+	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	web.Render(w, r, http.StatusOK, templates.CampaignResponseDetail(h.cfg.InstanceName, user, campaign, settings, submission))
+}
+
+func (h *Handler) ResponseTriageStatus(w http.ResponseWriter, r *http.Request) {
+	user, campaign, role, ok := h.responseCampaign(r)
+	if !ok || (role != "owner" && role != "editor") {
+		h.forbidden(w, r)
+		return
+	}
+	status := r.FormValue("triage_status")
+	submissionPublicID := chi.URLParam(r, "submissionPublicID")
+	if err := h.q.UpdateSubmissionTriageStatus(r.Context(), campaign, submissionPublicID, status, user.ID); err != nil {
+		h.forbidden(w, r)
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/responses/"+submissionPublicID, http.StatusSeeOther)
 }
 
 func (h *Handler) responseCampaign(r *http.Request) (db.User, db.Campaign, string, bool) {

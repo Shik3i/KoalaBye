@@ -197,6 +197,7 @@ func Routes(
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/options/{optionPublicID}/archive", campaignsHandler.FormOptionArchive)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/responses", campaignsHandler.Responses)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/responses/{submissionPublicID}", campaignsHandler.ResponseDetail)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/responses/{submissionPublicID}/triage", campaignsHandler.ResponseTriageStatus)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/analytics", campaignsHandler.Analytics)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/export/submissions.csv", campaignsHandler.ExportCSV)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/export/submissions.json", campaignsHandler.ExportJSON)

@@ -283,8 +283,8 @@ func (q *Querier) fieldSummaries(ctx context.Context, campaignID int64, start *t
 
 func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int64) ([]Submission, error) {
 	rows, err := q.db.QueryContext(ctx, `
-		SELECT s.id, s.public_id, s.campaign_id, v.public_id, s.install_token_hash IS NOT NULL, s.submitted_at, v.context_json,
-		       a.field_public_id, a.field_type, a.field_label_snapshot, a.value_json
+		SELECT s.id, s.public_id, s.campaign_id, v.public_id, s.install_token_hash IS NOT NULL, s.submitted_at, s.triage_status, v.context_json,
+		       a.field_id, a.field_public_id, a.field_type, a.field_label_snapshot, a.value_json
 		FROM campaign_submissions s
 		LEFT JOIN campaign_visits v ON v.id = s.visit_id
 		LEFT JOIN campaign_submission_answers a ON a.submission_id = s.id
@@ -301,16 +301,17 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 
 	for rows.Next() {
 		var sID, sCampaignID int64
-		var sPublicID, sSubmittedAt string
+		var sPublicID, sSubmittedAt, sTriageStatus string
 		var sVisitPublicID sql.NullString
 		var sHasInstallTokenHash bool
 		var contextJSON sql.NullString
 
+		var aFieldID sql.NullInt64
 		var aFieldPublicID, aFieldType, aFieldLabelSnapshot, aValueJSON sql.NullString
 
 		err := rows.Scan(
-			&sID, &sPublicID, &sCampaignID, &sVisitPublicID, &sHasInstallTokenHash, &sSubmittedAt, &contextJSON,
-			&aFieldPublicID, &aFieldType, &aFieldLabelSnapshot, &aValueJSON,
+			&sID, &sPublicID, &sCampaignID, &sVisitPublicID, &sHasInstallTokenHash, &sSubmittedAt, &sTriageStatus, &contextJSON,
+			&aFieldID, &aFieldPublicID, &aFieldType, &aFieldLabelSnapshot, &aValueJSON,
 		)
 		if err != nil {
 			return nil, err
@@ -329,6 +330,7 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 				VisitPublicID:       sVisitPublicID,
 				HasInstallTokenHash: sHasInstallTokenHash,
 				SubmittedAt:         sSubmittedAt,
+				TriageStatus:        sTriageStatus,
 				URLContext:          urlContext,
 			}
 			submissions = append(submissions, sub)
@@ -338,6 +340,7 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 
 		if aFieldPublicID.Valid {
 			submissions[idx].Answers = append(submissions[idx].Answers, SubmissionAnswer{
+				FieldID:            aFieldID.Int64,
 				FieldPublicID:      aFieldPublicID.String,
 				FieldType:          aFieldType.String,
 				FieldLabelSnapshot: aFieldLabelSnapshot.String,
@@ -347,6 +350,13 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	for index, submission := range submissions {
+		updated, err := q.withSubmissionAnswerDisplayLabels(ctx, submission)
+		if err != nil {
+			return nil, err
+		}
+		submissions[index] = updated
 	}
 	return submissions, nil
 }

@@ -45,6 +45,7 @@ type CampaignSettings struct {
 	CollectCoarseBrowser   bool
 	CollectCoarseOS        bool
 	CollectURLContext      bool
+	DevFeedbackIssueURL    sql.NullString
 	PublicLanguageDefault  string
 	ShowPrivacyNotice      bool
 	RetentionEnabled       bool
@@ -226,8 +227,8 @@ func (q *Querier) CampaignRole(ctx context.Context, campaignID, userID int64) (s
 
 func (q *Querier) GetCampaignSettings(ctx context.Context, campaignID int64) (CampaignSettings, error) {
 	var s CampaignSettings
-	err := q.db.QueryRowContext(ctx, `SELECT collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,collect_url_context,public_language_default,show_privacy_notice,retention_enabled,retention_days,updated_at,updated_by_user_id FROM campaign_settings WHERE campaign_id=?`, campaignID).
-		Scan(&s.CollectInstallToken, &s.HashInstallToken, &s.CountRawVisits, &s.CountUniqueTokenVisits, &s.CollectReferrerDomain, &s.CollectCoarseBrowser, &s.CollectCoarseOS, &s.CollectURLContext, &s.PublicLanguageDefault, &s.ShowPrivacyNotice, &s.RetentionEnabled, &s.RetentionDays, &s.UpdatedAt, &s.UpdatedByUserID)
+	err := q.db.QueryRowContext(ctx, `SELECT collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,collect_url_context,dev_feedback_issue_url,public_language_default,show_privacy_notice,retention_enabled,retention_days,updated_at,updated_by_user_id FROM campaign_settings WHERE campaign_id=?`, campaignID).
+		Scan(&s.CollectInstallToken, &s.HashInstallToken, &s.CountRawVisits, &s.CountUniqueTokenVisits, &s.CollectReferrerDomain, &s.CollectCoarseBrowser, &s.CollectCoarseOS, &s.CollectURLContext, &s.DevFeedbackIssueURL, &s.PublicLanguageDefault, &s.ShowPrivacyNotice, &s.RetentionEnabled, &s.RetentionDays, &s.UpdatedAt, &s.UpdatedByUserID)
 	return s, err
 }
 
@@ -267,6 +268,17 @@ func (q *Querier) UpdateCampaign(ctx context.Context, campaign Campaign, actorID
 	n, _ := res.RowsAffected()
 	if n == 0 {
 		return ErrCampaignArchived
+	}
+	return q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign_updated", "campaign", campaign.PublicID, nil, nil)
+}
+
+func (q *Querier) UpdateCampaignDevFeedbackIssueURL(ctx context.Context, campaign Campaign, issueURL string, actorID int64) error {
+	if campaign.Status == "archived" {
+		return ErrCampaignArchived
+	}
+	_, err := q.db.ExecContext(ctx, `UPDATE campaign_settings SET dev_feedback_issue_url=?,updated_at=?,updated_by_user_id=? WHERE campaign_id=?`, nullableText(issueURL), Now(), actorID, campaign.ID)
+	if err != nil {
+		return err
 	}
 	return q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign_updated", "campaign", campaign.PublicID, nil, nil)
 }

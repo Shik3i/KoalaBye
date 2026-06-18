@@ -3,6 +3,8 @@ package templates
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/koalastuff/koalabye/internal/db"
@@ -89,10 +91,22 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, bran
 							<p>{ tr(ctx, "public.form.placeholder") }</p>
 						} else {
 							<div class="public-main preview-main-scaled">
+								<section class="public-hero pt-20">
+									<div class="eyebrow">{ campaign.Name }</div>
+									<h1>{ nullableOr(branding.PublicHeading, tr(ctx, "public.heading")) }</h1>
+									<p class="lede">{ nullableOr(branding.PublicIntro, tr(ctx, "public.intro")) }</p>
+								</section>
 								<form class="public-form public-card panel m-0">
+									<h2>{ tr(ctx, "public.form.title") }</h2>
+									<p>{ tr(ctx, "public.form.optional") }</p>
 									@PublicFields(fields, false)
-									<button class="primary mt-20 opacity-80" disabled>Submit</button>
+									<button class="primary mt-20 opacity-80" disabled>{ tr(ctx, "public.form.submit") }</button>
 								</form>
+								<details class="panel public-card" open>
+									<summary class="font-bold-750"><h2 class="inline-heading">{ tr(ctx, "public.privacy.title") }</h2></summary>
+									<p>{ tr(ctx, "public.privacy.text") }</p>
+									<p class="muted">{ tr(ctx, "public.privacy.free_text") }</p>
+								</details>
 							</div>
 						}
 					</div>
@@ -216,19 +230,25 @@ templ PublicFields(fields []db.FormField, enabled bool) {
 	}
 }
 
-templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign, submissions []db.Submission) {
+templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, submissions []db.Submission) {
 	@Layout(tr(ctx, "responses.title"), instanceName, &user) {
 		@CampaignNav(campaign)
-		<section class="page-heading"><div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "responses.title") }</h1></div></section>
+		<section class="page-heading">
+			<div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "responses.title") }</h1></div>
+			if settings.DevFeedbackIssueURL.Valid {
+				<a class="button secondary" href={ templ.SafeURL(settings.DevFeedbackIssueURL.String) } target="_blank" rel="noopener noreferrer">{ tr(ctx, "responses.github_issue.open") }</a>
+			}
+		</section>
 		<section class="panel table-wrap">
 			<table>
 				<caption>{ tr(ctx, "responses.table_caption", campaign.Name) }</caption>
-				<thead><tr><th>{ tr(ctx, "responses.submitted_at") }</th><th>{ tr(ctx, "responses.summary") }</th><th>{ tr(ctx, "responses.visit") }</th><th>{ tr(ctx, "responses.token") }</th></tr></thead>
+				<thead><tr><th>{ tr(ctx, "responses.submitted_at") }</th><th>{ tr(ctx, "responses.status") }</th><th>{ tr(ctx, "responses.summary") }</th><th>{ tr(ctx, "responses.visit") }</th><th>{ tr(ctx, "responses.token") }</th></tr></thead>
 				<tbody>
 					for _, submission := range submissions {
 						<tr>
 							<td><a href={ templ.SafeURL(campaignPath(campaign) + "/responses/" + submission.PublicID) }>{ submission.SubmittedAt }</a></td>
-							<td>{ submission.AnswerSummary }</td>
+							<td><span class={ "badge triage-" + submission.TriageStatus }>{ tr(ctx, "responses.status." + submission.TriageStatus) }</span></td>
+							<td>{ submissionPreview(submission) }</td>
 							<td>{ nullable(submission.VisitPublicID) }</td>
 							<td>
 								if submission.HasInstallTokenHash {
@@ -248,18 +268,72 @@ templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign,
 	}
 }
 
-templ CampaignResponseDetail(instanceName string, user db.User, campaign db.Campaign, submission db.Submission) {
+templ CampaignResponseDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, submission db.Submission) {
 	@Layout(tr(ctx, "responses.detail"), instanceName, &user) {
 		@CampaignNav(campaign)
-		<section class="page-heading"><div><div class="eyebrow">{ submission.SubmittedAt }</div><h1>{ tr(ctx, "responses.detail") }</h1></div></section>
+		<section class="page-heading">
+			<div><div class="eyebrow">{ submission.SubmittedAt }</div><h1>{ tr(ctx, "responses.detail") }</h1></div>
+			if responseIssueURL(settings, campaign, submission) != "" {
+				<a class="button secondary" href={ templ.SafeURL(responseIssueURL(settings, campaign, submission)) } target="_blank" rel="noopener noreferrer">{ tr(ctx, "responses.github_issue.create") }</a>
+			}
+		</section>
 		<div class="notice">{ tr(ctx, "responses.privacy") }</div>
+		<section class="panel response-meta">
+			<div><span class="muted">{ tr(ctx, "responses.status") }</span><strong>{ tr(ctx, "responses.status." + submission.TriageStatus) }</strong></div>
+			<div><span class="muted">{ tr(ctx, "responses.visit") }</span><strong>{ nullable(submission.VisitPublicID) }</strong></div>
+			<div><span class="muted">{ tr(ctx, "responses.token") }</span><strong>{ translatedBoolean(ctx, fmt.Sprint(submission.HasInstallTokenHash)) }</strong></div>
+			<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/responses/" + submission.PublicID + "/triage") } class="response-status-form">
+				<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+				<label>
+					<span class="muted">{ tr(ctx, "responses.status.change") }</span>
+					<select name="triage_status">
+						for _, status := range []string{"new", "reviewed", "actionable", "closed"} {
+							<option value={ status } selected?={ submission.TriageStatus == status }>{ tr(ctx, "responses.status." + status) }</option>
+						}
+					</select>
+				</label>
+				<button type="submit" class="secondary">{ tr(ctx, "common.save") }</button>
+			</form>
+		</section>
+		if len(submission.URLContext) > 0 {
+			<section class="panel response-context">
+				<h2>{ tr(ctx, "responses.context") }</h2>
+				<dl class="stats">
+					for _, key := range sortedContextKeys(submission.URLContext) {
+						<dt>{ key }</dt>
+						<dd>{ submission.URLContext[key] }</dd>
+					}
+				</dl>
+			</section>
+		}
 		for _, answer := range submission.Answers {
 			<article class="panel response-answer">
-				<h2>{ answer.FieldLabelSnapshot }</h2>
-				<p>{ submissionAnswerDisplay(answer.ValueJSON) }</p>
+				<div class="field-heading">
+					<div><span class="badge quiet">{ tr(ctx, "form.type." + answer.FieldType) }</span><h2>{ answer.FieldLabelSnapshot }</h2></div>
+					<button class="button secondary copy-button" type="button" data-copy-target={ "answer-" + answer.FieldPublicID } data-copy-label={ tr(ctx, "copy.copied") } data-tooltip={ tr(ctx, "tooltip.btn.copy") }>{ tr(ctx, "copy.action") }</button>
+				</div>
+				<p id={ "answer-" + answer.FieldPublicID }>{ submissionAnswerDisplay(answerDisplayValueJSON(answer)) }</p>
 			</article>
 		}
 	}
+}
+
+func submissionPreview(submission db.Submission) string {
+	if len(submission.Answers) == 0 {
+		return submission.AnswerSummary
+	}
+	value := submissionAnswerDisplay(answerDisplayValueJSON(submission.Answers[0]))
+	if len([]rune(value)) > 140 {
+		return string([]rune(value)[:140]) + "..."
+	}
+	return value
+}
+
+func answerDisplayValueJSON(answer db.SubmissionAnswer) string {
+	if answer.DisplayValueJSON != "" {
+		return answer.DisplayValueJSON
+	}
+	return answer.ValueJSON
 }
 
 func submissionAnswerDisplay(raw string) string {
@@ -277,6 +351,64 @@ func submissionAnswerDisplay(raw string) string {
 	default:
 		return fmt.Sprint(value)
 	}
+}
+
+func responseIssueURL(settings db.CampaignSettings, campaign db.Campaign, submission db.Submission) string {
+	if !settings.DevFeedbackIssueURL.Valid || settings.DevFeedbackIssueURL.String == "" {
+		return ""
+	}
+	parsed, err := url.Parse(settings.DevFeedbackIssueURL.String)
+	if err != nil {
+		return settings.DevFeedbackIssueURL.String
+	}
+	values := parsed.Query()
+	if values.Get("title") == "" {
+		values.Set("title", campaign.Name+": feedback "+submission.PublicID)
+	}
+	if values.Get("body") == "" {
+		values.Set("body", responseIssueBody(campaign, submission))
+	}
+	parsed.RawQuery = values.Encode()
+	return parsed.String()
+}
+
+func responseIssueBody(campaign db.Campaign, submission db.Submission) string {
+	var body strings.Builder
+	body.WriteString("Campaign: ")
+	body.WriteString(campaign.Name)
+	body.WriteString("\nSubmission: ")
+	body.WriteString(submission.PublicID)
+	body.WriteString("\nSubmitted at: ")
+	body.WriteString(submission.SubmittedAt)
+	body.WriteString("\nStatus: ")
+	body.WriteString(submission.TriageStatus)
+	body.WriteString("\n\nFeedback:\n")
+	for _, answer := range submission.Answers {
+		body.WriteString("\n")
+		body.WriteString(answer.FieldLabelSnapshot)
+		body.WriteString("\n")
+		body.WriteString(submissionAnswerDisplay(answerDisplayValueJSON(answer)))
+		body.WriteString("\n")
+	}
+	if len(submission.URLContext) > 0 {
+		body.WriteString("\nContext:\n")
+		for _, key := range sortedContextKeys(submission.URLContext) {
+			body.WriteString(key)
+			body.WriteString(": ")
+			body.WriteString(submission.URLContext[key])
+			body.WriteString("\n")
+		}
+	}
+	return body.String()
+}
+
+func sortedContextKeys(values map[string]string) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func helpID(field db.FormField) string {

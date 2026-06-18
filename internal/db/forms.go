@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -303,13 +304,16 @@ type Submission struct {
 	VisitPublicID       sql.NullString
 	HasInstallTokenHash bool
 	SubmittedAt         string
+	TriageStatus        string
 	AnswerSummary       string
 	URLContext          map[string]string
 	Answers             []SubmissionAnswer
 }
 
 type SubmissionAnswer struct {
+	FieldID                                                 int64
 	FieldPublicID, FieldType, FieldLabelSnapshot, ValueJSON string
+	DisplayValueJSON                                        string
 }
 
 type SubmissionStats struct {
@@ -328,7 +332,7 @@ func (q *Querier) SubmissionStats(ctx context.Context, campaignID int64, now tim
 }
 
 func (q *Querier) ListSubmissions(ctx context.Context, campaignID int64) ([]Submission, error) {
-	rows, err := q.db.QueryContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,v.context_json,
+	rows, err := q.db.QueryContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,s.triage_status,v.context_json,
 		COALESCE((SELECT a.field_label_snapshot FROM campaign_submission_answers a WHERE a.submission_id=s.id ORDER BY a.id LIMIT 1),'')
 		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? ORDER BY s.id DESC LIMIT 100`, campaignID)
 	if err != nil {
@@ -339,7 +343,7 @@ func (q *Querier) ListSubmissions(ctx context.Context, campaignID int64) ([]Subm
 	for rows.Next() {
 		var submission Submission
 		var contextJSON sql.NullString
-		if err := rows.Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &contextJSON, &submission.AnswerSummary); err != nil {
+		if err := rows.Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.TriageStatus, &contextJSON, &submission.AnswerSummary); err != nil {
 			return nil, err
 		}
 		if contextJSON.Valid {
@@ -353,26 +357,99 @@ func (q *Querier) ListSubmissions(ctx context.Context, campaignID int64) ([]Subm
 func (q *Querier) GetSubmission(ctx context.Context, campaignID int64, publicID string) (Submission, error) {
 	var submission Submission
 	var contextJSON sql.NullString
-	err := q.db.QueryRowContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,v.context_json,''
+	err := q.db.QueryRowContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,s.triage_status,v.context_json,''
 		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? AND s.public_id=?`, campaignID, publicID).
-		Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &contextJSON, &submission.AnswerSummary)
+		Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.TriageStatus, &contextJSON, &submission.AnswerSummary)
 	if err != nil {
 		return submission, err
 	}
 	if contextJSON.Valid {
 		_ = json.Unmarshal([]byte(contextJSON.String), &submission.URLContext)
 	}
-	rows, err := q.db.QueryContext(ctx, `SELECT field_public_id,field_type,field_label_snapshot,value_json FROM campaign_submission_answers WHERE submission_id=? ORDER BY id`, submission.ID)
+	rows, err := q.db.QueryContext(ctx, `SELECT field_id,field_public_id,field_type,field_label_snapshot,value_json FROM campaign_submission_answers WHERE submission_id=? ORDER BY id`, submission.ID)
 	if err != nil {
 		return submission, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var answer SubmissionAnswer
-		if err := rows.Scan(&answer.FieldPublicID, &answer.FieldType, &answer.FieldLabelSnapshot, &answer.ValueJSON); err != nil {
+		if err := rows.Scan(&answer.FieldID, &answer.FieldPublicID, &answer.FieldType, &answer.FieldLabelSnapshot, &answer.ValueJSON); err != nil {
 			return submission, err
 		}
 		submission.Answers = append(submission.Answers, answer)
 	}
-	return submission, rows.Err()
+	if err := rows.Err(); err != nil {
+		return submission, err
+	}
+	return q.withSubmissionAnswerDisplayLabels(ctx, submission)
+}
+
+func (q *Querier) UpdateSubmissionTriageStatus(ctx context.Context, campaign Campaign, submissionPublicID, status string, actorID int64) error {
+	if status != "new" && status != "reviewed" && status != "actionable" && status != "closed" {
+		return ErrForbidden
+	}
+	res, err := q.db.ExecContext(ctx, `UPDATE campaign_submissions SET triage_status=? WHERE campaign_id=? AND public_id=?`, status, campaign.ID, submissionPublicID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign_response_triage_updated", "submission", submissionPublicID, nil, fmt.Sprintf(`{"status":%q}`, status))
+}
+
+func (q *Querier) withSubmissionAnswerDisplayLabels(ctx context.Context, submission Submission) (Submission, error) {
+	for index, answer := range submission.Answers {
+		if answer.FieldType != "radio_group" && answer.FieldType != "checkbox_group" {
+			continue
+		}
+		labels, err := q.optionLabelsByValue(ctx, answer.FieldID)
+		if err != nil || len(labels) == 0 {
+			continue
+		}
+		if answer.FieldType == "checkbox_group" {
+			var values []string
+			if json.Unmarshal([]byte(answer.ValueJSON), &values) != nil {
+				continue
+			}
+			changed := false
+			for valueIndex, value := range values {
+				if label, ok := labels[value]; ok {
+					values[valueIndex] = label
+					changed = true
+				}
+			}
+			if changed {
+				encoded, _ := json.Marshal(values)
+				submission.Answers[index].DisplayValueJSON = string(encoded)
+			}
+			continue
+		}
+		var value string
+		if json.Unmarshal([]byte(answer.ValueJSON), &value) != nil {
+			continue
+		}
+		if label, ok := labels[value]; ok {
+			encoded, _ := json.Marshal(label)
+			submission.Answers[index].DisplayValueJSON = string(encoded)
+		}
+	}
+	return submission, nil
+}
+
+func (q *Querier) optionLabelsByValue(ctx context.Context, fieldID int64) (map[string]string, error) {
+	rows, err := q.db.QueryContext(ctx, `SELECT value,label FROM campaign_form_options WHERE field_id=?`, fieldID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	labels := map[string]string{}
+	for rows.Next() {
+		var value, label string
+		if err := rows.Scan(&value, &label); err != nil {
+			return nil, err
+		}
+		labels[value] = label
+	}
+	return labels, rows.Err()
 }

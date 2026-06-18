@@ -53,6 +53,13 @@ func TestSubmissionPrivacyLinkageSnapshotsAndQuota(t *testing.T) {
 		t.Fatal(err)
 	}
 	field, _ := q.GetFormField(ctx, campaign.ID, "field_text")
+	if err := q.CreateFormField(ctx, SaveFormFieldInput{PublicID: "field_reason", CampaignID: campaign.ID, FieldType: "radio_group", Label: "Reason"}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	reason, _ := q.GetFormField(ctx, campaign.ID, "field_reason")
+	if err := q.CreateFormOption(ctx, campaign.ID, reason.ID, "option_expensive", "The paid plan was too expensive.", "expensive", owner.ID); err != nil {
+		t.Fatal(err)
+	}
 	at := time.Date(2026, 6, 12, 12, 0, 0, 0, time.UTC)
 	if err := q.RecordCampaignVisit(ctx, RecordVisitInput{
 		PublicID: "visit_submit", CampaignID: campaign.ID, OrganizationID: org.ID,
@@ -62,9 +69,13 @@ func TestSubmissionPrivacyLinkageSnapshotsAndQuota(t *testing.T) {
 		t.Fatal(err)
 	}
 	raw, _ := json.Marshal("<script>alert(1)</script>")
+	rawReason, _ := json.Marshal("expensive")
 	input := CreateSubmissionInput{
 		PublicID: "submission_one", VisitPublicID: "visit_submit", CampaignID: campaign.ID, OrgID: org.ID, SubmittedAt: at,
-		Answers: []SubmissionAnswerInput{{FieldID: field.ID, FieldPublicID: field.PublicID, FieldType: field.FieldType, FieldLabelSnapshot: field.Label, ValueJSON: string(raw)}},
+		Answers: []SubmissionAnswerInput{
+			{FieldID: field.ID, FieldPublicID: field.PublicID, FieldType: field.FieldType, FieldLabelSnapshot: field.Label, ValueJSON: string(raw)},
+			{FieldID: reason.ID, FieldPublicID: reason.PublicID, FieldType: reason.FieldType, FieldLabelSnapshot: reason.Label, ValueJSON: string(rawReason)},
+		},
 	}
 	if err := q.CreateSubmission(ctx, input); err != nil {
 		t.Fatal(err)
@@ -73,8 +84,28 @@ func TestSubmissionPrivacyLinkageSnapshotsAndQuota(t *testing.T) {
 	if err != nil || !submission.VisitPublicID.Valid || submission.VisitPublicID.String != "visit_submit" || !submission.HasInstallTokenHash {
 		t.Fatalf("submission linkage failed: %#v err=%v", submission, err)
 	}
-	if len(submission.Answers) != 1 || submission.Answers[0].FieldLabelSnapshot != "Original" || submission.Answers[0].FieldPublicID != "field_text" {
+	if len(submission.Answers) != 2 || submission.Answers[0].FieldLabelSnapshot != "Original" || submission.Answers[0].FieldPublicID != "field_text" {
 		t.Fatalf("answer snapshot missing: %#v", submission.Answers)
+	}
+	if submission.TriageStatus != "new" {
+		t.Fatalf("default triage status=%q", submission.TriageStatus)
+	}
+	if err := q.UpdateSubmissionTriageStatus(ctx, campaign, input.PublicID, "reviewed", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	submission, err = q.GetSubmission(ctx, campaign.ID, input.PublicID)
+	if err != nil || submission.TriageStatus != "reviewed" {
+		t.Fatalf("triage status not updated: %#v err=%v", submission, err)
+	}
+	if err := q.UpdateSubmissionTriageStatus(ctx, campaign, input.PublicID, "invalid", owner.ID); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("invalid triage status accepted: %v", err)
+	}
+	var displayReason string
+	if err := json.Unmarshal([]byte(submission.Answers[1].DisplayValueJSON), &displayReason); err != nil {
+		t.Fatal(err)
+	}
+	if displayReason != "The paid plan was too expensive." {
+		t.Fatalf("display reason=%q", displayReason)
 	}
 	if submission.URLContext["platform"] != "firefox" {
 		t.Fatalf("submission context missing: %#v", submission.URLContext)
