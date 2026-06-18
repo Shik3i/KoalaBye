@@ -277,6 +277,10 @@ func (h *Handler) PublicSubmitBySlug(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) publicSubmit(w http.ResponseWriter, r *http.Request, resolve func() (db.PublicCampaign, error)) {
+	if !h.submitLimiter.Allow(web.ClientIP(r, h.cfg.TrustedProxies)) {
+		h.publicUnavailable(w, r, http.StatusTooManyRequests, false, "en")
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxPublicFormBody)
 	if err := r.ParseForm(); err != nil {
 		h.publicUnavailable(w, r, http.StatusRequestEntityTooLarge, false, "en")

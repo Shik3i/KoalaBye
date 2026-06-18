@@ -2,7 +2,6 @@ package auth
 
 import (
 	"database/sql"
-	"net"
 	"net/http"
 	"strings"
 
@@ -43,7 +42,7 @@ func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username := db.NormalizeUsername(r.FormValue("username"))
-	ip := getClientIP(r)
+	ip := web.ClientIP(r, h.cfg.TrustedProxies)
 	if !h.limiter.Allow(username, ip) {
 		h.loginError(w, r, "auth.error.rate_limited")
 		return
@@ -74,22 +73,6 @@ func (h *Handler) LoginPost(w http.ResponseWriter, r *http.Request) {
 	h.limiter.Success(username, ip)
 	h.audit.Record(r.Context(), user.ID, "login_success", "user", user.PublicID)
 	http.Redirect(w, r, "/app", http.StatusSeeOther)
-}
-
-func getClientIP(r *http.Request) string {
-	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
-		if parts := strings.Split(ip, ","); len(parts) > 0 {
-			return strings.TrimSpace(parts[0])
-		}
-	}
-	if ip := r.Header.Get("X-Real-IP"); ip != "" {
-		return ip
-	}
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return ip
 }
 
 func (h *Handler) LogoutPost(w http.ResponseWriter, r *http.Request) {

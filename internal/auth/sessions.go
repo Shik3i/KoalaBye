@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/koalastuff/koalabye/internal/db"
@@ -14,14 +15,49 @@ import (
 
 const SessionCookieName = "koalabye_session"
 
+// touchInterval bounds how often an active session's last_seen_at is written.
+// Without it, every authenticated request issues a write, contending for
+// SQLite's single writer and amplifying WAL churn on every page load.
+const touchInterval = 10 * time.Minute
+
 type SessionManager struct {
 	queries       *db.Querier
 	secureCookies bool
 	lifetime      time.Duration
+
+	touchMu        sync.Mutex
+	lastTouched    map[string]time.Time
+	lastTouchSweep time.Time
 }
 
 func NewSessionManager(queries *db.Querier, secureCookies bool) *SessionManager {
-	return &SessionManager{queries: queries, secureCookies: secureCookies, lifetime: 30 * 24 * time.Hour}
+	return &SessionManager{
+		queries:       queries,
+		secureCookies: secureCookies,
+		lifetime:      30 * 24 * time.Hour,
+		lastTouched:   make(map[string]time.Time),
+	}
+}
+
+// shouldTouch reports whether the session identified by hash is due for a
+// last_seen_at write, recording the decision so subsequent requests within the
+// interval skip the database entirely.
+func (s *SessionManager) shouldTouch(hash string, now time.Time) bool {
+	s.touchMu.Lock()
+	defer s.touchMu.Unlock()
+	if now.Sub(s.lastTouchSweep) >= touchInterval {
+		s.lastTouchSweep = now
+		for key, seen := range s.lastTouched {
+			if now.Sub(seen) >= touchInterval {
+				delete(s.lastTouched, key)
+			}
+		}
+	}
+	if last, ok := s.lastTouched[hash]; ok && now.Sub(last) < touchInterval {
+		return false
+	}
+	s.lastTouched[hash] = now
+	return true
 }
 
 func (s *SessionManager) Start(ctx context.Context, w http.ResponseWriter, userID int64) error {
@@ -46,9 +82,10 @@ func (s *SessionManager) CurrentUser(ctx context.Context, r *http.Request) (db.U
 	if err != nil {
 		return db.User{}, err
 	}
-	user, err := s.queries.GetActiveSessionUser(ctx, HashSessionToken(cookie.Value), db.Now())
-	if err == nil {
-		_ = s.queries.TouchSession(ctx, HashSessionToken(cookie.Value), db.Now())
+	hash := HashSessionToken(cookie.Value)
+	user, err := s.queries.GetActiveSessionUser(ctx, hash, db.Now())
+	if err == nil && s.shouldTouch(hash, time.Now()) {
+		_ = s.queries.TouchSession(ctx, hash, db.Now())
 	}
 	return user, err
 }

@@ -43,13 +43,19 @@ var allowedContextKeys = []string{
 }
 
 type Handler struct {
-	cfg         config.Config
-	q           *db.Querier
-	permissions *permissions.Service
+	cfg           config.Config
+	q             *db.Querier
+	permissions   *permissions.Service
+	submitLimiter *web.RateLimiter
 }
 
 func New(cfg config.Config, q *db.Querier, p *permissions.Service) *Handler {
-	return &Handler{cfg: cfg, q: q, permissions: p}
+	return &Handler{
+		cfg:           cfg,
+		q:             q,
+		permissions:   p,
+		submitLimiter: web.NewRateLimiter(10, time.Minute),
+	}
 }
 
 func (h *Handler) logError(ctx context.Context, msg string, err error) {

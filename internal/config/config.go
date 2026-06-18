@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"net/url"
 	"os"
 	"strconv"
@@ -22,6 +23,7 @@ type Config struct {
 	InviteOnly                         bool
 	InviteRegistrationEnabled          bool
 	SecureCookies                      bool
+	TrustedProxies                     []netip.Prefix
 	InstanceName                       string
 	InstanceSourceURL                  string
 	BootstrapUsername                  string
@@ -59,6 +61,12 @@ func Load() (Config, error) {
 		DefaultMaxMonthlySubmissionsPerOrg: envInt("KOALABYE_DEFAULT_MAX_MONTHLY_SUBMISSIONS_PER_ORG", 1000),
 	}
 
+	trustedProxies, err := parseTrustedProxies(os.Getenv("KOALABYE_TRUSTED_PROXIES"))
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.TrustedProxies = trustedProxies
+
 	if cfg.Mode != "selfhost" && cfg.Mode != "cloud" {
 		return Config{}, fmt.Errorf("KOALABYE_MODE must be selfhost or cloud, got %q", cfg.Mode)
 	}
@@ -93,6 +101,37 @@ func Load() (Config, error) {
 		return Config{}, errors.New("default safety limits must be non-negative and owner/member limits at least 1")
 	}
 	return cfg, nil
+}
+
+// parseTrustedProxies parses a comma-separated list of CIDRs or bare IPs.
+// Bare IPs are treated as single-host prefixes. Forwarded headers are honored
+// only for peers within these ranges; an empty list trusts none (secure default).
+func parseTrustedProxies(raw string) ([]netip.Prefix, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	var prefixes []netip.Prefix
+	for _, part := range strings.Split(raw, ",") {
+		entry := strings.TrimSpace(part)
+		if entry == "" {
+			continue
+		}
+		if strings.Contains(entry, "/") {
+			prefix, err := netip.ParsePrefix(entry)
+			if err != nil {
+				return nil, fmt.Errorf("invalid KOALABYE_TRUSTED_PROXIES entry %q: %w", entry, err)
+			}
+			prefixes = append(prefixes, prefix.Masked())
+			continue
+		}
+		addr, err := netip.ParseAddr(entry)
+		if err != nil {
+			return nil, fmt.Errorf("invalid KOALABYE_TRUSTED_PROXIES entry %q: %w", entry, err)
+		}
+		prefixes = append(prefixes, netip.PrefixFrom(addr, addr.BitLen()))
+	}
+	return prefixes, nil
 }
 
 func isSafePublicURL(raw string) bool {

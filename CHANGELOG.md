@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.4.3 - 2026-06-18
+
+### Security
+- Login rate limiter no longer trusts `X-Forwarded-For`/`X-Real-IP` unless the
+  peer is in the new `KOALABYE_TRUSTED_PROXIES` allowlist, closing a brute-force
+  bypass when the app is exposed directly (removed unconditional `RealIP` middleware)
+- Login attempt map is now swept of expired entries, preventing unbounded
+  memory growth from failed logins and rotated IPs
+- Added per-IP fixed-window rate limiting to public submission endpoints
+  (10/minute) to prevent flooding and denial-of-feedback abuse
+
+### Performance
+- Active-session `last_seen_at` is now written at most once per 10 minutes
+  instead of on every authenticated request, reducing SQLite write contention
+
 ## v0.4.0 - 2026-06-16
 
 ### Design System
