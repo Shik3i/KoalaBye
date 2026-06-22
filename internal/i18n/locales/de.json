@@ -59,6 +59,7 @@
   "dashboard.no_organizations": "Du gehörst noch keiner Organisation an.",
   "dashboard.organization_explanation": "Eine Organisation ist ein privater Teambereich für Kampagnen, Mitglieder und Sicherheitslimits. Selbst gehostete Instanzen behalten alles in der eigenen Infrastruktur.",
   "dashboard.campaigns": "Kampagnen",
+  "dashboard.campaigns.more": "und %s weitere Kampagne(n) werden nicht angezeigt.",
   "dashboard.campaigns_text": "Erstelle für jede Erweiterung, App oder Kündigung einen eigenen anonymen Feedbackkanal.",
   "dashboard.selfhost_text": "KoalaBye verwendet keine externe Analyse und benötigt keine Drittanbieter-Dienste.",
   "dashboard.no_campaigns": "Noch keine Kampagnen erstellt.",

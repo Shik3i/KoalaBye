@@ -227,6 +227,28 @@ func (q *Querier) ArchiveFormOption(ctx context.Context, campaignID int64, publi
 	return q.auditFormChange(ctx, campaignID, actorID, "campaign_form_option_archived", publicID)
 }
 
+func (q *Querier) UpdateFormFieldOrder(ctx context.Context, campaignID int64, publicIDs []string, actorID int64) error {
+	tx, err := q.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for index, publicID := range publicIDs {
+		_, err = tx.ExecContext(ctx, `UPDATE campaign_form_fields SET sort_order=?, updated_at=? WHERE campaign_id=? AND public_id=? AND archived_at IS NULL`,
+			index+1, Now(), campaignID, publicID)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err = q.auditFormChange(ctx, campaignID, actorID, "campaign_form_reordered", ""); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func (q *Querier) auditFormChange(ctx context.Context, campaignID, actorID int64, action, targetID string) error {
 	var orgID int64
 	if err := q.db.QueryRowContext(ctx, `SELECT organization_id FROM campaigns WHERE id=?`, campaignID).Scan(&orgID); err != nil {

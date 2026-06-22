@@ -143,7 +143,7 @@ templ InstanceAudit(instanceName string, user db.User, events []db.AuditEvent) {
 				<thead><tr><th>{ tr(ctx, "instance.audit_action") }</th><th>{ tr(ctx, "instance.audit_target") }</th><th>{ tr(ctx, "instance.audit_created") }</th></tr></thead>
 				<tbody>
 					for _, event := range events {
-						<tr><td>{ translatedAuditAction(ctx, event.Action) }</td><td>{ nullable(event.TargetID) }</td><td>{ event.CreatedAt }</td></tr>
+						<tr><td>{ translatedAuditAction(ctx, event.Action) }</td><td>{ nullable(event.TargetID) }</td><td><time data-local-time datetime={ event.CreatedAt }>{ event.CreatedAt }</time></td></tr>
 					}
 				</tbody>
 			</table>
@@ -161,7 +161,7 @@ templ InstanceErrorLogs(instanceName string, user db.User, logs []db.ErrorLogEnt
 				<thead><tr><th>{ tr(ctx, "instance.error_level") }</th><th>{ tr(ctx, "instance.error_message") }</th><th>{ tr(ctx, "instance.error_context") }</th><th>{ tr(ctx, "instance.audit_created") }</th></tr></thead>
 				<tbody>
 					for _, entry := range logs {
-						<tr><td><span class="badge badge-error">{ entry.Level }</span></td><td>{ entry.Message }</td><td>{ nullable(entry.Context) }</td><td>{ entry.CreatedAt }</td></tr>
+						<tr><td><span class="badge badge-error">{ entry.Level }</span></td><td>{ entry.Message }</td><td>{ nullable(entry.Context) }</td><td><time data-local-time datetime={ entry.CreatedAt }>{ entry.CreatedAt }</time></td></tr>
 					}
 					if len(logs) == 0 {
 						<tr><td colspan="4" class="muted">{ tr(ctx, "instance.error_logs.empty") }</td></tr>

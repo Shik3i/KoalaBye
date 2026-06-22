@@ -30,8 +30,26 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 			@metricCard("submissions.current_month", analytics.Overview.CurrentMonthSubmissions)
 		</section>
 		<section class="grid two">
-			<article class="panel"><h2>{ tr(ctx, "analytics.latest_visit") }</h2><p>{ nullable(analytics.Overview.LatestVisitAt) }</p></article>
-			<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(analytics.Overview.LatestSubmissionAt) }</p></article>
+			<article class="panel">
+				<h2>{ tr(ctx, "analytics.latest_visit") }</h2>
+				<p>
+					if analytics.Overview.LatestVisitAt.Valid {
+						<time data-local-time datetime={ analytics.Overview.LatestVisitAt.String }>{ analytics.Overview.LatestVisitAt.String }</time>
+					} else {
+						-
+					}
+				</p>
+			</article>
+			<article class="panel">
+				<h2>{ tr(ctx, "submissions.latest") }</h2>
+				<p>
+					if analytics.Overview.LatestSubmissionAt.Valid {
+						<time data-local-time datetime={ analytics.Overview.LatestSubmissionAt.String }>{ analytics.Overview.LatestSubmissionAt.String }</time>
+					} else {
+						-
+					}
+				</p>
+			</article>
 		</section>
 		<section class="panel">
 			<h2>{ tr(ctx, "analytics.trend") }</h2>
@@ -122,12 +140,12 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 				<p>{ tr(ctx, "deletion.confirm_help", campaign.Slug) }</p>
 				if settings.RetentionEnabled {
 					<p>{ tr(ctx, "retention.summary", settings.RetentionDays.Int64) }</p>
-					@dangerForm(campaignPath(campaign)+"/retention/delete-old", "retention.delete_old", false)
+					@dangerForm(campaignPath(campaign)+"/retention/delete-old", "retention.delete_old", "", false)
 				} else {
 					<p>{ tr(ctx, "retention.disabled") }</p>
 				}
-				@dangerForm(campaignPath(campaign)+"/responses/delete-all", "deletion.responses", true)
-				@dangerForm(campaignPath(campaign)+"/visits/delete-all", "deletion.visits", true)
+				@dangerForm(campaignPath(campaign)+"/responses/delete-all", "deletion.responses", campaign.Slug, true)
+				@dangerForm(campaignPath(campaign)+"/visits/delete-all", "deletion.visits", campaign.Slug, true)
 			</section>
 		}
 	}
@@ -161,11 +179,11 @@ templ trendSVG(points []db.DailyTrend) {
 	<div class="chart-legend"><span class="raw">{ tr(ctx, "visits.raw_total") }</span><span class="unique">{ tr(ctx, "visits.unique_total") }</span><span class="submissions">{ tr(ctx, "submissions.total") }</span></div>
 }
 
-templ dangerForm(action, key string, confirmation bool) {
-	<form method="post" action={ templ.SafeURL(action) } class="form-stack danger-form">
+templ dangerForm(action, key, slug string, confirmation bool) {
+	<form class="form-stack danger-form" method="post" action={ templ.SafeURL(action) }>
 		<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
 		if confirmation {
-			<label>{ tr(ctx, "deletion.confirmation") }<input name="confirmation" required/></label>
+			<label>{ tr(ctx, "deletion.confirmation") } (<code>{ slug }</code>)<input name="confirmation" required/></label>
 		}
 		<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, key) }</button>
 	</form>

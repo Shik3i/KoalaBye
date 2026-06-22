@@ -59,6 +59,7 @@
   "dashboard.no_organizations": "Todavía no perteneces a ninguna organización.",
   "dashboard.organization_explanation": "Una organización es un espacio privado de equipo para campañas, miembros y límites de seguridad. Las instancias autoalojadas pueden mantenerlo todo en su propia infraestructura.",
   "dashboard.campaigns": "Campañas",
+  "dashboard.campaigns.more": "y %s campaña(s) más no se muestran.",
   "dashboard.campaigns_text": "Crea una campaña para cada extensión, aplicación o proceso de cancelación donde quieras comentarios anónimos.",
   "dashboard.selfhost_text": "KoalaBye no usa analíticas externas ni requiere servicios de terceros.",
   "dashboard.no_campaigns": "Aún no se han creado campañas.",

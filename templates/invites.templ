@@ -35,7 +35,7 @@ templ OrganizationInvites(instanceName string, user db.User, org db.Organization
 							<tr>
 								<td>{ tr(ctx, "role." + invite.Role) }</td>
 								<td>{ fmt.Sprintf("%d/%d", invite.UsedCount, invite.MaxUses) }</td>
-								<td>{ invite.ExpiresAt }</td>
+								<td><time data-local-time datetime={ invite.ExpiresAt }>{ invite.ExpiresAt }</time></td>
 								<td>
 									if !invite.RevokedAt.Valid {
 										<form method="post" action={ templ.SafeURL("/app/orgs/" + org.PublicID + "/invites/" + invite.PublicID + "/revoke") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.revoke") }>{ tr(ctx, "invite.revoke") }</button></form>

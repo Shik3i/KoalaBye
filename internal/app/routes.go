@@ -193,6 +193,7 @@ func Routes(
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/fields/{fieldPublicID}", campaignsHandler.FormFieldUpdate)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/fields/{fieldPublicID}/archive", campaignsHandler.FormFieldArchive)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/fields/{fieldPublicID}/move", campaignsHandler.FormFieldMove)
+		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/reorder", campaignsHandler.FormFieldReorder)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/fields/{fieldPublicID}/options", campaignsHandler.FormOptionCreate)
 		protected.Post("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/form/options/{optionPublicID}/archive", campaignsHandler.FormOptionArchive)
 		protected.Get("/app/orgs/{orgPublicID}/campaigns/{campaignPublicID}/responses", campaignsHandler.Responses)

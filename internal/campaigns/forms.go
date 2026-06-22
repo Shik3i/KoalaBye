@@ -187,6 +187,29 @@ func (h *Handler) FormFieldMove(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
 }
 
+func (h *Handler) FormFieldReorder(w http.ResponseWriter, r *http.Request) {
+	user, campaign, _, ok := h.campaign(r, permissionEdit)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	fields := r.Form["field_order"]
+	if len(fields) == 0 {
+		http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
+		return
+	}
+	if err := h.q.UpdateFormFieldOrder(r.Context(), campaign.ID, fields, user.ID); err != nil {
+		h.logError(r.Context(), "failed to reorder fields", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/form", http.StatusSeeOther)
+}
+
 func (h *Handler) FormOptionCreate(w http.ResponseWriter, r *http.Request) {
 	user, campaign, _, ok := h.campaign(r, permissionEdit)
 	if !ok {
@@ -293,7 +316,7 @@ func (h *Handler) publicSubmit(w http.ResponseWriter, r *http.Request, resolve f
 	}
 	r = r.WithContext(i18n.PublicCampaignContext(r.Context(), r, publicCampaign.Settings.PublicLanguageDefault))
 	if r.FormValue("website") != "" {
-		web.Render(w, r, http.StatusOK, templates.PublicCampaignThankYou(h.cfg.InstanceName, &publicCampaign.Branding))
+		web.Render(w, r, http.StatusOK, templates.PublicCampaignThankYou(h.cfg.InstanceName, publicCampaign.Campaign.PublicID, &publicCampaign.Branding))
 		return
 	}
 	fields, err := h.q.ListFormFields(r.Context(), publicCampaign.Campaign.ID, false)
@@ -320,7 +343,7 @@ func (h *Handler) publicSubmit(w http.ResponseWriter, r *http.Request, resolve f
 		h.publicUnavailable(w, r, http.StatusServiceUnavailable, false, publicCampaign.Settings.PublicLanguageDefault)
 		return
 	}
-	web.Render(w, r, http.StatusOK, templates.PublicCampaignThankYou(h.cfg.InstanceName, &publicCampaign.Branding))
+	web.Render(w, r, http.StatusOK, templates.PublicCampaignThankYou(h.cfg.InstanceName, publicCampaign.Campaign.PublicID, &publicCampaign.Branding))
 }
 
 func validateSubmission(fields []db.FormField, r *http.Request) ([]db.SubmissionAnswerInput, string) {

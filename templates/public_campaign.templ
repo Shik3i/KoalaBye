@@ -76,7 +76,7 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 			<h1>{ nullableOr(branding.PublicHeading, tr(ctx, "public.heading")) }</h1>
 			<p class="lede">{ nullableOr(branding.PublicIntro, tr(ctx, "public.intro")) }</p>
 		</section>
-		<section class="panel public-card">
+		<section class="panel public-card" id="feedback-form-panel">
 			if len(fields) == 0 {
 				<h2>{ tr(ctx, "public.form.title") }</h2>
 				<p>{ tr(ctx, "public.form.placeholder") }</p>
@@ -86,13 +86,17 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 				if errorKey != "" {
 					<div class="alert" role="alert">{ tr(ctx, errorKey) }</div>
 				}
-				<form method="post" action={ templ.SafeURL("/c/" + campaign.PublicID + "/submit?lang=" + string(localeFromContext(ctx).Locale)) } class="form-stack">
+				<form method="post" action={ templ.SafeURL("/c/" + campaign.PublicID + "/submit?lang=" + string(localeFromContext(ctx).Locale)) } class="form-stack" data-public-feedback-form data-campaign-id={ campaign.PublicID }>
 					<input type="hidden" name="visit_public_id" value={ visitPublicID }/>
 					<div class="honeypot" aria-hidden="true"><label>{ tr(ctx, "public.form.honeypot") }<input name="website" tabindex="-1" autocomplete="off"/></label></div>
 					@PublicFields(fields, true)
 					<button type="submit" data-tooltip={ tr(ctx, "tooltip.btn.submit") }>{ tr(ctx, "public.form.submit") }</button>
 				</form>
 			}
+		</section>
+		<section class="panel public-card" id="feedback-already-submitted-panel" style="display: none;">
+			<h2>{ tr(ctx, "public.thanks.title") }</h2>
+			<p>{ tr(ctx, "public.thanks.text") }</p>
 		</section>
 		<details class="panel public-card">
 			<summary class="font-bold-750"><h2 class="inline-heading">{ tr(ctx, "public.privacy.title") }</h2></summary>
@@ -106,9 +110,9 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 	}
 }
 
-templ PublicCampaignThankYou(instanceName string, branding *db.CampaignBranding) {
+templ PublicCampaignThankYou(instanceName string, campaignPublicID string, branding *db.CampaignBranding) {
 	@PublicLayout(tr(ctx, "public.thanks.title"), instanceName, branding) {
-		<section class="public-hero">
+		<section class="public-hero" data-submission-success={ campaignPublicID }>
 			<h1>{ tr(ctx, "public.thanks.title") }</h1>
 			<p class="lede">{ tr(ctx, "public.thanks.text") }</p>
 		</section>

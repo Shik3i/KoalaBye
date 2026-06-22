@@ -24,31 +24,40 @@ templ CampaignForm(instanceName string, user db.User, campaign db.Campaign, bran
 		}
 		<section class="grid two">
 			<div>
-				for index, field := range fields {
-					<article class="panel form-field-card">
-						<div class="field-heading">
-							<div><span class="badge quiet">{ tr(ctx, "form.type." + field.FieldType) }</span><h2>{ field.Label }</h2></div>
-							if canEdit {
-								<a href={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/edit") }>{ tr(ctx, "common.edit") }</a>
-							}
-						</div>
-						if field.HelpText.Valid {
-							<p>{ field.HelpText.String }</p>
-						}
-						if field.Required {
-							<span class="badge">{ tr(ctx, "form.required") }</span>
-						} else {
-							<span class="badge quiet">{ tr(ctx, "form.optional") }</span>
-						}
-						if canEdit {
-							<div class="actions compact">
-								@fieldAction(campaign, field, "up", index == 0)
-								@fieldAction(campaign, field, "down", index == len(fields)-1)
-								<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/archive") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "common.remove") }</button></form>
-							</div>
-						}
-					</article>
+				if canEdit && len(fields) > 1 {
+					<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/reorder") } data-reorder-form class="mb-24">
+						<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+						<div data-order-inputs></div>
+						<button type="submit" class="secondary" data-reorder-save hidden>{ tr(ctx, "common.save") }</button>
+					</form>
 				}
+				<div data-field-list>
+					for index, field := range fields {
+						<article class="panel form-field-card" draggable="true" data-field-id={ field.PublicID }>
+							<div class="field-heading">
+								<div><span class="badge quiet">{ tr(ctx, "form.type." + field.FieldType) }</span><h2>{ field.Label }</h2></div>
+								if canEdit {
+									<a href={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/edit") }>{ tr(ctx, "common.edit") }</a>
+								}
+							</div>
+							if field.HelpText.Valid {
+								<p>{ field.HelpText.String }</p>
+							}
+							if field.Required {
+								<span class="badge">{ tr(ctx, "form.required") }</span>
+							} else {
+								<span class="badge quiet">{ tr(ctx, "form.optional") }</span>
+							}
+							if canEdit {
+								<div class="actions compact">
+									@fieldAction(campaign, field, "up", index == 0)
+									@fieldAction(campaign, field, "down", index == len(fields)-1)
+									<form class="inline-form" method="post" action={ templ.SafeURL(campaignPath(campaign) + "/form/fields/" + field.PublicID + "/archive") }><input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/><button class="link-button danger" type="submit" data-tooltip={ tr(ctx, "tooltip.btn.remove") }>{ tr(ctx, "common.remove") }</button></form>
+								</div>
+							}
+						</article>
+					}
+				</div>
 				if len(fields) == 0 {
 					<div class="notice">{ tr(ctx, "form.empty") }</div>
 				}
@@ -246,7 +255,7 @@ templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign,
 				<tbody>
 					for _, submission := range submissions {
 						<tr>
-							<td><a href={ templ.SafeURL(campaignPath(campaign) + "/responses/" + submission.PublicID) }>{ submission.SubmittedAt }</a></td>
+							<td><a href={ templ.SafeURL(campaignPath(campaign) + "/responses/" + submission.PublicID) }><time data-local-time datetime={ submission.SubmittedAt }>{ submission.SubmittedAt }</time></a></td>
 							<td><span class={ "badge triage-" + submission.TriageStatus }>{ tr(ctx, "responses.status." + submission.TriageStatus) }</span></td>
 							<td>{ submissionPreview(submission) }</td>
 							<td>{ nullable(submission.VisitPublicID) }</td>
@@ -272,7 +281,7 @@ templ CampaignResponseDetail(instanceName string, user db.User, campaign db.Camp
 	@Layout(tr(ctx, "responses.detail"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
-			<div><div class="eyebrow">{ submission.SubmittedAt }</div><h1>{ tr(ctx, "responses.detail") }</h1></div>
+			<div><div class="eyebrow"><time data-local-time datetime={ submission.SubmittedAt }>{ submission.SubmittedAt }</time></div><h1>{ tr(ctx, "responses.detail") }</h1></div>
 			if responseIssueURL(settings, campaign, submission) != "" {
 				<a class="button secondary" href={ templ.SafeURL(responseIssueURL(settings, campaign, submission)) } target="_blank" rel="noopener noreferrer">{ tr(ctx, "responses.github_issue.create") }</a>
 			}

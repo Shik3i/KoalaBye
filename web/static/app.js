@@ -298,6 +298,66 @@ document.documentElement.classList.add("js");
             updatePreview();
         });
 
+        // Local timezone formatting
+        var formatLocalTimes = function(root) {
+            (root || document).querySelectorAll("time[data-local-time]").forEach(function(el) {
+                var dtStr = el.getAttribute("datetime");
+                if (!dtStr) return;
+                var date = new Date(dtStr);
+                if (isNaN(date.getTime())) return;
+
+                var lang = document.documentElement.lang || "en";
+                var pad = function(n) { return String(n).padStart(2, '0'); };
+                var day = pad(date.getDate());
+                var month = pad(date.getMonth() + 1);
+                var year = String(date.getFullYear()).slice(-2);
+                var hours = pad(date.getHours());
+                var minutes = pad(date.getMinutes());
+
+                if (lang.indexOf("de") === 0) {
+                    el.textContent = day + "." + month + "." + year + " " + hours + ":" + minutes + " Uhr";
+                } else {
+                    el.textContent = day + "/" + month + "/" + year + ", " + hours + ":" + minutes;
+                }
+            });
+        };
+        formatLocalTimes();
+        document.body.addEventListener("htmx:afterSettle", function(event) {
+            formatLocalTimes(event.target);
+        });
+
+        // General double-submit protection: disable submit buttons on submit
+        document.querySelectorAll("form[method='post'].form-stack").forEach(function(form) {
+            form.addEventListener("submit", function() {
+                form.setAttribute("aria-busy", "true");
+                form.querySelectorAll("button[type='submit']").forEach(function(button) {
+                    button.disabled = true;
+                });
+            });
+        });
+
+        // Handle localStorage submission tracking
+        var successIndicator = document.querySelector("[data-submission-success]");
+        if (successIndicator) {
+            var campaignId = successIndicator.getAttribute("data-submission-success");
+            if (campaignId) {
+                localStorage.setItem("koalabye_submitted_" + campaignId, "true");
+            }
+        }
+
+        var publicForm = document.querySelector("[data-public-feedback-form]");
+        if (publicForm) {
+            var campaignId = publicForm.getAttribute("data-campaign-id");
+            if (campaignId && localStorage.getItem("koalabye_submitted_" + campaignId) === "true") {
+                var formPanel = document.getElementById("feedback-form-panel");
+                var thanksPanel = document.getElementById("feedback-already-submitted-panel");
+                if (formPanel && thanksPanel) {
+                    formPanel.style.display = "none";
+                    thanksPanel.style.display = "block";
+                }
+            }
+        }
+
         var fieldList = document.querySelector("[data-field-list]");
         var reorderForm = document.querySelector("[data-reorder-form]");
         if (fieldList && reorderForm) {
@@ -338,3 +398,4 @@ document.documentElement.classList.add("js");
         }
     });
 })();
+

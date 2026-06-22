@@ -59,6 +59,7 @@
   "dashboard.no_organizations": "You do not belong to an organization yet.",
   "dashboard.organization_explanation": "An organization is a private team space for campaigns, members, and safety limits. Self-hosted instances can keep everything inside their own infrastructure.",
   "dashboard.campaigns": "Campaigns",
+  "dashboard.campaigns.more": "and %s more campaign(s) are not shown.",
   "dashboard.campaigns_text": "Create a campaign for each extension, app, or cancellation flow where you want anonymous feedback.",
   "dashboard.selfhost_text": "KoalaBye uses no external analytics or required third-party services.",
   "dashboard.no_campaigns": "No campaigns created yet.",

@@ -165,12 +165,25 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 			<section class="grid three">
 				<article class="panel"><h2>{ tr(ctx, "visits.raw_total") }</h2><strong class="metric">{ fmt.Sprint(stats.RawTotal) }</strong></article>
 				<article class="panel"><h2>{ tr(ctx, "visits.unique_total") }</h2><strong class="metric">{ fmt.Sprint(stats.UniqueTokenTotal) }</strong></article>
-				<article class="panel"><h2>{ tr(ctx, "visits.current_month") }</h2><strong class="metric">{ fmt.Sprint(stats.CurrentMonthTotal) }</strong><p>{ tr(ctx, "visits.last", nullable(stats.LastVisitAt)) }</p></article>
+				<article class="panel"><h2>{ tr(ctx, "visits.current_month") }</h2><strong class="metric">{ fmt.Sprint(stats.CurrentMonthTotal) }</strong><p>
+					if stats.LastVisitAt.Valid {
+						{ tr(ctx, "visits.last", "") }
+						<time data-local-time datetime={ stats.LastVisitAt.String }>{ stats.LastVisitAt.String }</time>
+					} else {
+						{ tr(ctx, "visits.last", "-") }
+					}
+				</p></article>
 			</section>
 			<section class="grid three">
 				<article class="panel"><h2>{ tr(ctx, "submissions.total") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.Total) }</strong></article>
 				<article class="panel"><h2>{ tr(ctx, "submissions.current_month") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.CurrentMonth) }</strong></article>
-				<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>{ nullable(submissionStats.LatestAt) }</p><p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a> · <a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a></p></article>
+				<article class="panel"><h2>{ tr(ctx, "submissions.latest") }</h2><p>
+					if submissionStats.LatestAt.Valid {
+						<time data-local-time datetime={ submissionStats.LatestAt.String }>{ submissionStats.LatestAt.String }</time>
+					} else {
+						-
+					}
+				</p><p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.title") }</a> · <a href={ templ.SafeURL(campaignPath(campaign) + "/form") }>{ tr(ctx, "form.title") }</a></p></article>
 			</section>
 			<section class="panel"><h2>{ tr(ctx, "analytics.title") }</h2><p>{ tr(ctx, "analytics.description") }</p><a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/analytics") }>{ tr(ctx, "analytics.open") }</a></section>
 			<section class="grid two">

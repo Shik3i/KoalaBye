@@ -60,6 +60,11 @@ templ Dashboard(instanceName string, user db.User, organizations []db.Organizati
 							}
 						}
 					</ul>
+					if len(campaigns) > 5 {
+						<p class="muted text-xs mt-12 text-center">
+							{ tr(ctx, "dashboard.campaigns.more", fmt.Sprint(len(campaigns)-5)) }
+						</p>
+					}
 				}
 			</article>
 			if isOwner {

@@ -42,7 +42,7 @@ templ Instance(instanceName string, user db.User, registrationEnabled string, ev
 						<thead><tr><th>{ tr(ctx, "instance.audit_action") }</th><th>{ tr(ctx, "instance.audit_target") }</th><th>{ tr(ctx, "instance.audit_created") }</th></tr></thead>
 						<tbody>
 							for _, event := range events {
-								<tr><td>{ translatedAuditAction(ctx, event.Action) }</td><td>{ nullable(event.TargetID) }</td><td>{ event.CreatedAt }</td></tr>
+								<tr><td>{ translatedAuditAction(ctx, event.Action) }</td><td>{ nullable(event.TargetID) }</td><td><time data-local-time datetime={ event.CreatedAt }>{ event.CreatedAt }</time></td></tr>
 							}
 						</tbody>
 					</table>
