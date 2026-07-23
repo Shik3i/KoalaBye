@@ -131,9 +131,7 @@ func Routes(
 		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "privacy", settings))
 	})
 	r.Get("/legal/imprint", func(w http.ResponseWriter, r *http.Request) {
-		r = r.WithContext(i18n.LegalContext(r.Context()))
-		settings, _ := queries.Settings(r.Context())
-		web.Render(w, r, http.StatusOK, templates.Legal(cfg.InstanceName, "imprint", settings))
+		http.Redirect(w, r, "https://koalastuff.net/legal", http.StatusPermanentRedirect)
 	})
 
 	r.Group(func(protected chi.Router) {
