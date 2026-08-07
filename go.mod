@@ -2,7 +2,7 @@ module github.com/koalastuff/koalabye
 
 go 1.26
 
-toolchain go1.26.4
+toolchain go1.26.5
 
 require (
 	github.com/a-h/templ v0.3.1020
