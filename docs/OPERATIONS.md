@@ -2,7 +2,7 @@
 
 KoalaBye is one Go service with one SQLite database. It does not require email, a queue, object storage, an external database, or analytics services.
 
-Source builds use Go 1.26.4. Run `make check` before deployment, or use `go run ./cmd/devcheck` on Windows and other systems without GNU Make.
+Source builds use Go 1.26.5. Run `make check` before deployment, or use `go run ./cmd/devcheck` on Windows and other systems without GNU Make.
 
 ## First Deployment
 

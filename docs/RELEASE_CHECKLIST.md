@@ -2,7 +2,7 @@
 
 ## Code and Tests
 
-- [ ] Confirm `go version` reports Go 1.26.4.
+- [ ] Confirm `go version` reports Go 1.26.5.
 - [ ] Run `go fmt ./...`.
 - [ ] Run `go test ./...`.
 - [ ] Run `go vet ./...`.

@@ -94,7 +94,7 @@ For HTTPS, place Caddy on the `koalabye` Docker network and adapt `Caddyfile.exa
 
 ## Local Development
 
-Requirements: Go 1.26.4 and Docker only if testing the image.
+Requirements: Go 1.26.5 and Docker only if testing the image.
 
 ```bash
 cp .env.example .env
