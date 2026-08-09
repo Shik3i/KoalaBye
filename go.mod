@@ -6,7 +6,7 @@ toolchain go1.26.5
 
 require (
 	github.com/a-h/templ v0.3.1020
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/pressly/goose/v3 v3.26.0
 	golang.org/x/crypto v0.54.0
 	modernc.org/sqlite v1.38.2
