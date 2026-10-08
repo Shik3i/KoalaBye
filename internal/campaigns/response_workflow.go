@@ -24,7 +24,7 @@ func (h *Handler) responseDetailURL(campaign db.Campaign, submissionPublicID, fr
 // ResponseNoteAdd stores an internal team note on a response.
 func (h *Handler) ResponseNoteAdd(w http.ResponseWriter, r *http.Request) {
 	user, campaign, _, ok := h.responseCampaign(r)
-	if !ok {
+	if !ok || !responsesWritable(campaign) {
 		h.forbidden(w, r)
 		return
 	}
@@ -44,7 +44,7 @@ func (h *Handler) ResponseNoteAdd(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ResponseNoteDelete(w http.ResponseWriter, r *http.Request) {
 	user, campaign, role, ok := h.responseCampaign(r)
-	if !ok {
+	if !ok || !responsesWritable(campaign) {
 		h.forbidden(w, r)
 		return
 	}
@@ -95,7 +95,7 @@ func (h *Handler) ResponseViewDelete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ResponseTagDelete(w http.ResponseWriter, r *http.Request) {
 	user, campaign, role, ok := h.responseCampaign(r)
-	if !ok || !canEditResponses(role) {
+	if !ok || !canEditResponses(role) || !responsesWritable(campaign) {
 		h.forbidden(w, r)
 		return
 	}
@@ -110,7 +110,7 @@ func (h *Handler) ResponseTagDelete(w http.ResponseWriter, r *http.Request) {
 // ResponseAutoClose configures closing of read, unassigned, unstarred responses after N days.
 func (h *Handler) ResponseAutoClose(w http.ResponseWriter, r *http.Request) {
 	user, campaign, role, ok := h.responseCampaign(r)
-	if !ok || !canEditResponses(role) {
+	if !ok || !canEditResponses(role) || !responsesWritable(campaign) {
 		h.forbidden(w, r)
 		return
 	}

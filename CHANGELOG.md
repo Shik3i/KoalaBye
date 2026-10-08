@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.5.0 - 2026-10-08
 
 ### Features
 - Responses list shows whether a response contains free text (badge + text preview) next to the chosen options
@@ -18,6 +18,7 @@
 - Analytics: tag overview, frequent words in free text (counted once per answer, de/en/es stopwords) and groups of repeated answers
 
 ### Security
+- Archived and disabled campaigns are read-only for shared response state (status, star, tags, assignment, notes, auto-close); personal read markers still work
 - CSV export neutralises spreadsheet formula injection (`=`, `+`, `-`, `@`, tab/CR/LF prefixes) in respondent-controlled cells
 
 ### Maintenance

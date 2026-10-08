@@ -455,6 +455,12 @@ func (h *Handler) Responses(w http.ResponseWriter, r *http.Request) {
 
 func canEditResponses(role string) bool { return role == "owner" || role == "editor" }
 
+// responsesWritable is false for archived or disabled campaigns, which are read-only
+// (own read markers excepted).
+func responsesWritable(campaign db.Campaign) bool {
+	return campaign.Status != "archived" && !campaign.DisabledAt.Valid
+}
+
 func (h *Handler) ResponseDetail(w http.ResponseWriter, r *http.Request) {
 	user, campaign, role, ok := h.responseCampaign(r)
 	if !ok {
@@ -515,7 +521,7 @@ func (h *Handler) ResponseBulk(w http.ResponseWriter, r *http.Request) {
 	if action == "tag_add" || action == "tag_remove" {
 		param = r.PostForm.Get("tag")
 	}
-	if db.BulkActionNeedsEditor(action) && !canEditResponses(role) {
+	if db.BulkActionNeedsEditor(action) && (!canEditResponses(role) || !responsesWritable(campaign)) {
 		h.forbidden(w, r)
 		return
 	}
@@ -555,7 +561,7 @@ func responsesListURL(campaign db.Campaign, filter db.ResponseFilter) string {
 
 func (h *Handler) ResponseTriageStatus(w http.ResponseWriter, r *http.Request) {
 	user, campaign, role, ok := h.responseCampaign(r)
-	if !ok || (role != "owner" && role != "editor") {
+	if !ok || !canEditResponses(role) || !responsesWritable(campaign) {
 		h.forbidden(w, r)
 		return
 	}

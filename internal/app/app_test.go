@@ -2032,4 +2032,23 @@ func TestResponseWorkflowNotesViewsTagsExportAndAutoClose(t *testing.T) {
 	if german := get(base+"/responses/wf_1?lang=de", ownerLogin.session).Body.String(); !strings.Contains(german, "Interne Notizen") {
 		t.Fatal("German locale missing for notes")
 	}
+
+	// archived campaigns are read-only for shared state, but read markers still work
+	if _, err = application.Database.Exec(`UPDATE campaigns SET status='archived' WHERE id=?`, campaign.ID); err != nil {
+		t.Fatal(err)
+	}
+	for path, form := range map[string]url.Values{
+		"/responses/bulk":          {"action": {"star"}, "ids": {"wf_1"}},
+		"/responses/wf_1/notes":    {"body": {"late note"}},
+		"/responses/wf_1/triage":   {"triage_status": {"closed"}},
+		"/responses/auto-close":    {"days": {"14"}},
+		"/responses/tags/x/delete": {},
+	} {
+		if r := post(path, form, ownerToken, ownerLogin.session, ownerCSRF); r.Code != http.StatusForbidden {
+			t.Fatalf("archived campaign accepted %s: %d", path, r.Code)
+		}
+	}
+	if r := post("/responses/bulk", url.Values{"action": {"read"}, "ids": {"wf_1"}}, ownerToken, ownerLogin.session, ownerCSRF); r.Code != http.StatusSeeOther {
+		t.Fatalf("read marker on archived campaign=%d", r.Code)
+	}
 }
