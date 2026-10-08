@@ -50,6 +50,7 @@ type CampaignSettings struct {
 	ShowPrivacyNotice      bool
 	RetentionEnabled       bool
 	RetentionDays          sql.NullInt64
+	AutoCloseDays          sql.NullInt64
 	UpdatedAt              string
 	UpdatedByUserID        sql.NullInt64
 }
@@ -227,8 +228,8 @@ func (q *Querier) CampaignRole(ctx context.Context, campaignID, userID int64) (s
 
 func (q *Querier) GetCampaignSettings(ctx context.Context, campaignID int64) (CampaignSettings, error) {
 	var s CampaignSettings
-	err := q.db.QueryRowContext(ctx, `SELECT collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,collect_url_context,dev_feedback_issue_url,public_language_default,show_privacy_notice,retention_enabled,retention_days,updated_at,updated_by_user_id FROM campaign_settings WHERE campaign_id=?`, campaignID).
-		Scan(&s.CollectInstallToken, &s.HashInstallToken, &s.CountRawVisits, &s.CountUniqueTokenVisits, &s.CollectReferrerDomain, &s.CollectCoarseBrowser, &s.CollectCoarseOS, &s.CollectURLContext, &s.DevFeedbackIssueURL, &s.PublicLanguageDefault, &s.ShowPrivacyNotice, &s.RetentionEnabled, &s.RetentionDays, &s.UpdatedAt, &s.UpdatedByUserID)
+	err := q.db.QueryRowContext(ctx, `SELECT collect_install_token,hash_install_token,count_raw_visits,count_unique_token_visits,collect_referrer_domain,collect_coarse_browser,collect_coarse_os,collect_url_context,dev_feedback_issue_url,public_language_default,show_privacy_notice,retention_enabled,retention_days,auto_close_days,updated_at,updated_by_user_id FROM campaign_settings WHERE campaign_id=?`, campaignID).
+		Scan(&s.CollectInstallToken, &s.HashInstallToken, &s.CountRawVisits, &s.CountUniqueTokenVisits, &s.CollectReferrerDomain, &s.CollectCoarseBrowser, &s.CollectCoarseOS, &s.CollectURLContext, &s.DevFeedbackIssueURL, &s.PublicLanguageDefault, &s.ShowPrivacyNotice, &s.RetentionEnabled, &s.RetentionDays, &s.AutoCloseDays, &s.UpdatedAt, &s.UpdatedByUserID)
 	return s, err
 }
 

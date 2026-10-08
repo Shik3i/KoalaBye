@@ -3,6 +3,8 @@ package templates
 import (
 	"fmt"
 	"math"
+	"net/url"
+	"strings"
 
 	"github.com/koalastuff/koalabye/internal/db"
 )
@@ -126,6 +128,38 @@ templ CampaignAnalyticsPage(instanceName string, user db.User, campaign db.Campa
 				<div class="notice">{ tr(ctx, "analytics.fields.empty") }</div>
 			}
 		</section>
+		if len(analytics.Tags) > 0 {
+			<section class="panel">
+				<h2>{ tr(ctx, "analytics.tags.title") }</h2>
+				<ul class="tag-list">
+					for _, tag := range analytics.Tags {
+						<li><a class="chip" href={ templ.SafeURL(campaignPath(campaign) + "/responses?" + url.Values{"tag": {tag.Name}}.Encode()) }>{ tag.Name } <strong>{ fmt.Sprint(tag.Count) }</strong></a></li>
+					}
+				</ul>
+			</section>
+		}
+		if analytics.Insights.Analyzed > 0 {
+			<section class="panel">
+				<h2>{ tr(ctx, "analytics.insights.title") }</h2>
+				<p class="muted">{ tr(ctx, "analytics.insights.description", analytics.Insights.Analyzed) }</p>
+				if len(analytics.Insights.TopWords) > 0 {
+					<h3>{ tr(ctx, "analytics.insights.words") }</h3>
+					<ul class="tag-list">
+						for _, word := range analytics.Insights.TopWords {
+							<li><a class="chip" href={ templ.SafeURL(campaignPath(campaign) + "/responses?" + url.Values{"q": {word.Word}}.Encode()) }>{ word.Word } <strong>{ fmt.Sprint(word.Count) }</strong></a></li>
+						}
+					</ul>
+				}
+				if len(analytics.Insights.Duplicates) > 0 {
+					<h3>{ tr(ctx, "analytics.insights.duplicates") }</h3>
+					<ul class="clean-list">
+						for _, group := range analytics.Insights.Duplicates {
+							<li><a href={ templ.SafeURL(campaignPath(campaign) + "/responses?" + url.Values{"q": {duplicateSearchQuery(group.Sample)}}.Encode()) }>{ group.Sample }</a><strong>{ fmt.Sprint(group.Count) + "×" }</strong></li>
+						}
+					</ul>
+				}
+			</section>
+		}
 		<section class="panel">
 			<h2>{ tr(ctx, "export.title") }</h2>
 			<div class="notice">{ tr(ctx, "export.warning") }</div>
@@ -216,4 +250,12 @@ func maxInt(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func duplicateSearchQuery(sample string) string {
+	words := strings.Fields(strings.TrimSuffix(sample, "..."))
+	if len(words) > 5 {
+		words = words[:5]
+	}
+	return strings.Join(words, " ")
 }

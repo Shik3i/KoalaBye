@@ -331,6 +331,11 @@ type Submission struct {
 	Starred             bool
 	ReadByMe            bool
 	ReadByOthers        int64
+	AssigneeUserID      sql.NullInt64
+	AssigneeName        string
+	NoteCount           int64
+	Tags                []string
+	ReadBy              []string
 	AnswerSummary       string
 	URLContext          map[string]string
 	Answers             []SubmissionAnswer
@@ -361,9 +366,9 @@ func (q *Querier) SubmissionStats(ctx context.Context, campaignID int64, now tim
 func (q *Querier) GetSubmission(ctx context.Context, campaignID int64, publicID string) (Submission, error) {
 	var submission Submission
 	var contextJSON sql.NullString
-	err := q.db.QueryRowContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,s.triage_status,s.has_text,s.starred,v.context_json,''
+	err := q.db.QueryRowContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,s.triage_status,s.has_text,s.starred,s.assignee_user_id,COALESCE((SELECT CASE WHEN u.display_name <> '' THEN u.display_name ELSE u.username END FROM users u WHERE u.id=s.assignee_user_id),''),v.context_json,''
 		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? AND s.public_id=?`, campaignID, publicID).
-		Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.TriageStatus, &submission.HasText, &submission.Starred, &contextJSON, &submission.AnswerSummary)
+		Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.TriageStatus, &submission.HasText, &submission.Starred, &submission.AssigneeUserID, &submission.AssigneeName, &contextJSON, &submission.AnswerSummary)
 	if err != nil {
 		return submission, err
 	}

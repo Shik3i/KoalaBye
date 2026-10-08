@@ -209,12 +209,12 @@ func TestResponseBulkActionsAndPagination(t *testing.T) {
 		t.Fatalf("out-of-range page not clamped: page=%d rows=%d", clamped.Page, len(clamped.Submissions))
 	}
 
-	n, err := f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "read", BulkTarget{PublicIDs: []string{"sub_000", "sub_001", "sub_other_campaign"}})
+	n, err := f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "read", "", BulkTarget{PublicIDs: []string{"sub_000", "sub_001", "sub_other_campaign"}})
 	if err != nil || n != 2 {
 		t.Fatalf("bulk read by ids: n=%d err=%v", n, err)
 	}
 	filter := ResponseFilter{Content: "text"}
-	if n, err = f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "read", BulkTarget{Filter: &filter}); err != nil || n != 27 {
+	if n, err = f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "read", "", BulkTarget{Filter: &filter}); err != nil || n != 27 {
 		t.Fatalf("bulk read by filter: n=%d err=%v", n, err)
 	}
 	if counts := f.page(t, f.owner, ResponseFilter{}).Counts; counts.UnreadMe != int64(total-29) {
@@ -223,17 +223,17 @@ func TestResponseBulkActionsAndPagination(t *testing.T) {
 	if counts := f.page(t, f.other, ResponseFilter{}).Counts; counts.UnreadMe != int64(total) {
 		t.Fatalf("bulk read must not touch other users: %#v", counts)
 	}
-	if n, err = f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "unread", BulkTarget{PublicIDs: []string{"sub_000"}}); err != nil || n != 1 {
+	if n, err = f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "unread", "", BulkTarget{PublicIDs: []string{"sub_000"}}); err != nil || n != 1 {
 		t.Fatalf("bulk unread: n=%d err=%v", n, err)
 	}
 
-	if _, err = f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "star", BulkTarget{PublicIDs: []string{"sub_002", "sub_003"}}); err != nil {
+	if _, err = f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "star", "", BulkTarget{PublicIDs: []string{"sub_002", "sub_003"}}); err != nil {
 		t.Fatal(err)
 	}
 	if got := fmt.Sprint(publicIDs(f.page(t, f.owner, ResponseFilter{Starred: true}))); got != "[sub_003 sub_002]" {
 		t.Fatalf("starred: %s", got)
 	}
-	if _, err = f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "status_actionable", BulkTarget{Filter: &ResponseFilter{Starred: true}}); err != nil {
+	if _, err = f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, "status_actionable", "", BulkTarget{Filter: &ResponseFilter{Starred: true}}); err != nil {
 		t.Fatal(err)
 	}
 	if counts := f.page(t, f.owner, ResponseFilter{}).Counts; counts.Actionable != 2 || counts.Starred != 2 {
@@ -256,7 +256,7 @@ func TestResponseBulkActionsAndPagination(t *testing.T) {
 		{"read", BulkTarget{}},
 		{"read", BulkTarget{PublicIDs: make([]string, maxBulkSelectedIDs+1)}},
 	} {
-		if _, err := f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, bad.action, bad.target); !errors.Is(err, ErrForbidden) {
+		if _, err := f.q.BulkUpdateSubmissions(ctx, f.campaign, f.owner.ID, bad.action, "", bad.target); !errors.Is(err, ErrForbidden) {
 			t.Errorf("action %q target %d ids: expected ErrForbidden, got %v", bad.action, len(bad.target.PublicIDs), err)
 		}
 	}

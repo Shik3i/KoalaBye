@@ -1868,3 +1868,168 @@ func TestResponseReadTrackingBulkActionsAndRoles(t *testing.T) {
 		t.Fatal("German locale missing for new response UI")
 	}
 }
+
+func TestResponseWorkflowNotesViewsTagsExportAndAutoClose(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	ctx := context.Background()
+	orgs, _ := q.ListOrganizationsForUser(ctx, owner.ID)
+	org := orgs[0]
+	campaign, err := q.CreateCampaign(ctx, db.CreateCampaignInput{PublicID: "camp_wf", OrganizationID: org.ID, CreatedBy: owner.ID, Name: "Workflow", Slug: "workflow", Language: "en", PrivacyPreset: "strict"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = q.CreateFormField(ctx, db.SaveFormFieldInput{PublicID: "field_text", CampaignID: campaign.ID, FieldType: "textarea", Label: "Why?"}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	field, _ := q.GetFormField(ctx, campaign.ID, "field_text")
+	for i, text := range []string{"=HYPERLINK(\"http://evil\")", "sync broke", "sync broke"} {
+		raw, _ := json.Marshal(text)
+		if err = q.CreateSubmission(ctx, db.CreateSubmissionInput{
+			PublicID: fmt.Sprintf("wf_%d", i), CampaignID: campaign.ID, OrgID: org.ID, SubmittedAt: time.Now().Add(time.Duration(i) * time.Minute),
+			Answers: []db.SubmissionAnswerInput{{FieldID: field.ID, FieldPublicID: field.PublicID, FieldType: field.FieldType, FieldLabelSnapshot: field.Label, ValueJSON: string(raw)}},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	analyst := seedNonOwner(t, application, "wfanalyst", "analyst long password")
+	if _, err = application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, analyst.ID, db.Now(), owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	loaded, _ := q.GetCampaignByPublicID(ctx, org.PublicID, campaign.PublicID)
+	if err = q.SetCampaignMember(ctx, loaded, analyst.PublicID, "analyst", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	base := "/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID
+	ownerLogin := login(t, application, owner.Username, password)
+	analystLogin := login(t, application, analyst.Username, "analyst long password")
+	get := func(target string, session *http.Cookie) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodGet, target, nil)
+		request.AddCookie(session)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		return response
+	}
+	ownerCSRF, ownerToken, _ := csrfPage(t, application, base+"/responses", ownerLogin.session)
+	analystCSRF, analystToken, _ := csrfPage(t, application, base+"/responses", analystLogin.session)
+	post := func(path string, form url.Values, token string, session, csrfCookie *http.Cookie) *httptest.ResponseRecorder {
+		form.Set("csrf_token", token)
+		return formPost(application, base+path, form, session, csrfCookie)
+	}
+
+	// tags + assignment (owner/editor only)
+	if r := post("/responses/bulk", url.Values{"action": {"tag_add"}, "tag": {"Billing"}, "ids": {"wf_1", "wf_2"}}, ownerToken, ownerLogin.session, ownerCSRF); r.Code != http.StatusSeeOther {
+		t.Fatalf("owner tag_add=%d", r.Code)
+	}
+	if r := post("/responses/bulk", url.Values{"action": {"tag_add"}, "tag": {"Hack"}, "ids": {"wf_1"}}, analystToken, analystLogin.session, analystCSRF); r.Code != http.StatusForbidden {
+		t.Fatalf("analyst tag_add=%d", r.Code)
+	}
+	if r := post("/responses/bulk", url.Values{"action": {"assign:" + analyst.PublicID}, "ids": {"wf_1"}, "back": {"wf_1"}}, ownerToken, ownerLogin.session, ownerCSRF); r.Header().Get("Location") != base+"/responses/wf_1" {
+		t.Fatalf("assign redirect=%q", r.Header().Get("Location"))
+	}
+	detail := get(base+"/responses/wf_1", analystLogin.session)
+	if body := detail.Body.String(); !strings.Contains(body, "#Billing") || !strings.Contains(body, "→ Regular User") || !strings.Contains(body, `data-shortcuts="detail"`) {
+		t.Fatalf("detail missing workflow data: %d", detail.Code)
+	}
+	if list := get(base+"/responses?assignee=me", analystLogin.session); !strings.Contains(list.Body.String(), "wf_1") && !strings.Contains(list.Body.String(), "sync broke") {
+		t.Fatal("assigned-to-me filter broken")
+	}
+
+	// notes: any reader may add, only author/editor may delete
+	if r := post("/responses/wf_1/notes", url.Values{"body": {"<b>looking</b>"}}, analystToken, analystLogin.session, analystCSRF); r.Code != http.StatusSeeOther {
+		t.Fatalf("analyst note=%d", r.Code)
+	}
+	if body := get(base+"/responses/wf_1", ownerLogin.session).Body.String(); !strings.Contains(body, "&lt;b&gt;looking&lt;/b&gt;") || strings.Contains(body, "<b>looking</b>") {
+		t.Fatal("note missing or not escaped")
+	}
+	var notePublicID string
+	if err = application.Database.QueryRow(`SELECT public_id FROM campaign_submission_notes LIMIT 1`).Scan(&notePublicID); err != nil {
+		t.Fatal(err)
+	}
+	other := seedNonOwner(t, application, "wfother", "other long password")
+	if _, err = application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, other.ID, db.Now(), owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err = q.SetCampaignMember(ctx, loaded, other.PublicID, "analyst", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	otherLogin := login(t, application, other.Username, "other long password")
+	otherCSRF, otherToken, _ := csrfPage(t, application, base+"/responses", otherLogin.session)
+	post("/responses/wf_1/notes/"+notePublicID+"/delete", url.Values{}, otherToken, otherLogin.session, otherCSRF)
+	var notes int
+	_ = application.Database.QueryRow(`SELECT COUNT(*) FROM campaign_submission_notes`).Scan(&notes)
+	if notes != 1 {
+		t.Fatal("another analyst deleted someone else's note")
+	}
+	post("/responses/wf_1/notes/"+notePublicID+"/delete", url.Values{}, ownerToken, ownerLogin.session, ownerCSRF)
+	_ = application.Database.QueryRow(`SELECT COUNT(*) FROM campaign_submission_notes`).Scan(&notes)
+	if notes != 0 {
+		t.Fatal("editor could not delete note")
+	}
+
+	// saved views: analysts cannot share; owner can
+	if r := post("/responses/views", url.Values{"name": {"Mine"}, "shared": {"on"}, "status": {"open"}}, analystToken, analystLogin.session, analystCSRF); r.Code != http.StatusSeeOther {
+		t.Fatalf("view create=%d", r.Code)
+	}
+	var shared int
+	_ = application.Database.QueryRow(`SELECT shared FROM campaign_response_views WHERE name='Mine'`).Scan(&shared)
+	if shared != 0 {
+		t.Fatal("analyst created a shared view")
+	}
+	post("/responses/views", url.Values{"name": {"Team todo"}, "shared": {"on"}, "read": {"unread_me"}}, ownerToken, ownerLogin.session, ownerCSRF)
+	if body := get(base+"/responses", analystLogin.session).Body.String(); !strings.Contains(body, "Team todo") || !strings.Contains(body, "Mine") {
+		t.Fatal("saved views not listed for analyst")
+	}
+	if body := get(base+"/responses", otherLogin.session).Body.String(); !strings.Contains(body, "Team todo") || strings.Contains(body, ">Mine") {
+		t.Fatal("view visibility wrong for other user")
+	}
+
+	// filtered CSV export: formulas neutralised, filter respected, new columns present
+	export := get(base+"/export/submissions.csv?tag=billing", ownerLogin.session)
+	if export.Code != http.StatusOK || !strings.Contains(export.Body.String(), "triage_status,starred,has_free_text,tags,assignee,read_by") || strings.Contains(export.Body.String(), "wf_0") || !strings.Contains(export.Body.String(), "wf_1") {
+		t.Fatalf("filtered export wrong: %s", export.Body.String())
+	}
+	full := get(base+"/export/submissions.csv", ownerLogin.session).Body.String()
+	if !strings.Contains(full, `'=HYPERLINK`) || strings.Contains(full, ",=HYPERLINK") {
+		t.Fatalf("formula not neutralised: %s", full)
+	}
+	if js := get(base+"/export/submissions.json?tag=billing", ownerLogin.session).Body.String(); !strings.Contains(js, `"tags":["Billing"]`) || !strings.Contains(js, `"triage_status":"new"`) {
+		t.Fatalf("json export: %s", js)
+	}
+
+	// analytics insights
+	if body := get(base+"/analytics", ownerLogin.session).Body.String(); !strings.Contains(body, "Free-text insights") || !strings.Contains(body, "Response tags") || !strings.Contains(body, "Repeated answers") {
+		t.Fatal("analytics insights missing")
+	}
+
+	// auto-close endpoint: editor only, validated values
+	if r := post("/responses/auto-close", url.Values{"days": {"30"}}, analystToken, analystLogin.session, analystCSRF); r.Code != http.StatusForbidden {
+		t.Fatalf("analyst auto-close=%d", r.Code)
+	}
+	if r := post("/responses/auto-close", url.Values{"days": {"31"}}, ownerToken, ownerLogin.session, ownerCSRF); r.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid auto-close=%d", r.Code)
+	}
+	if r := post("/responses/auto-close", url.Values{"days": {"30"}}, ownerToken, ownerLogin.session, ownerCSRF); r.Code != http.StatusSeeOther {
+		t.Fatalf("auto-close=%d", r.Code)
+	}
+	var days int
+	if err = application.Database.QueryRow(`SELECT auto_close_days FROM campaign_settings WHERE campaign_id=?`, campaign.ID).Scan(&days); err != nil || days != 30 {
+		t.Fatalf("auto-close not stored: %d %v", days, err)
+	}
+
+	// tag deletion: editor only
+	var tagPublicID string
+	_ = application.Database.QueryRow(`SELECT public_id FROM campaign_response_tags WHERE name='Billing'`).Scan(&tagPublicID)
+	if r := post("/responses/tags/"+tagPublicID+"/delete", url.Values{}, analystToken, analystLogin.session, analystCSRF); r.Code != http.StatusForbidden {
+		t.Fatalf("analyst tag delete=%d", r.Code)
+	}
+	if r := post("/responses/tags/"+tagPublicID+"/delete", url.Values{}, ownerToken, ownerLogin.session, ownerCSRF); r.Code != http.StatusSeeOther {
+		t.Fatalf("owner tag delete=%d", r.Code)
+	}
+	if german := get(base+"/responses/wf_1?lang=de", ownerLogin.session).Body.String(); !strings.Contains(german, "Interne Notizen") {
+		t.Fatal("German locale missing for notes")
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 const (
 	ResponsePageSize     = 50
 	maxBulkSelectedIDs   = 200
+	maxTagNameRunes      = 30
 	maxSearchTerms       = 5
 	maxSearchTermRunes   = 100
 	readExistsAny        = `EXISTS (SELECT 1 FROM campaign_submission_reads r WHERE r.submission_id = s.id)`
@@ -22,8 +24,14 @@ const (
 	bulkActionUnread     = "unread"
 	bulkActionStar       = "star"
 	bulkActionUnstar     = "unstar"
+	bulkActionAssign     = "assign"
+	bulkActionUnassign   = "unassign"
+	bulkActionTagAdd     = "tag_add"
+	bulkActionTagRemove  = "tag_remove"
 	bulkActionStatusPref = "status_"
 )
+
+var userPublicIDPattern = regexp.MustCompile(`^usr_[A-Za-z0-9_-]{1,40}$`)
 
 var triageStatuses = []string{"new", "reviewed", "actionable", "closed"}
 
@@ -33,11 +41,33 @@ type ResponseFilter struct {
 	Read    string // "", unread, unread_me, team, mine
 	Content string // "", text, choices
 	Starred bool
-	Query   string
-	From    string // YYYY-MM-DD
-	To      string // YYYY-MM-DD
-	Oldest  bool
-	Page    int
+	// Assignee is "", "me", "none" or a user public ID.
+	Assignee string
+	// Tag is a tag name (matched case-insensitively).
+	Tag    string
+	Query  string
+	From   string // YYYY-MM-DD
+	To     string // YYYY-MM-DD
+	Oldest bool
+	Page   int
+}
+
+// ResponseFilterFromValues builds a normalised filter from query/form values.
+func ResponseFilterFromValues(values url.Values) ResponseFilter {
+	page, _ := strconv.Atoi(values.Get("page"))
+	return ResponseFilter{
+		Status:   values.Get("status"),
+		Read:     values.Get("read"),
+		Content:  values.Get("content"),
+		Starred:  values.Get("starred") == "1",
+		Assignee: values.Get("assignee"),
+		Tag:      values.Get("tag"),
+		Query:    values.Get("q"),
+		From:     values.Get("from"),
+		To:       values.Get("to"),
+		Oldest:   values.Get("sort") == "oldest",
+		Page:     page,
+	}.Normalize()
 }
 
 // Normalize drops unknown values so the filter is always safe to render and query.
@@ -56,6 +86,13 @@ func (f ResponseFilter) Normalize() ResponseFilter {
 	case "text", "choices":
 	default:
 		f.Content = ""
+	}
+	if f.Assignee != "me" && f.Assignee != "none" && !userPublicIDPattern.MatchString(f.Assignee) {
+		f.Assignee = ""
+	}
+	f.Tag = strings.TrimSpace(f.Tag)
+	if runes := []rune(f.Tag); len(runes) > maxTagNameRunes {
+		f.Tag = string(runes[:maxTagNameRunes])
 	}
 	f.Query = strings.Join(searchTerms(f.Query), " ")
 	if _, err := time.Parse("2006-01-02", f.From); err != nil {
@@ -85,6 +122,12 @@ func (f ResponseFilter) Values() url.Values {
 	if f.Starred {
 		values.Set("starred", "1")
 	}
+	if f.Assignee != "" {
+		values.Set("assignee", f.Assignee)
+	}
+	if f.Tag != "" {
+		values.Set("tag", f.Tag)
+	}
 	if f.Query != "" {
 		values.Set("q", f.Query)
 	}
@@ -105,7 +148,7 @@ func (f ResponseFilter) Values() url.Values {
 
 // IsFiltered reports whether any narrowing criterion is active.
 func (f ResponseFilter) IsFiltered() bool {
-	return f.Status != "" || f.Read != "" || f.Content != "" || f.Starred || f.Query != "" || f.From != "" || f.To != ""
+	return f.Status != "" || f.Read != "" || f.Content != "" || f.Starred || f.Assignee != "" || f.Tag != "" || f.Query != "" || f.From != "" || f.To != ""
 }
 
 func (f ResponseFilter) where(campaignID, userID int64) (string, []any) {
@@ -140,6 +183,22 @@ func (f ResponseFilter) where(campaignID, userID int64) (string, []any) {
 	}
 	if f.Starred {
 		clauses = append(clauses, "s.starred = 1")
+	}
+	switch f.Assignee {
+	case "":
+	case "me":
+		clauses = append(clauses, "s.assignee_user_id = ?")
+		args = append(args, userID)
+	case "none":
+		clauses = append(clauses, "s.assignee_user_id IS NULL")
+	default:
+		clauses = append(clauses, "s.assignee_user_id = (SELECT id FROM users WHERE public_id = ?)")
+		args = append(args, f.Assignee)
+	}
+	if f.Tag != "" {
+		clauses = append(clauses, `EXISTS (SELECT 1 FROM campaign_submission_tags st JOIN campaign_response_tags t ON t.id = st.tag_id
+			WHERE st.submission_id = s.id AND t.campaign_id = s.campaign_id AND t.name_normalized = ?)`)
+		args = append(args, strings.ToLower(f.Tag))
 	}
 	for _, term := range searchTerms(f.Query) {
 		clauses = append(clauses, `(s.public_id = ? OR EXISTS (SELECT 1 FROM campaign_submission_answers a WHERE a.submission_id = s.id AND a.value_json LIKE ? ESCAPE '\'))`)
@@ -177,7 +236,7 @@ func escapeLike(value string) string {
 
 // ResponseCounts are campaign-wide totals, independent of the active filter.
 type ResponseCounts struct {
-	Total, Unread, UnreadMe, WithText, Starred, Actionable int64
+	Total, Unread, UnreadMe, WithText, Starred, Actionable, AssignedMe int64
 }
 
 type ResponsePage struct {
@@ -206,9 +265,10 @@ func (q *Querier) ResponseCounts(ctx context.Context, campaignID, userID int64) 
 			COALESCE(SUM(CASE WHEN NOT `+readExistsMine+` THEN 1 ELSE 0 END), 0),
 			COALESCE(SUM(s.has_text), 0),
 			COALESCE(SUM(s.starred), 0),
-			COALESCE(SUM(CASE WHEN s.triage_status = 'actionable' THEN 1 ELSE 0 END), 0)
-		FROM campaign_submissions s WHERE s.campaign_id = ?`, userID, campaignID).
-		Scan(&counts.Total, &counts.Unread, &counts.UnreadMe, &counts.WithText, &counts.Starred, &counts.Actionable)
+			COALESCE(SUM(CASE WHEN s.triage_status = 'actionable' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN s.assignee_user_id = ? AND s.triage_status <> 'closed' THEN 1 ELSE 0 END), 0)
+		FROM campaign_submissions s WHERE s.campaign_id = ?`, userID, userID, campaignID).
+		Scan(&counts.Total, &counts.Unread, &counts.UnreadMe, &counts.WithText, &counts.Starred, &counts.Actionable, &counts.AssignedMe)
 	return counts, err
 }
 
@@ -241,7 +301,9 @@ func (q *Querier) ListSubmissionsPage(ctx context.Context, campaignID, userID in
 	rowArgs := append([]any{userID, userID}, args...)
 	rowArgs = append(rowArgs, ResponsePageSize, (page.Page-1)*ResponsePageSize)
 	rows, err := q.db.QueryContext(ctx, `SELECT s.id, s.public_id, s.campaign_id, v.public_id, s.install_token_hash IS NOT NULL, s.submitted_at, s.triage_status,
-			s.has_text, s.starred, `+readExistsMine+`, (SELECT COUNT(*) FROM campaign_submission_reads r WHERE r.submission_id = s.id AND r.user_id <> ?)
+			s.has_text, s.starred, `+readExistsMine+`, (SELECT COUNT(*) FROM campaign_submission_reads r WHERE r.submission_id = s.id AND r.user_id <> ?),
+			s.assignee_user_id, COALESCE((SELECT CASE WHEN u.display_name <> '' THEN u.display_name ELSE u.username END FROM users u WHERE u.id = s.assignee_user_id), ''),
+			(SELECT COUNT(*) FROM campaign_submission_notes n WHERE n.submission_id = s.id)
 		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id = s.visit_id
 		WHERE `+where+` ORDER BY s.id `+order+` LIMIT ? OFFSET ?`, rowArgs...)
 	if err != nil {
@@ -253,7 +315,8 @@ func (q *Querier) ListSubmissionsPage(ctx context.Context, campaignID, userID in
 	for rows.Next() {
 		var submission Submission
 		if err := rows.Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash,
-			&submission.SubmittedAt, &submission.TriageStatus, &submission.HasText, &submission.Starred, &submission.ReadByMe, &submission.ReadByOthers); err != nil {
+			&submission.SubmittedAt, &submission.TriageStatus, &submission.HasText, &submission.Starred, &submission.ReadByMe, &submission.ReadByOthers,
+			&submission.AssigneeUserID, &submission.AssigneeName, &submission.NoteCount); err != nil {
 			return page, err
 		}
 		index[submission.ID] = len(page.Submissions)
@@ -290,6 +353,9 @@ func (q *Querier) ListSubmissionsPage(ctx context.Context, campaignID, userID in
 		}
 		for i := range page.Submissions {
 			applyDisplayLabels(&page.Submissions[i], labels)
+		}
+		if err := q.loadSubmissionTags(ctx, page.Submissions); err != nil {
+			return page, err
 		}
 	}
 	page.Counts, err = q.ResponseCounts(ctx, campaignID, userID)
@@ -381,7 +447,7 @@ func BulkActionNeedsEditor(action string) bool {
 
 func validBulkAction(action string) bool {
 	switch action {
-	case bulkActionRead, bulkActionUnread, bulkActionStar, bulkActionUnstar:
+	case bulkActionRead, bulkActionUnread, bulkActionStar, bulkActionUnstar, bulkActionAssign, bulkActionUnassign, bulkActionTagAdd, bulkActionTagRemove:
 		return true
 	}
 	if status, ok := strings.CutPrefix(action, bulkActionStatusPref); ok {
@@ -395,7 +461,8 @@ func validBulkAction(action string) bool {
 }
 
 // BulkUpdateSubmissions applies one action to many responses and returns the number touched.
-func (q *Querier) BulkUpdateSubmissions(ctx context.Context, campaign Campaign, actorID int64, action string, target BulkTarget) (int64, error) {
+// param carries the tag name (tag_add/tag_remove) or assignee user public ID (assign).
+func (q *Querier) BulkUpdateSubmissions(ctx context.Context, campaign Campaign, actorID int64, action, param string, target BulkTarget) (int64, error) {
 	if !validBulkAction(action) {
 		return 0, ErrForbidden
 	}
@@ -419,6 +486,28 @@ func (q *Querier) BulkUpdateSubmissions(ctx context.Context, campaign Campaign, 
 			flag = 1
 		}
 		result, err = q.db.ExecContext(ctx, `UPDATE campaign_submissions SET starred = ? WHERE id IN (`+selected+`)`, append([]any{flag}, args...)...)
+	case action == bulkActionAssign:
+		assigneeID, assignErr := q.assignableUserID(ctx, campaign, param)
+		if assignErr != nil {
+			return 0, assignErr
+		}
+		result, err = q.db.ExecContext(ctx, `UPDATE campaign_submissions SET assignee_user_id = ? WHERE id IN (`+selected+`)`, append([]any{assigneeID}, args...)...)
+	case action == bulkActionUnassign:
+		result, err = q.db.ExecContext(ctx, `UPDATE campaign_submissions SET assignee_user_id = NULL WHERE id IN (`+selected+`)`, args...)
+	case action == bulkActionTagAdd:
+		tagID, tagErr := q.getOrCreateTag(ctx, campaign.ID, param)
+		if tagErr != nil {
+			return 0, tagErr
+		}
+		result, err = q.db.ExecContext(ctx, `INSERT OR IGNORE INTO campaign_submission_tags(submission_id, tag_id) SELECT s.id, ? FROM campaign_submissions s WHERE `+where,
+			append([]any{tagID}, args...)...)
+	case action == bulkActionTagRemove:
+		_, normalized, ok := normalizeTagName(param)
+		if !ok {
+			return 0, ErrForbidden
+		}
+		result, err = q.db.ExecContext(ctx, `DELETE FROM campaign_submission_tags WHERE tag_id IN (SELECT id FROM campaign_response_tags WHERE campaign_id = ? AND name_normalized = ?)
+			AND submission_id IN (`+selected+`)`, append([]any{campaign.ID, normalized}, args...)...)
 	default:
 		status := strings.TrimPrefix(action, bulkActionStatusPref)
 		result, err = q.db.ExecContext(ctx, `UPDATE campaign_submissions SET triage_status = ? WHERE id IN (`+selected+`)`, append([]any{status}, args...)...)
@@ -428,7 +517,7 @@ func (q *Querier) BulkUpdateSubmissions(ctx context.Context, campaign Campaign, 
 	}
 	affected, _ := result.RowsAffected()
 	if BulkActionNeedsEditor(action) && affected > 0 {
-		metadata, _ := json.Marshal(map[string]any{"action": action, "count": affected, "by_filter": target.Filter != nil})
+		metadata, _ := json.Marshal(map[string]any{"action": action, "param": param, "count": affected, "by_filter": target.Filter != nil})
 		if err := q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign_response_bulk_updated", "campaign", campaign.PublicID, nil, string(metadata)); err != nil {
 			return affected, err
 		}

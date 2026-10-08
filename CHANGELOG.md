@@ -9,6 +9,14 @@
 - Bulk actions on selected responses or on all responses matching the active filter: mark read/unread (own marker), star, set status
 - Star responses (shared with the team); next/newer/older/next-unread navigation on the detail page; unread count on the campaign overview
 
+- Internal team notes per response (never visible to respondents); assignee per response with an "Assigned to me" quick filter and bulk assign
+- Tags per response (free-form, case-insensitive, up to 100 per campaign): add/remove per response or in bulk, filter by tag, tag counts and tag management
+- Saved views: store the current filter as a personal or team-shared view (migration 00017)
+- Keyboard shortcuts: `j`/`k`/`Enter`/`x`/`/` in the list, `j`/`k`/`n`/`r`/`s`/`u` on a response, `?` for help
+- CSV/JSON export honours the active filter and adds status, star, free-text flag, tags, assignee and readers
+- Auto-close: optionally closes responses that were read, are not starred or assigned and are still New/Reviewed after N days (hourly background job, audited)
+- Analytics: tag overview, frequent words in free text (counted once per answer, de/en/es stopwords) and groups of repeated answers
+
 ### Security
 - CSV export neutralises spreadsheet formula injection (`=`, `+`, `-`, `@`, tab/CR/LF prefixes) in respondent-controlled cells
 
