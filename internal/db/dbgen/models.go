@@ -113,6 +113,8 @@ type CampaignSubmission struct {
 	InstallTokenHash interface{} `json:"install_token_hash"`
 	SubmittedAt      string      `json:"submitted_at"`
 	TriageStatus     string      `json:"triage_status"`
+	HasText          int64       `json:"has_text"`
+	Starred          int64       `json:"starred"`
 }
 
 type CampaignSubmissionAnswer struct {
@@ -123,6 +125,12 @@ type CampaignSubmissionAnswer struct {
 	FieldType          string      `json:"field_type"`
 	FieldLabelSnapshot string      `json:"field_label_snapshot"`
 	ValueJson          string      `json:"value_json"`
+}
+
+type CampaignSubmissionRead struct {
+	SubmissionID int64  `json:"submission_id"`
+	UserID       int64  `json:"user_id"`
+	FirstReadAt  string `json:"first_read_at"`
 }
 
 type CampaignVisit struct {

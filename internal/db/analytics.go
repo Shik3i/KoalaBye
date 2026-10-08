@@ -351,12 +351,12 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	for index, submission := range submissions {
-		updated, err := q.withSubmissionAnswerDisplayLabels(ctx, submission)
-		if err != nil {
-			return nil, err
-		}
-		submissions[index] = updated
+	labels, err := q.campaignOptionLabels(ctx, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	for index := range submissions {
+		applyDisplayLabels(&submissions[index], labels)
 	}
 	return submissions, nil
 }

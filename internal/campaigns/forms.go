@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -425,22 +426,25 @@ func optionSet(options []db.FormOption) map[string]struct{} {
 }
 
 func (h *Handler) Responses(w http.ResponseWriter, r *http.Request) {
-	user, campaign, _, ok := h.responseCampaign(r)
+	user, campaign, role, ok := h.responseCampaign(r)
 	if !ok {
 		h.forbidden(w, r)
 		return
 	}
-	submissions, err := h.q.ListSubmissionsWithAnswers(r.Context(), campaign.ID)
+	filter := parseResponseFilter(r.URL.Query())
+	page, err := h.q.ListSubmissionsPage(r.Context(), campaign.ID, user.ID, filter)
 	if err != nil {
+		h.logError(r.Context(), "load responses", err)
 		http.Error(w, "load responses", http.StatusInternalServerError)
 		return
 	}
+	filter.Page = page.Page
 	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
-	web.Render(w, r, http.StatusOK, templates.CampaignResponses(h.cfg.InstanceName, user, campaign, settings, submissions))
+	web.Render(w, r, http.StatusOK, templates.CampaignResponses(h.cfg.InstanceName, user, campaign, settings, page, filter, role == "owner" || role == "editor"))
 }
 
 func (h *Handler) ResponseDetail(w http.ResponseWriter, r *http.Request) {
-	user, campaign, _, ok := h.responseCampaign(r)
+	user, campaign, role, ok := h.responseCampaign(r)
 	if !ok {
 		h.forbidden(w, r)
 		return
@@ -450,8 +454,85 @@ func (h *Handler) ResponseDetail(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
+	if err := h.q.MarkSubmissionRead(r.Context(), submission.ID, user.ID); err != nil {
+		h.logError(r.Context(), "mark response read", err)
+	}
+	readers, err := h.q.ListSubmissionReaders(r.Context(), submission.ID, user.ID)
+	if err != nil {
+		h.logError(r.Context(), "load response readers", err)
+	}
+	neighbors, err := h.q.GetSubmissionNeighbors(r.Context(), campaign.ID, submission.ID, user.ID)
+	if err != nil {
+		h.logError(r.Context(), "load response neighbors", err)
+	}
+	for _, reader := range readers {
+		if reader.IsMe {
+			submission.ReadByMe = true
+		}
+	}
 	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
-	web.Render(w, r, http.StatusOK, templates.CampaignResponseDetail(h.cfg.InstanceName, user, campaign, settings, submission))
+	web.Render(w, r, http.StatusOK, templates.CampaignResponseDetail(h.cfg.InstanceName, user, campaign, settings, submission, readers, neighbors, role == "owner" || role == "editor"))
+}
+
+// ResponseBulk applies a read/star/status action to selected or all filtered responses.
+func (h *Handler) ResponseBulk(w http.ResponseWriter, r *http.Request) {
+	user, campaign, role, ok := h.responseCampaign(r)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	action := r.PostForm.Get("action")
+	if db.BulkActionNeedsEditor(action) && role != "owner" && role != "editor" {
+		h.forbidden(w, r)
+		return
+	}
+	filter := parseResponseFilter(r.PostForm)
+	back := r.PostForm.Get("back")
+	target := db.BulkTarget{PublicIDs: r.PostForm["ids"]}
+	if r.PostForm.Get("scope") == "filter" && back == "" {
+		target = db.BulkTarget{Filter: &filter}
+	}
+	if _, err := h.q.BulkUpdateSubmissions(r.Context(), campaign, user.ID, action, target); err != nil {
+		if errors.Is(err, db.ErrForbidden) {
+			http.Redirect(w, r, responsesListURL(campaign, filter), http.StatusSeeOther)
+			return
+		}
+		h.logError(r.Context(), "bulk update responses", err)
+		http.Error(w, "update responses", http.StatusInternalServerError)
+		return
+	}
+	if back != "" {
+		http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/responses/"+url.PathEscape(back), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, responsesListURL(campaign, filter), http.StatusSeeOther)
+}
+
+func parseResponseFilter(values url.Values) db.ResponseFilter {
+	page, _ := strconv.Atoi(values.Get("page"))
+	return db.ResponseFilter{
+		Status:  values.Get("status"),
+		Read:    values.Get("read"),
+		Content: values.Get("content"),
+		Starred: values.Get("starred") == "1",
+		Query:   values.Get("q"),
+		From:    values.Get("from"),
+		To:      values.Get("to"),
+		Oldest:  values.Get("sort") == "oldest",
+		Page:    page,
+	}.Normalize()
+}
+
+func responsesListURL(campaign db.Campaign, filter db.ResponseFilter) string {
+	target := campaignURL(campaign.OrganizationPublicID, campaign.PublicID) + "/responses"
+	if encoded := filter.Values().Encode(); encoded != "" {
+		target += "?" + encoded
+	}
+	return target
 }
 
 func (h *Handler) ResponseTriageStatus(w http.ResponseWriter, r *http.Request) {

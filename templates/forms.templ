@@ -239,45 +239,173 @@ templ PublicFields(fields []db.FormField, enabled bool) {
 	}
 }
 
-templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, submissions []db.Submission) {
+templ CampaignResponses(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, page db.ResponsePage, filter db.ResponseFilter, canEdit bool) {
 	@Layout(tr(ctx, "responses.title"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
 			<div><div class="eyebrow">{ campaign.Name }</div><h1>{ tr(ctx, "responses.title") }</h1></div>
-			if settings.DevFeedbackIssueURL.Valid {
-				<a class="button secondary" href={ templ.SafeURL(settings.DevFeedbackIssueURL.String) } target="_blank" rel="noopener noreferrer">{ tr(ctx, "responses.github_issue.open") }</a>
-			}
+			<div class="heading-actions">
+				<a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/export/submissions.csv") }>{ tr(ctx, "responses.export_csv") }</a>
+				if settings.DevFeedbackIssueURL.Valid {
+					<a class="button secondary" href={ templ.SafeURL(settings.DevFeedbackIssueURL.String) } target="_blank" rel="noopener noreferrer">{ tr(ctx, "responses.github_issue.open") }</a>
+				}
+			</div>
 		</section>
-		<section class="panel table-wrap">
+		<nav class="response-chips" aria-label={ tr(ctx, "responses.chips_aria") }>
+			@responseChip(campaign, filter, db.ResponseFilter{}, "responses.chip.all", page.Counts.Total)
+			@responseChip(campaign, filter, db.ResponseFilter{Read: "unread_me"}, "responses.chip.unread_me", page.Counts.UnreadMe)
+			@responseChip(campaign, filter, db.ResponseFilter{Read: "unread"}, "responses.chip.unread", page.Counts.Unread)
+			@responseChip(campaign, filter, db.ResponseFilter{Content: "text"}, "responses.chip.text", page.Counts.WithText)
+			@responseChip(campaign, filter, db.ResponseFilter{Starred: true}, "responses.chip.starred", page.Counts.Starred)
+			@responseChip(campaign, filter, db.ResponseFilter{Status: "actionable"}, "responses.chip.actionable", page.Counts.Actionable)
+		</nav>
+		<section class="panel">
+			<form method="get" action={ templ.SafeURL(campaignPath(campaign) + "/responses") } class="response-filter">
+				<label class="filter-search"><span class="muted">{ tr(ctx, "responses.filter.search") }</span><input type="search" name="q" value={ filter.Query } maxlength="500" autocomplete="off"/></label>
+				<label>
+					<span class="muted">{ tr(ctx, "responses.status") }</span>
+					<select name="status">
+						<option value="" selected?={ filter.Status == "" }>{ tr(ctx, "responses.filter.any") }</option>
+						<option value="open" selected?={ filter.Status == "open" }>{ tr(ctx, "responses.status.open") }</option>
+						for _, status := range []string{"new", "reviewed", "actionable", "closed"} {
+							<option value={ status } selected?={ filter.Status == status }>{ tr(ctx, "responses.status." + status) }</option>
+						}
+					</select>
+				</label>
+				<label>
+					<span class="muted">{ tr(ctx, "responses.read_state") }</span>
+					<select name="read">
+						<option value="" selected?={ filter.Read == "" }>{ tr(ctx, "responses.filter.any") }</option>
+						for _, value := range []string{"unread", "unread_me", "team", "mine"} {
+							<option value={ value } selected?={ filter.Read == value }>{ tr(ctx, "responses.filter.read." + value) }</option>
+						}
+					</select>
+				</label>
+				<label>
+					<span class="muted">{ tr(ctx, "responses.content") }</span>
+					<select name="content">
+						<option value="" selected?={ filter.Content == "" }>{ tr(ctx, "responses.filter.any") }</option>
+						<option value="text" selected?={ filter.Content == "text" }>{ tr(ctx, "responses.content.text") }</option>
+						<option value="choices" selected?={ filter.Content == "choices" }>{ tr(ctx, "responses.content.choices") }</option>
+					</select>
+				</label>
+				<label><span class="muted">{ tr(ctx, "responses.filter.from") }</span><input type="date" name="from" value={ filter.From }/></label>
+				<label><span class="muted">{ tr(ctx, "responses.filter.to") }</span><input type="date" name="to" value={ filter.To }/></label>
+				<label>
+					<span class="muted">{ tr(ctx, "responses.filter.sort") }</span>
+					<select name="sort">
+						<option value="" selected?={ !filter.Oldest }>{ tr(ctx, "responses.filter.sort.newest") }</option>
+						<option value="oldest" selected?={ filter.Oldest }>{ tr(ctx, "responses.filter.sort.oldest") }</option>
+					</select>
+				</label>
+				<label class="filter-check"><input type="checkbox" name="starred" value="1" checked?={ filter.Starred }/> { tr(ctx, "responses.filter.starred_only") }</label>
+				<div class="filter-actions">
+					<button type="submit">{ tr(ctx, "responses.filter.apply") }</button>
+					if filter.IsFiltered() || filter.Oldest {
+						<a class="button secondary" href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.filter.reset") }</a>
+					}
+				</div>
+			</form>
+		</section>
+		<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/responses/bulk") } class="panel table-wrap" data-bulk-form>
+			<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+			for _, field := range responseFilterFields(filter) {
+				<input type="hidden" name={ field[0] } value={ field[1] }/>
+			}
+			<p class="muted response-count">{ tr(ctx, "responses.matching", page.Matching) }</p>
+			if len(page.Submissions) > 0 {
+				<div class="bulk-bar">
+					<label class="filter-check"><input type="checkbox" data-select-all/> { tr(ctx, "responses.select_all") }</label>
+					<select name="action" aria-label={ tr(ctx, "responses.bulk.action") }>
+						<option value="read">{ tr(ctx, "responses.bulk.read") }</option>
+						<option value="unread">{ tr(ctx, "responses.bulk.unread") }</option>
+						if canEdit {
+							<option value="star">{ tr(ctx, "responses.bulk.star") }</option>
+							<option value="unstar">{ tr(ctx, "responses.bulk.unstar") }</option>
+							for _, status := range []string{"new", "reviewed", "actionable", "closed"} {
+								<option value={ "status_" + status }>{ tr(ctx, "responses.bulk.status", tr(ctx, "responses.status." + status)) }</option>
+							}
+						}
+					</select>
+					if page.Matching > int64(len(page.Submissions)) {
+						<label class="filter-check"><input type="checkbox" name="scope" value="filter"/> { tr(ctx, "responses.bulk.scope", page.Matching) }</label>
+					}
+					<button type="submit" class="secondary">{ tr(ctx, "responses.bulk.apply") }</button>
+				</div>
+			}
 			<table>
 				<caption>{ tr(ctx, "responses.table_caption", campaign.Name) }</caption>
-				<thead><tr><th>{ tr(ctx, "responses.submitted_at") }</th><th>{ tr(ctx, "responses.status") }</th><th>{ tr(ctx, "responses.summary") }</th><th>{ tr(ctx, "responses.visit") }</th><th>{ tr(ctx, "responses.token") }</th></tr></thead>
+				<thead><tr><th><span class="visually-hidden">{ tr(ctx, "responses.select") }</span></th><th><span class="visually-hidden">{ tr(ctx, "responses.starred") }</span></th><th>{ tr(ctx, "responses.submitted_at") }</th><th>{ tr(ctx, "responses.status") }</th><th>{ tr(ctx, "responses.read_state") }</th><th>{ tr(ctx, "responses.summary") }</th></tr></thead>
 				<tbody>
-					for _, submission := range submissions {
-						<tr>
+					for _, submission := range page.Submissions {
+						<tr class={ templ.KV("unread", !submission.ReadByMe) }>
+							<td><input type="checkbox" name="ids" value={ submission.PublicID } aria-label={ tr(ctx, "responses.select_row", submission.PublicID) }/></td>
+							<td>
+								if submission.Starred {
+									<span class="star" title={ tr(ctx, "responses.starred") }>★<span class="visually-hidden">{ tr(ctx, "responses.starred") }</span></span>
+								}
+							</td>
 							<td><a href={ templ.SafeURL(campaignPath(campaign) + "/responses/" + submission.PublicID) }><time data-local-time datetime={ submission.SubmittedAt }>{ submission.SubmittedAt }</time></a></td>
 							<td><span class={ "badge triage-" + submission.TriageStatus }>{ tr(ctx, "responses.status." + submission.TriageStatus) }</span></td>
-							<td>{ submissionPreview(submission) }</td>
-							<td>{ nullable(submission.VisitPublicID) }</td>
-							<td>
-								if submission.HasInstallTokenHash {
-									{ tr(ctx, "common.yes") }
+							<td class="read-badges">
+								if !submission.ReadByMe && submission.ReadByOthers == 0 {
+									<span class="badge read-unread">{ tr(ctx, "responses.read.unread") }</span>
+								}
+								if submission.ReadByMe {
+									<span class="badge read-mine">{ tr(ctx, "responses.read.mine") }</span>
+								}
+								if submission.ReadByOthers > 0 {
+									<span class="badge read-team">{ tr(ctx, "responses.read.team", submission.ReadByOthers) }</span>
+								}
+							</td>
+							<td class="response-preview">
+								if submission.HasText {
+									<span class="badge content-text">{ tr(ctx, "responses.content.text") }</span>
 								} else {
-									{ tr(ctx, "common.no") }
+									<span class="badge quiet">{ tr(ctx, "responses.content.choices") }</span>
+								}
+								if text := submissionTextPreview(submission); text != "" {
+									<span class="preview-text">{ text }</span>
+								}
+								if choices := submissionChoicePreview(submission); choices != "" {
+									<span class="preview-choices muted">{ choices }</span>
 								}
 							</td>
 						</tr>
 					}
 				</tbody>
 			</table>
-			if len(submissions) == 0 {
-				<div class="empty-state"><p>{ tr(ctx, "responses.empty") }</p></div>
+			if len(page.Submissions) == 0 {
+				<div class="empty-state">
+					if filter.IsFiltered() {
+						<p>{ tr(ctx, "responses.empty.filtered") }</p>
+					} else {
+						<p>{ tr(ctx, "responses.empty") }</p>
+					}
+				</div>
 			}
-		</section>
+		</form>
+		if page.PageCount > 1 {
+			<nav class="pagination" aria-label={ tr(ctx, "responses.pagination.aria") }>
+				if page.Page > 1 {
+					<a class="button secondary" href={ templ.SafeURL(responsesPageURL(campaign, filter, page.Page-1)) }>{ tr(ctx, "responses.pagination.prev") }</a>
+				}
+				<span class="muted">{ tr(ctx, "responses.pagination.page", page.Page, page.PageCount) }</span>
+				if page.Page < page.PageCount {
+					<a class="button secondary" href={ templ.SafeURL(responsesPageURL(campaign, filter, page.Page+1)) }>{ tr(ctx, "responses.pagination.next") }</a>
+				}
+			</nav>
+		}
 	}
 }
 
-templ CampaignResponseDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, submission db.Submission) {
+templ responseChip(campaign db.Campaign, current, target db.ResponseFilter, labelKey string, count int64) {
+	<a class="chip" href={ templ.SafeURL(responsesPageURL(campaign, target, 1)) } { responseChipAttrs(current, target)... }>
+		{ tr(ctx, labelKey) } <strong>{ fmt.Sprint(count) }</strong>
+	</a>
+}
+
+templ CampaignResponseDetail(instanceName string, user db.User, campaign db.Campaign, settings db.CampaignSettings, submission db.Submission, readers []db.SubmissionReader, neighbors db.SubmissionNeighbors, canEdit bool) {
 	@Layout(tr(ctx, "responses.detail"), instanceName, &user) {
 		@CampaignNav(campaign)
 		<section class="page-heading">
@@ -286,6 +414,18 @@ templ CampaignResponseDetail(instanceName string, user db.User, campaign db.Camp
 				<a class="button secondary" href={ templ.SafeURL(responseIssueURL(settings, campaign, submission)) } target="_blank" rel="noopener noreferrer">{ tr(ctx, "responses.github_issue.create") }</a>
 			}
 		</section>
+		<nav class="response-pager" aria-label={ tr(ctx, "responses.pager_aria") }>
+			<a href={ templ.SafeURL(campaignPath(campaign) + "/responses") }>{ tr(ctx, "responses.nav.back") }</a>
+			if neighbors.NewerPublicID != "" {
+				<a href={ templ.SafeURL(campaignPath(campaign) + "/responses/" + neighbors.NewerPublicID) }>{ tr(ctx, "responses.nav.newer") }</a>
+			}
+			if neighbors.OlderPublicID != "" {
+				<a href={ templ.SafeURL(campaignPath(campaign) + "/responses/" + neighbors.OlderPublicID) }>{ tr(ctx, "responses.nav.older") }</a>
+			}
+			if neighbors.NextUnreadPublicID != "" {
+				<a href={ templ.SafeURL(campaignPath(campaign) + "/responses/" + neighbors.NextUnreadPublicID) }>{ tr(ctx, "responses.nav.next_unread") }</a>
+			}
+		</nav>
 		<div class="notice">{ tr(ctx, "responses.privacy") }</div>
 		<section class="panel response-meta">
 			<div><span class="muted">{ tr(ctx, "responses.status") }</span><strong>{ tr(ctx, "responses.status." + submission.TriageStatus) }</strong></div>
@@ -303,6 +443,30 @@ templ CampaignResponseDetail(instanceName string, user db.User, campaign db.Camp
 				</label>
 				<button type="submit" class="secondary">{ tr(ctx, "common.save") }</button>
 			</form>
+		</section>
+		<section class="panel response-readers">
+			<h2>{ tr(ctx, "responses.readers") }</h2>
+			<ul class="reader-list">
+				for _, reader := range readers {
+					<li>
+						<strong>{ reader.Name }</strong>
+						if reader.IsMe {
+							<span class="badge read-mine">{ tr(ctx, "responses.readers.you") }</span>
+						}
+						<time class="muted" data-local-time datetime={ reader.FirstReadAt }>{ reader.FirstReadAt }</time>
+					</li>
+				}
+			</ul>
+			<div class="actions compact">
+				@responseSingleAction(campaign, submission, "unread", "responses.mark_unread")
+				if canEdit {
+					if submission.Starred {
+						@responseSingleAction(campaign, submission, "unstar", "responses.star.remove")
+					} else {
+						@responseSingleAction(campaign, submission, "star", "responses.star.add")
+					}
+				}
+			</div>
 		</section>
 		if len(submission.URLContext) > 0 {
 			<section class="panel response-context">
@@ -327,15 +491,14 @@ templ CampaignResponseDetail(instanceName string, user db.User, campaign db.Camp
 	}
 }
 
-func submissionPreview(submission db.Submission) string {
-	if len(submission.Answers) == 0 {
-		return submission.AnswerSummary
-	}
-	value := submissionAnswerDisplay(answerDisplayValueJSON(submission.Answers[0]))
-	if len([]rune(value)) > 140 {
-		return string([]rune(value)[:140]) + "..."
-	}
-	return value
+templ responseSingleAction(campaign db.Campaign, submission db.Submission, action, labelKey string) {
+	<form method="post" action={ templ.SafeURL(campaignPath(campaign) + "/responses/bulk") }>
+		<input type="hidden" name="csrf_token" value={ csrfFromContext(ctx) }/>
+		<input type="hidden" name="ids" value={ submission.PublicID }/>
+		<input type="hidden" name="back" value={ submission.PublicID }/>
+		<input type="hidden" name="action" value={ action }/>
+		<button type="submit" class="secondary">{ tr(ctx, labelKey) }</button>
+	</form>
 }
 
 func answerDisplayValueJSON(answer db.SubmissionAnswer) string {
@@ -429,4 +592,69 @@ func fieldAttrs(field db.FormField) templ.Attributes {
 		return templ.Attributes{"aria-describedby": helpID(field)}
 	}
 	return nil
+}
+
+func responsesPageURL(campaign db.Campaign, filter db.ResponseFilter, page int) string {
+	filter.Page = page
+	target := campaignPath(campaign) + "/responses"
+	if encoded := filter.Values().Encode(); encoded != "" {
+		target += "?" + encoded
+	}
+	return target
+}
+
+func responseChipAttrs(current, target db.ResponseFilter) templ.Attributes {
+	current.Page, target.Page = 1, 1
+	if current.Values().Encode() == target.Values().Encode() {
+		return templ.Attributes{"aria-current": "page"}
+	}
+	return nil
+}
+
+func responseFilterFields(filter db.ResponseFilter) [][2]string {
+	values := filter.Values()
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	fields := make([][2]string, 0, len(keys))
+	for _, key := range keys {
+		fields = append(fields, [2]string{key, values.Get(key)})
+	}
+	return fields
+}
+
+func truncateRunes(value string, limit int) string {
+	if runes := []rune(value); len(runes) > limit {
+		return string(runes[:limit]) + "..."
+	}
+	return value
+}
+
+// submissionTextPreview returns the first non-empty free-text answer.
+func submissionTextPreview(submission db.Submission) string {
+	for _, answer := range submission.Answers {
+		if answer.FieldType != "textarea" {
+			continue
+		}
+		if value := strings.TrimSpace(submissionAnswerDisplay(answer.ValueJSON)); value != "" {
+			return truncateRunes(value, 200)
+		}
+	}
+	return ""
+}
+
+// submissionChoicePreview summarises radio, checkbox and rating answers.
+func submissionChoicePreview(submission db.Submission) string {
+	var parts []string
+	for _, answer := range submission.Answers {
+		if answer.FieldType == "textarea" {
+			continue
+		}
+		if value := strings.TrimSpace(submissionAnswerDisplay(answerDisplayValueJSON(answer))); value != "" {
+			parts = append(parts, value)
+		}
+	}
+	return truncateRunes(strings.Join(parts, " · "), 140)
 }

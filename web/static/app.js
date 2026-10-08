@@ -66,6 +66,14 @@ document.documentElement.classList.add("js");
             updateThemeButton();
         });
 
+        document.querySelectorAll("[data-bulk-form]").forEach(function(form) {
+            var toggle = form.querySelector("[data-select-all]");
+            if (!toggle) return;
+            toggle.addEventListener("change", function() {
+                form.querySelectorAll('input[name="ids"]').forEach(function(box) { box.checked = toggle.checked; });
+            });
+        });
+
         document.querySelectorAll("[data-copy-target]").forEach(function(button) {
             button.addEventListener("click", function() {
                 var target = document.getElementById(button.getAttribute("data-copy-target"));

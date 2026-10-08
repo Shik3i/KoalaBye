@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Features
+- Responses list shows whether a response contains free text (badge + text preview) next to the chosen options
+- Per-user read tracking (migration 00016): every response is *Unread* (nobody opened it), *Read by me* and/or *Read by team (n)*; opening a response marks it read, the detail page lists who read it and when, and it can be marked unread again
+- Responses list: quick-filter chips with counts, filters (status, read state, free text vs. choices only, starred, date range, search over answers and IDs), sort order, pagination (50 per page)
+- Bulk actions on selected responses or on all responses matching the active filter: mark read/unread (own marker), star, set status
+- Star responses (shared with the team); next/newer/older/next-unread navigation on the detail page; unread count on the campaign overview
+
+### Security
+- CSV export neutralises spreadsheet formula injection (`=`, `+`, `-`, `@`, tab/CR/LF prefixes) in respondent-controlled cells
+
+### Maintenance
+- Templ generator pin aligned with `go.mod` (`v0.3.1070`); generated templates regenerated
+- Export loader fetches option labels once per campaign instead of once per submission
+
 ## v0.4.3 - 2026-06-18
 
 ### Security

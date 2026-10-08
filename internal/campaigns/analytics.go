@@ -91,6 +91,9 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		for _, publicID := range columns {
 			row = append(row, values[publicID])
 		}
+		for index := range row {
+			row[index] = csvSafeCell(row[index])
+		}
 		if err := writer.Write(row); err != nil {
 			return
 		}
@@ -228,6 +231,19 @@ func exportAnswerValue(raw string) string {
 	default:
 		return fmt.Sprint(value)
 	}
+}
+
+// csvSafeCell neutralises spreadsheet formula injection (CWE-1236) in
+// respondent-controlled values by prefixing a single quote.
+func csvSafeCell(value string) string {
+	if value == "" {
+		return value
+	}
+	switch value[0] {
+	case '=', '+', '-', '@', '\t', '\r', '\n':
+		return "'" + value
+	}
+	return value
 }
 
 func sanitizeExportLabel(value string) string {

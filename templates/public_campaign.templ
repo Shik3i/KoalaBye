@@ -18,7 +18,9 @@ templ PublicLayout(title, instanceName string, branding *db.CampaignBranding) {
 			<link rel="stylesheet" href={ "/assets/app.css?v=" + version.Current().Version }/>
 			<script src={ "/assets/app.js?v=" + version.Current().Version } defer></script>
 			if branding != nil && branding.CustomCSS.Valid {
-				<style type="text/css">{ branding.CustomCSS.String }</style>
+				<style type="text/css">
+					{ branding.CustomCSS.String }
+				</style>
 			}
 		</head>
 		<body class={ bodyClass(branding) }>
@@ -94,7 +96,7 @@ templ PublicCampaignPage(instanceName string, campaign db.Campaign, settings db.
 				</form>
 			}
 		</section>
-		<section class="panel public-card" id="feedback-already-submitted-panel" style="display: none;">
+		<section class="panel public-card" id="feedback-already-submitted-panel" style="display: none">
 			<h2>{ tr(ctx, "public.thanks.title") }</h2>
 			<p>{ tr(ctx, "public.thanks.text") }</p>
 		</section>

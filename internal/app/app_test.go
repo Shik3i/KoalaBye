@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -1767,5 +1768,103 @@ func TestI18nPlaceholdersAndForbiddenStrings(t *testing.T) {
 				t.Errorf("Route %s (%s) contains forbidden wording", route, lang)
 			}
 		}
+	}
+}
+
+func TestResponseReadTrackingBulkActionsAndRoles(t *testing.T) {
+	t.Parallel()
+	application := testApp(t)
+	owner, password := seedOwner(t, application)
+	q := db.NewQuerier(application.Database)
+	ctx := context.Background()
+	orgs, _ := q.ListOrganizationsForUser(ctx, owner.ID)
+	org := orgs[0]
+	campaign, err := q.CreateCampaign(ctx, db.CreateCampaignInput{PublicID: "camp_resp", OrganizationID: org.ID, CreatedBy: owner.ID, Name: "Resp Campaign", Slug: "resp-campaign", Language: "en", PrivacyPreset: "strict"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = q.CreateFormField(ctx, db.SaveFormFieldInput{PublicID: "field_text", CampaignID: campaign.ID, FieldType: "textarea", Label: "Why?"}, owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	field, _ := q.GetFormField(ctx, campaign.ID, "field_text")
+	for i, text := range []string{"first <b>text</b>", "second text"} {
+		raw, _ := json.Marshal(text)
+		if err = q.CreateSubmission(ctx, db.CreateSubmissionInput{
+			PublicID: fmt.Sprintf("sub_%d", i), CampaignID: campaign.ID, OrgID: org.ID, SubmittedAt: time.Now().Add(time.Duration(i) * time.Minute),
+			Answers: []db.SubmissionAnswerInput{{FieldID: field.ID, FieldPublicID: field.PublicID, FieldType: field.FieldType, FieldLabelSnapshot: field.Label, ValueJSON: string(raw)}},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	analyst := seedNonOwner(t, application, "analystuser", "analyst long password")
+	if _, err = application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, analyst.ID, db.Now(), owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	loaded, _ := q.GetCampaignByPublicID(ctx, org.PublicID, campaign.PublicID)
+	if err = q.SetCampaignMember(ctx, loaded, analyst.PublicID, "analyst", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	viewer := seedNonOwner(t, application, "viewonly", "viewer long password")
+	if _, err = application.Database.Exec(`INSERT INTO organization_members(organization_id,user_id,role,created_at,created_by_user_id) VALUES(?,?,'member',?,?)`, org.ID, viewer.ID, db.Now(), owner.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err = q.SetCampaignMember(ctx, loaded, viewer.PublicID, "viewer", owner.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	base := "/app/orgs/" + org.PublicID + "/campaigns/" + campaign.PublicID + "/responses"
+	ownerLogin := login(t, application, owner.Username, password)
+	analystLogin := login(t, application, analyst.Username, "analyst long password")
+	viewerLogin := login(t, application, viewer.Username, "viewer long password")
+	get := func(target string, session *http.Cookie) *httptest.ResponseRecorder {
+		request := httptest.NewRequest(http.MethodGet, target, nil)
+		request.AddCookie(session)
+		response := httptest.NewRecorder()
+		application.Handler.ServeHTTP(response, request)
+		return response
+	}
+
+	list := get(base, ownerLogin.session)
+	if list.Code != http.StatusOK || !strings.Contains(list.Body.String(), "Unread") || !strings.Contains(list.Body.String(), "Free text") || !strings.Contains(list.Body.String(), "first &lt;b&gt;text&lt;/b&gt;") {
+		t.Fatalf("owner list=%d body=%s", list.Code, list.Body.String())
+	}
+	if get(base, viewerLogin.session).Code != http.StatusForbidden {
+		t.Fatal("campaign viewer must not see responses")
+	}
+
+	if detail := get(base+"/sub_0", ownerLogin.session); detail.Code != http.StatusOK || !strings.Contains(detail.Body.String(), "Read by") {
+		t.Fatalf("detail=%d", detail.Code)
+	}
+	analystList := get(base+"?read=team", analystLogin.session)
+	if analystList.Code != http.StatusOK || !strings.Contains(analystList.Body.String(), "Read by team (1)") || strings.Contains(analystList.Body.String(), "second text") {
+		t.Fatalf("analyst should see only the response the owner read: %d %s", analystList.Code, analystList.Body.String())
+	}
+
+	csrfCookie, token, _ := csrfPage(t, application, base, analystLogin.session)
+	markRead := formPost(application, base+"/bulk", url.Values{"csrf_token": {token}, "action": {"read"}, "ids": {"sub_1"}, "read": {"unread_me"}}, analystLogin.session, csrfCookie)
+	if markRead.Code != http.StatusSeeOther || markRead.Header().Get("Location") != base+"?read=unread_me" {
+		t.Fatalf("analyst mark read=%d location=%q", markRead.Code, markRead.Header().Get("Location"))
+	}
+	if star := formPost(application, base+"/bulk", url.Values{"csrf_token": {token}, "action": {"star"}, "ids": {"sub_1"}}, analystLogin.session, csrfCookie); star.Code != http.StatusForbidden {
+		t.Fatalf("analyst must not change shared state: %d", star.Code)
+	}
+	if noCSRF := formPost(application, base+"/bulk", url.Values{"action": {"read"}, "ids": {"sub_1"}}, analystLogin.session); noCSRF.Code == http.StatusSeeOther {
+		t.Fatal("bulk endpoint accepted a request without CSRF token")
+	}
+	var reads int
+	if err = application.Database.QueryRow(`SELECT COUNT(*) FROM campaign_submission_reads`).Scan(&reads); err != nil || reads != 2 {
+		t.Fatalf("expected 2 read markers (owner sub_0, analyst sub_1), got %d err=%v", reads, err)
+	}
+
+	ownerCookie, ownerToken, _ := csrfPage(t, application, base, ownerLogin.session)
+	star := formPost(application, base+"/bulk", url.Values{"csrf_token": {ownerToken}, "action": {"star"}, "ids": {"sub_1"}, "back": {"sub_1"}}, ownerLogin.session, ownerCookie)
+	if star.Code != http.StatusSeeOther || star.Header().Get("Location") != base+"/sub_1" {
+		t.Fatalf("owner star=%d location=%q", star.Code, star.Header().Get("Location"))
+	}
+	if starred := get(base+"?starred=1", ownerLogin.session); !strings.Contains(starred.Body.String(), "second text") || strings.Contains(starred.Body.String(), "first &lt;b&gt;") {
+		t.Fatalf("starred filter broken: %s", starred.Body.String())
+	}
+	if german := get(base+"?lang=de", ownerLogin.session); !strings.Contains(german.Body.String(), "Lesestatus") {
+		t.Fatal("German locale missing for new response UI")
 	}
 }
