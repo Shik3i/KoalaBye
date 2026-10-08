@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const templVersion = "v0.3.1020"
+const templVersion = "v0.3.1070"
 
 func main() {
 	check := flag.Bool("check", false, "verify generated templates without writing files")
