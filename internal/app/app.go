@@ -26,6 +26,7 @@ type App struct {
 	Config   config.Config
 	Database *sql.DB
 	Handler  http.Handler
+	stop     context.CancelFunc
 }
 
 func New(ctx context.Context, cfg config.Config) (*App, error) {
@@ -105,6 +106,33 @@ func (a *App) Server() *http.Server {
 	}
 }
 
+// RunMaintenance starts the hourly background job that auto-closes read responses.
+// It stops when Close is called.
+func (a *App) RunMaintenance() {
+	ctx, cancel := context.WithCancel(context.Background())
+	a.stop = cancel
+	queries := db.NewQuerier(a.Database)
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for {
+			if closed, err := queries.RunAutoClose(ctx, time.Now()); err != nil && ctx.Err() == nil {
+				slog.Error("auto-close responses", "error", err)
+			} else if closed > 0 {
+				slog.Info("auto-closed responses", "count", closed)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+}
+
 func (a *App) Close() error {
+	if a.stop != nil {
+		a.stop()
+	}
 	return a.Database.Close()
 }

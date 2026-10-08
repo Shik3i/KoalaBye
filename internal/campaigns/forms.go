@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -425,22 +426,43 @@ func optionSet(options []db.FormOption) map[string]struct{} {
 }
 
 func (h *Handler) Responses(w http.ResponseWriter, r *http.Request) {
-	user, campaign, _, ok := h.responseCampaign(r)
+	user, campaign, role, ok := h.responseCampaign(r)
 	if !ok {
 		h.forbidden(w, r)
 		return
 	}
-	submissions, err := h.q.ListSubmissionsWithAnswers(r.Context(), campaign.ID)
+	filter := db.ResponseFilterFromValues(r.URL.Query())
+	page, err := h.q.ListSubmissionsPage(r.Context(), campaign.ID, user.ID, filter)
 	if err != nil {
+		h.logError(r.Context(), "load responses", err)
 		http.Error(w, "load responses", http.StatusInternalServerError)
 		return
 	}
+	filter.Page = page.Page
 	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
-	web.Render(w, r, http.StatusOK, templates.CampaignResponses(h.cfg.InstanceName, user, campaign, settings, submissions))
+	data := templates.ResponsesPageData{Page: page, Filter: filter, CanEdit: canEditResponses(role), IsOwner: role == "owner", AutoCloseDays: settings.AutoCloseDays.Int64}
+	if data.Tags, err = h.q.ListResponseTags(r.Context(), campaign.ID); err != nil {
+		h.logError(r.Context(), "load response tags", err)
+	}
+	if data.Views, err = h.q.ListResponseViews(r.Context(), campaign.ID, user.ID); err != nil {
+		h.logError(r.Context(), "load response views", err)
+	}
+	if data.Members, err = h.q.ListAssignableMembers(r.Context(), campaign); err != nil {
+		h.logError(r.Context(), "load assignable members", err)
+	}
+	web.Render(w, r, http.StatusOK, templates.CampaignResponses(h.cfg.InstanceName, user, campaign, settings, data))
+}
+
+func canEditResponses(role string) bool { return role == "owner" || role == "editor" }
+
+// responsesWritable is false for archived or disabled campaigns, which are read-only
+// (own read markers excepted).
+func responsesWritable(campaign db.Campaign) bool {
+	return campaign.Status != "archived" && !campaign.DisabledAt.Valid
 }
 
 func (h *Handler) ResponseDetail(w http.ResponseWriter, r *http.Request) {
-	user, campaign, _, ok := h.responseCampaign(r)
+	user, campaign, role, ok := h.responseCampaign(r)
 	if !ok {
 		h.forbidden(w, r)
 		return
@@ -450,13 +472,96 @@ func (h *Handler) ResponseDetail(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
+	if err := h.q.MarkSubmissionRead(r.Context(), submission.ID, user.ID); err != nil {
+		h.logError(r.Context(), "mark response read", err)
+	}
+	data := templates.ResponseDetailData{Submission: submission, CanEdit: canEditResponses(role), CurrentUserID: user.ID}
+	if data.Readers, err = h.q.ListSubmissionReaders(r.Context(), submission.ID, user.ID); err != nil {
+		h.logError(r.Context(), "load response readers", err)
+	}
+	if data.Neighbors, err = h.q.GetSubmissionNeighbors(r.Context(), campaign.ID, submission.ID, user.ID); err != nil {
+		h.logError(r.Context(), "load response neighbors", err)
+	}
+	if data.Notes, err = h.q.ListSubmissionNotes(r.Context(), submission.ID); err != nil {
+		h.logError(r.Context(), "load response notes", err)
+	}
+	if data.Tags, err = h.q.ListResponseTags(r.Context(), campaign.ID); err != nil {
+		h.logError(r.Context(), "load response tags", err)
+	}
+	if data.Members, err = h.q.ListAssignableMembers(r.Context(), campaign); err != nil {
+		h.logError(r.Context(), "load assignable members", err)
+	}
+	if err := h.q.LoadSubmissionTags(r.Context(), &data.Submission); err != nil {
+		h.logError(r.Context(), "load submission tags", err)
+	}
+	for _, reader := range data.Readers {
+		if reader.IsMe {
+			data.Submission.ReadByMe = true
+		}
+	}
 	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
-	web.Render(w, r, http.StatusOK, templates.CampaignResponseDetail(h.cfg.InstanceName, user, campaign, settings, submission))
+	web.Render(w, r, http.StatusOK, templates.CampaignResponseDetail(h.cfg.InstanceName, user, campaign, settings, data))
+}
+
+// ResponseBulk applies a read/star/status/assign/tag action to selected or all filtered responses.
+func (h *Handler) ResponseBulk(w http.ResponseWriter, r *http.Request) {
+	user, campaign, role, ok := h.responseCampaign(r)
+	if !ok {
+		h.forbidden(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	action, param := r.PostForm.Get("action"), ""
+	if rest, found := strings.CutPrefix(action, "assign:"); found {
+		action, param = "assign", rest
+	}
+	if action == "tag_add" || action == "tag_remove" {
+		param = r.PostForm.Get("tag")
+	}
+	if db.BulkActionNeedsEditor(action) && (!canEditResponses(role) || !responsesWritable(campaign)) {
+		h.forbidden(w, r)
+		return
+	}
+	filter := db.ResponseFilterFromValues(r.PostForm)
+	back := r.PostForm.Get("back")
+	target := db.BulkTarget{PublicIDs: r.PostForm["ids"]}
+	if r.PostForm.Get("scope") == "filter" && back == "" {
+		target = db.BulkTarget{Filter: &filter}
+	}
+	if _, err := h.q.BulkUpdateSubmissions(r.Context(), campaign, user.ID, action, param, target); err != nil {
+		if errors.Is(err, db.ErrForbidden) || errors.Is(err, db.ErrInvalidInput) || errors.Is(err, db.ErrLimitReached) {
+			h.redirectAfterBulk(w, r, campaign, filter, back)
+			return
+		}
+		h.logError(r.Context(), "bulk update responses", err)
+		http.Error(w, "update responses", http.StatusInternalServerError)
+		return
+	}
+	h.redirectAfterBulk(w, r, campaign, filter, back)
+}
+
+func (h *Handler) redirectAfterBulk(w http.ResponseWriter, r *http.Request, campaign db.Campaign, filter db.ResponseFilter, back string) {
+	if back != "" {
+		http.Redirect(w, r, campaignURL(campaign.OrganizationPublicID, campaign.PublicID)+"/responses/"+url.PathEscape(back), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, responsesListURL(campaign, filter), http.StatusSeeOther)
+}
+
+func responsesListURL(campaign db.Campaign, filter db.ResponseFilter) string {
+	target := campaignURL(campaign.OrganizationPublicID, campaign.PublicID) + "/responses"
+	if encoded := filter.Values().Encode(); encoded != "" {
+		target += "?" + encoded
+	}
+	return target
 }
 
 func (h *Handler) ResponseTriageStatus(w http.ResponseWriter, r *http.Request) {
 	user, campaign, role, ok := h.responseCampaign(r)
-	if !ok || (role != "owner" && role != "editor") {
+	if !ok || !canEditResponses(role) || !responsesWritable(campaign) {
 		h.forbidden(w, r)
 		return
 	}

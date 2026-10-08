@@ -50,6 +50,16 @@ Do not put names, email addresses, account IDs, advertising IDs, or other person
 
 Every public campaign page displays a collection notice. The notice distinguishes Strict mode from enabled coarse diagnostics and separately identifies URL-context collection. Public pages do not set cookies. An explicit theme choice can be stored in browser `localStorage`.
 
+## Team Workflow Data
+
+Team members with access to responses generate internal data that is never shown to respondents and never part of the public form:
+
+- read markers (which team member opened which response, and when)
+- internal notes, assignee, tags and star
+- saved filter views
+
+Exports include status, star, tags, assignee and the names of team members who read a response, but never the internal notes. Deleting responses also deletes this data.
+
 ## Exports
 
 Authorized CSV and JSON exports can include sanitized URL context attached to the linked visit. They never include raw install tokens, install-token hashes, raw query strings, IP addresses, raw user agents, full referrer URLs, or internal integer IDs. Exports can contain submitted free text and must be handled as sensitive operator data.

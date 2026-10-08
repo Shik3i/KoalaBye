@@ -45,6 +45,8 @@ type CampaignAnalytics struct {
 	Trend                           []DailyTrend
 	Fields                          []FieldSummary
 	Referrers, Browsers, OSFamilies []MetadataCount
+	Tags                            []ResponseTag
+	Insights                        TextInsights
 }
 
 func (q *Querier) CampaignAnalytics(ctx context.Context, campaignID int64, start *time.Time, now time.Time) (CampaignAnalytics, error) {
@@ -282,15 +284,26 @@ func (q *Querier) fieldSummaries(ctx context.Context, campaignID int64, start *t
 }
 
 func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int64) ([]Submission, error) {
+	return q.ListSubmissionsForExport(ctx, campaignID, 0, nil)
+}
+
+// ListSubmissionsForExport loads submissions with answers, workflow metadata
+// (status, star, tags, assignee, readers) and optionally narrows them with a filter.
+func (q *Querier) ListSubmissionsForExport(ctx context.Context, campaignID, userID int64, filter *ResponseFilter) ([]Submission, error) {
+	where, args := ResponseFilter{}.where(campaignID, userID)
+	if filter != nil {
+		where, args = filter.Normalize().where(campaignID, userID)
+	}
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT s.id, s.public_id, s.campaign_id, v.public_id, s.install_token_hash IS NOT NULL, s.submitted_at, s.triage_status, v.context_json,
-		       a.field_id, a.field_public_id, a.field_type, a.field_label_snapshot, a.value_json
+		       a.field_id, a.field_public_id, a.field_type, a.field_label_snapshot, a.value_json,
+		       s.has_text, s.starred, COALESCE((SELECT CASE WHEN u.display_name <> '' THEN u.display_name ELSE u.username END FROM users u WHERE u.id = s.assignee_user_id), '')
 		FROM campaign_submissions s
 		LEFT JOIN campaign_visits v ON v.id = s.visit_id
 		LEFT JOIN campaign_submission_answers a ON a.submission_id = s.id
-		WHERE s.campaign_id = ?
+		WHERE `+where+`
 		ORDER BY s.id DESC, a.id ASC
-	`, campaignID)
+	`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -308,10 +321,13 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 
 		var aFieldID sql.NullInt64
 		var aFieldPublicID, aFieldType, aFieldLabelSnapshot, aValueJSON sql.NullString
+		var sHasText, sStarred bool
+		var sAssignee string
 
 		err := rows.Scan(
 			&sID, &sPublicID, &sCampaignID, &sVisitPublicID, &sHasInstallTokenHash, &sSubmittedAt, &sTriageStatus, &contextJSON,
 			&aFieldID, &aFieldPublicID, &aFieldType, &aFieldLabelSnapshot, &aValueJSON,
+			&sHasText, &sStarred, &sAssignee,
 		)
 		if err != nil {
 			return nil, err
@@ -331,6 +347,9 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 				HasInstallTokenHash: sHasInstallTokenHash,
 				SubmittedAt:         sSubmittedAt,
 				TriageStatus:        sTriageStatus,
+				HasText:             sHasText,
+				Starred:             sStarred,
+				AssigneeName:        sAssignee,
 				URLContext:          urlContext,
 			}
 			submissions = append(submissions, sub)
@@ -351,18 +370,24 @@ func (q *Querier) ListSubmissionsWithAnswers(ctx context.Context, campaignID int
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	for index, submission := range submissions {
-		updated, err := q.withSubmissionAnswerDisplayLabels(ctx, submission)
-		if err != nil {
-			return nil, err
-		}
-		submissions[index] = updated
+	labels, err := q.campaignOptionLabels(ctx, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	for index := range submissions {
+		applyDisplayLabels(&submissions[index], labels)
+	}
+	if err := q.loadSubmissionTags(ctx, submissions); err != nil {
+		return nil, err
+	}
+	if err := q.loadSubmissionReadBy(ctx, submissions); err != nil {
+		return nil, err
 	}
 	return submissions, nil
 }
 
-func (q *Querier) AuditCampaignExport(ctx context.Context, actorID int64, campaign Campaign, format string, count int) error {
-	metadata, _ := json.Marshal(map[string]any{"format": format, "campaign_public_id": campaign.PublicID, "approximate_submission_count": count})
+func (q *Querier) AuditCampaignExport(ctx context.Context, actorID int64, campaign Campaign, format string, count int, filtered bool) error {
+	metadata, _ := json.Marshal(map[string]any{"format": format, "campaign_public_id": campaign.PublicID, "approximate_submission_count": count, "filtered": filtered})
 	return q.CreateAuditEvent(ctx, actorID, campaign.OrganizationID, "campaign.export."+format, "campaign", campaign.PublicID, nil, string(metadata))
 }
 

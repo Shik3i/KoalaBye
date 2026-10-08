@@ -30,6 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer application.Close()
+	application.RunMaintenance()
 
 	server := application.Server()
 	errs := make(chan error, 1)

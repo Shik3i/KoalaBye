@@ -86,6 +86,26 @@ type CampaignMember struct {
 	CreatedByUserID interface{} `json:"created_by_user_id"`
 }
 
+type CampaignResponseTag struct {
+	ID             int64  `json:"id"`
+	PublicID       string `json:"public_id"`
+	CampaignID     int64  `json:"campaign_id"`
+	Name           string `json:"name"`
+	NameNormalized string `json:"name_normalized"`
+	CreatedAt      string `json:"created_at"`
+}
+
+type CampaignResponseView struct {
+	ID         int64  `json:"id"`
+	PublicID   string `json:"public_id"`
+	CampaignID int64  `json:"campaign_id"`
+	UserID     int64  `json:"user_id"`
+	Name       string `json:"name"`
+	Query      string `json:"query"`
+	Shared     int64  `json:"shared"`
+	CreatedAt  string `json:"created_at"`
+}
+
 type CampaignSetting struct {
 	CampaignID             int64       `json:"campaign_id"`
 	CollectInstallToken    int64       `json:"collect_install_token"`
@@ -103,6 +123,7 @@ type CampaignSetting struct {
 	RetentionDays          interface{} `json:"retention_days"`
 	CollectUrlContext      int64       `json:"collect_url_context"`
 	DevFeedbackIssueUrl    interface{} `json:"dev_feedback_issue_url"`
+	AutoCloseDays          interface{} `json:"auto_close_days"`
 }
 
 type CampaignSubmission struct {
@@ -113,6 +134,9 @@ type CampaignSubmission struct {
 	InstallTokenHash interface{} `json:"install_token_hash"`
 	SubmittedAt      string      `json:"submitted_at"`
 	TriageStatus     string      `json:"triage_status"`
+	HasText          int64       `json:"has_text"`
+	Starred          int64       `json:"starred"`
+	AssigneeUserID   interface{} `json:"assignee_user_id"`
 }
 
 type CampaignSubmissionAnswer struct {
@@ -123,6 +147,26 @@ type CampaignSubmissionAnswer struct {
 	FieldType          string      `json:"field_type"`
 	FieldLabelSnapshot string      `json:"field_label_snapshot"`
 	ValueJson          string      `json:"value_json"`
+}
+
+type CampaignSubmissionNote struct {
+	ID           int64       `json:"id"`
+	PublicID     string      `json:"public_id"`
+	SubmissionID int64       `json:"submission_id"`
+	AuthorUserID interface{} `json:"author_user_id"`
+	Body         string      `json:"body"`
+	CreatedAt    string      `json:"created_at"`
+}
+
+type CampaignSubmissionRead struct {
+	SubmissionID int64  `json:"submission_id"`
+	UserID       int64  `json:"user_id"`
+	FirstReadAt  string `json:"first_read_at"`
+}
+
+type CampaignSubmissionTag struct {
+	SubmissionID int64 `json:"submission_id"`
+	TagID        int64 `json:"tag_id"`
 }
 
 type CampaignVisit struct {

@@ -34,3 +34,21 @@ func TestCSVAnswerEscapingAndSanitization(t *testing.T) {
 		t.Fatalf("sanitized label=%q", got)
 	}
 }
+
+func TestCSVSafeCellNeutralisesFormulas(t *testing.T) {
+	t.Parallel()
+	for input, want := range map[string]string{
+		"=HYPERLINK(\"http://x\")": "'=HYPERLINK(\"http://x\")",
+		"+1":                       "'+1",
+		"-1":                       "'-1",
+		"@SUM(A1)":                 "'@SUM(A1)",
+		"\tcmd":                    "'\tcmd",
+		"plain text":               "plain text",
+		"":                         "",
+		"a=b":                      "a=b",
+	} {
+		if got := csvSafeCell(input); got != want {
+			t.Errorf("csvSafeCell(%q)=%q want %q", input, got, want)
+		}
+	}
+}

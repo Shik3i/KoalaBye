@@ -66,6 +66,67 @@ document.documentElement.classList.add("js");
             updateThemeButton();
         });
 
+        document.querySelectorAll("[data-bulk-form]").forEach(function(form) {
+            var toggle = form.querySelector("[data-select-all]");
+            if (!toggle) return;
+            toggle.addEventListener("change", function() {
+                form.querySelectorAll('input[name="ids"]').forEach(function(box) { box.checked = toggle.checked; });
+            });
+        });
+
+        (function() {
+            var help = document.getElementById("shortcut-help");
+            document.querySelectorAll("[data-shortcut-help-toggle]").forEach(function(button) {
+                button.addEventListener("click", function() { if (help) help.hidden = !help.hidden; });
+            });
+            var detail = document.querySelector('[data-shortcuts="detail"]');
+            var list = document.querySelector('[data-shortcuts="list"]');
+            if (!detail && !list) return;
+            var rows = list ? Array.prototype.slice.call(list.querySelectorAll("tr[data-row]")) : [];
+            var active = -1;
+            function setActive(index) {
+                if (!rows.length) return;
+                active = Math.max(0, Math.min(rows.length - 1, index));
+                rows.forEach(function(row, i) { row.classList.toggle("kb-active", i === active); });
+                rows[active].scrollIntoView({block: "nearest"});
+            }
+            function go(url) { if (url) window.location.href = url; }
+            function submitAction(name) {
+                var form = detail.querySelector('form[data-shortcut-action="' + name + '"]');
+                if (form) form.submit();
+            }
+            document.addEventListener("keydown", function(event) {
+                if (event.ctrlKey || event.metaKey || event.altKey) return;
+                var target = event.target;
+                if (target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable)) return;
+                if (document.querySelector("dialog[open]")) return;
+                var key = event.key;
+                if (key === "?") { if (help) help.hidden = !help.hidden; event.preventDefault(); return; }
+                if (list) {
+                    if (key === "j") { setActive(active + 1); event.preventDefault(); }
+                    else if (key === "k") { setActive(active < 0 ? 0 : active - 1); event.preventDefault(); }
+                    else if (key === "Enter" && active >= 0) {
+                        var link = rows[active].querySelector("a[data-row-link]");
+                        if (link) { window.location.href = link.href; event.preventDefault(); }
+                    } else if (key === "x" && active >= 0) {
+                        var box = rows[active].querySelector('input[name="ids"]');
+                        if (box) { box.checked = !box.checked; event.preventDefault(); }
+                    } else if (key === "/") {
+                        var search = document.querySelector("[data-shortcut-search]");
+                        if (search) { search.focus(); event.preventDefault(); }
+                    }
+                } else if (detail) {
+                    var data = detail.dataset;
+                    if (key === "j") go(data.olderUrl);
+                    else if (key === "k") go(data.newerUrl);
+                    else if (key === "n") go(data.nextUnreadUrl);
+                    else if (key === "u") go(data.listUrl);
+                    else if (key === "r") submitAction("unread");
+                    else if (key === "s") submitAction(detail.querySelector('form[data-shortcut-action="unstar"]') ? "unstar" : "star");
+                }
+            });
+        })();
+
         document.querySelectorAll("[data-copy-target]").forEach(function(button) {
             button.addEventListener("click", function() {
                 var target = document.getElementById(button.getAttribute("data-copy-target"));

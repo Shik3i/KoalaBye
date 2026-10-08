@@ -36,7 +36,18 @@ func (h *Handler) Analytics(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "load settings", http.StatusInternalServerError)
 		return
 	}
+	h.attachResponseInsights(r, campaign, &analytics)
 	web.Render(w, r, http.StatusOK, templates.CampaignAnalyticsPage(h.cfg.InstanceName, user, campaign, settings, analytics, rangeKey, role == "owner", ""))
+}
+
+func (h *Handler) attachResponseInsights(r *http.Request, campaign db.Campaign, analytics *db.CampaignAnalytics) {
+	var err error
+	if analytics.Tags, err = h.q.ListResponseTags(r.Context(), campaign.ID); err != nil {
+		h.logError(r.Context(), "load response tags", err)
+	}
+	if analytics.Insights, err = h.q.ResponseTextInsights(r.Context(), campaign.ID); err != nil {
+		h.logError(r.Context(), "load response text insights", err)
+	}
 }
 
 func analyticsRange(value string, now time.Time) (string, *time.Time) {
@@ -60,7 +71,8 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	submissions, err := h.q.ListSubmissionsWithAnswers(r.Context(), campaign.ID)
+	filter := db.ResponseFilterFromValues(r.URL.Query())
+	submissions, err := h.q.ListSubmissionsForExport(r.Context(), campaign.ID, user.ID, &filter)
 	if err != nil {
 		http.Error(w, "load export", http.StatusInternalServerError)
 		return
@@ -69,7 +81,7 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	contextColumns := exportContextColumns(submissions)
 	var output bytes.Buffer
 	writer := csv.NewWriter(&output)
-	header := []string{"submission_public_id", "submitted_at", "visit_public_id", "has_install_token_hash"}
+	header := []string{"submission_public_id", "submitted_at", "visit_public_id", "has_install_token_hash", "triage_status", "starred", "has_free_text", "tags", "assignee", "read_by"}
 	for _, key := range contextColumns {
 		header = append(header, "context_"+key)
 	}
@@ -84,12 +96,17 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		for _, answer := range submission.Answers {
 			values[answer.FieldPublicID] = exportAnswerValue(answer.ValueJSON)
 		}
-		row := []string{submission.PublicID, submission.SubmittedAt, submission.VisitPublicID.String, strconv.FormatBool(submission.HasInstallTokenHash)}
+		row := []string{submission.PublicID, submission.SubmittedAt, submission.VisitPublicID.String, strconv.FormatBool(submission.HasInstallTokenHash),
+			submission.TriageStatus, strconv.FormatBool(submission.Starred), strconv.FormatBool(submission.HasText),
+			strings.Join(submission.Tags, ";"), submission.AssigneeName, strings.Join(submission.ReadBy, ";")}
 		for _, key := range contextColumns {
 			row = append(row, submission.URLContext[key])
 		}
 		for _, publicID := range columns {
 			row = append(row, values[publicID])
+		}
+		for index := range row {
+			row[index] = csvSafeCell(row[index])
 		}
 		if err := writer.Write(row); err != nil {
 			return
@@ -100,7 +117,7 @@ func (h *Handler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "create export", http.StatusInternalServerError)
 		return
 	}
-	if err := h.q.AuditCampaignExport(r.Context(), user.ID, campaign, "csv", len(submissions)); err != nil {
+	if err := h.q.AuditCampaignExport(r.Context(), user.ID, campaign, "csv", len(submissions), filter.IsFiltered()); err != nil {
 		http.Error(w, "audit export", http.StatusInternalServerError)
 		return
 	}
@@ -123,6 +140,12 @@ type jsonExportSubmission struct {
 	VisitPublicID       *string            `json:"visit_public_id"`
 	HasInstallTokenHash bool               `json:"has_install_token_hash"`
 	URLContext          map[string]string  `json:"url_context,omitempty"`
+	TriageStatus        string             `json:"triage_status"`
+	Starred             bool               `json:"starred"`
+	HasFreeText         bool               `json:"has_free_text"`
+	Tags                []string           `json:"tags"`
+	Assignee            string             `json:"assignee,omitempty"`
+	ReadBy              []string           `json:"read_by"`
 	Answers             []jsonExportAnswer `json:"answers"`
 }
 
@@ -139,7 +162,8 @@ func (h *Handler) ExportJSON(w http.ResponseWriter, r *http.Request) {
 		h.forbidden(w, r)
 		return
 	}
-	submissions, err := h.q.ListSubmissionsWithAnswers(r.Context(), campaign.ID)
+	filter := db.ResponseFilterFromValues(r.URL.Query())
+	submissions, err := h.q.ListSubmissionsForExport(r.Context(), campaign.ID, user.ID, &filter)
 	if err != nil {
 		http.Error(w, "load export", http.StatusInternalServerError)
 		return
@@ -152,6 +176,8 @@ func (h *Handler) ExportJSON(w http.ResponseWriter, r *http.Request) {
 		item := jsonExportSubmission{
 			SubmissionPublicID: submission.PublicID, SubmittedAt: submission.SubmittedAt,
 			HasInstallTokenHash: submission.HasInstallTokenHash, URLContext: submission.URLContext,
+			TriageStatus: submission.TriageStatus, Starred: submission.Starred, HasFreeText: submission.HasText,
+			Tags: nonNilStrings(submission.Tags), Assignee: submission.AssigneeName, ReadBy: nonNilStrings(submission.ReadBy),
 		}
 		if submission.VisitPublicID.Valid {
 			value := submission.VisitPublicID.String
@@ -172,13 +198,20 @@ func (h *Handler) ExportJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "create export", http.StatusInternalServerError)
 		return
 	}
-	if err := h.q.AuditCampaignExport(r.Context(), user.ID, campaign, "json", len(submissions)); err != nil {
+	if err := h.q.AuditCampaignExport(r.Context(), user.ID, campaign, "json", len(submissions), filter.IsFiltered()); err != nil {
 		http.Error(w, "audit export", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+safeExportFilename(campaign.Slug)+`-submissions.json"`)
 	_, _ = w.Write(output.Bytes())
+}
+
+func nonNilStrings(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 func exportContextColumns(submissions []db.Submission) []string {
@@ -228,6 +261,19 @@ func exportAnswerValue(raw string) string {
 	default:
 		return fmt.Sprint(value)
 	}
+}
+
+// csvSafeCell neutralises spreadsheet formula injection (CWE-1236) in
+// respondent-controlled values by prefixing a single quote.
+func csvSafeCell(value string) string {
+	if value == "" {
+		return value
+	}
+	switch value[0] {
+	case '=', '+', '-', '@', '\t', '\r', '\n':
+		return "'" + value
+	}
+	return value
 }
 
 func sanitizeExportLabel(value string) string {
@@ -305,5 +351,6 @@ func (h *Handler) renderAnalyticsMessage(w http.ResponseWriter, r *http.Request,
 	rangeKey, start := analyticsRange(r.FormValue("range"), time.Now().UTC())
 	analytics, _ := h.q.CampaignAnalytics(r.Context(), campaign.ID, start, time.Now().UTC())
 	settings, _ := h.q.GetCampaignSettings(r.Context(), campaign.ID)
+	h.attachResponseInsights(r, campaign, &analytics)
 	web.Render(w, r, http.StatusUnprocessableEntity, templates.CampaignAnalyticsPage(h.cfg.InstanceName, user, campaign, settings, analytics, rangeKey, role == "owner", key))
 }

@@ -297,8 +297,8 @@ func (q *Querier) CreateSubmission(ctx context.Context, input CreateSubmissionIn
 	if input.VisitPublicID != "" {
 		_ = tx.QueryRowContext(ctx, `SELECT id,install_token_hash FROM campaign_visits WHERE public_id=? AND campaign_id=?`, input.VisitPublicID, input.CampaignID).Scan(&visitID, &tokenHash)
 	}
-	result, err := tx.ExecContext(ctx, `INSERT INTO campaign_submissions(public_id,campaign_id,visit_id,install_token_hash,submitted_at) VALUES(?,?,?,?,?)`,
-		input.PublicID, input.CampaignID, nullableInt64(visitID), nullableText(tokenHash.String), at.Format(time.RFC3339Nano))
+	result, err := tx.ExecContext(ctx, `INSERT INTO campaign_submissions(public_id,campaign_id,visit_id,install_token_hash,submitted_at,has_text) VALUES(?,?,?,?,?,?)`,
+		input.PublicID, input.CampaignID, nullableInt64(visitID), nullableText(tokenHash.String), at.Format(time.RFC3339Nano), answersHaveText(input.Answers))
 	if err != nil {
 		return err
 	}
@@ -327,6 +327,15 @@ type Submission struct {
 	HasInstallTokenHash bool
 	SubmittedAt         string
 	TriageStatus        string
+	HasText             bool
+	Starred             bool
+	ReadByMe            bool
+	ReadByOthers        int64
+	AssigneeUserID      sql.NullInt64
+	AssigneeName        string
+	NoteCount           int64
+	Tags                []string
+	ReadBy              []string
 	AnswerSummary       string
 	URLContext          map[string]string
 	Answers             []SubmissionAnswer
@@ -340,6 +349,7 @@ type SubmissionAnswer struct {
 
 type SubmissionStats struct {
 	Total, CurrentMonth int64
+	UnreadForUser       int64
 	LatestAt            sql.NullString
 }
 
@@ -353,35 +363,12 @@ func (q *Querier) SubmissionStats(ctx context.Context, campaignID int64, now tim
 	return stats, err
 }
 
-func (q *Querier) ListSubmissions(ctx context.Context, campaignID int64) ([]Submission, error) {
-	rows, err := q.db.QueryContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,s.triage_status,v.context_json,
-		COALESCE((SELECT a.field_label_snapshot FROM campaign_submission_answers a WHERE a.submission_id=s.id ORDER BY a.id LIMIT 1),'')
-		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? ORDER BY s.id DESC LIMIT 100`, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var submissions []Submission
-	for rows.Next() {
-		var submission Submission
-		var contextJSON sql.NullString
-		if err := rows.Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.TriageStatus, &contextJSON, &submission.AnswerSummary); err != nil {
-			return nil, err
-		}
-		if contextJSON.Valid {
-			_ = json.Unmarshal([]byte(contextJSON.String), &submission.URLContext)
-		}
-		submissions = append(submissions, submission)
-	}
-	return submissions, rows.Err()
-}
-
 func (q *Querier) GetSubmission(ctx context.Context, campaignID int64, publicID string) (Submission, error) {
 	var submission Submission
 	var contextJSON sql.NullString
-	err := q.db.QueryRowContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,s.triage_status,v.context_json,''
+	err := q.db.QueryRowContext(ctx, `SELECT s.id,s.public_id,s.campaign_id,v.public_id,s.install_token_hash IS NOT NULL,s.submitted_at,s.triage_status,s.has_text,s.starred,s.assignee_user_id,COALESCE((SELECT CASE WHEN u.display_name <> '' THEN u.display_name ELSE u.username END FROM users u WHERE u.id=s.assignee_user_id),''),v.context_json,''
 		FROM campaign_submissions s LEFT JOIN campaign_visits v ON v.id=s.visit_id WHERE s.campaign_id=? AND s.public_id=?`, campaignID, publicID).
-		Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.TriageStatus, &contextJSON, &submission.AnswerSummary)
+		Scan(&submission.ID, &submission.PublicID, &submission.CampaignID, &submission.VisitPublicID, &submission.HasInstallTokenHash, &submission.SubmittedAt, &submission.TriageStatus, &submission.HasText, &submission.Starred, &submission.AssigneeUserID, &submission.AssigneeName, &contextJSON, &submission.AnswerSummary)
 	if err != nil {
 		return submission, err
 	}
@@ -421,57 +408,10 @@ func (q *Querier) UpdateSubmissionTriageStatus(ctx context.Context, campaign Cam
 }
 
 func (q *Querier) withSubmissionAnswerDisplayLabels(ctx context.Context, submission Submission) (Submission, error) {
-	for index, answer := range submission.Answers {
-		if answer.FieldType != "radio_group" && answer.FieldType != "checkbox_group" {
-			continue
-		}
-		labels, err := q.optionLabelsByValue(ctx, answer.FieldID)
-		if err != nil || len(labels) == 0 {
-			continue
-		}
-		if answer.FieldType == "checkbox_group" {
-			var values []string
-			if json.Unmarshal([]byte(answer.ValueJSON), &values) != nil {
-				continue
-			}
-			changed := false
-			for valueIndex, value := range values {
-				if label, ok := labels[value]; ok {
-					values[valueIndex] = label
-					changed = true
-				}
-			}
-			if changed {
-				encoded, _ := json.Marshal(values)
-				submission.Answers[index].DisplayValueJSON = string(encoded)
-			}
-			continue
-		}
-		var value string
-		if json.Unmarshal([]byte(answer.ValueJSON), &value) != nil {
-			continue
-		}
-		if label, ok := labels[value]; ok {
-			encoded, _ := json.Marshal(label)
-			submission.Answers[index].DisplayValueJSON = string(encoded)
-		}
-	}
-	return submission, nil
-}
-
-func (q *Querier) optionLabelsByValue(ctx context.Context, fieldID int64) (map[string]string, error) {
-	rows, err := q.db.QueryContext(ctx, `SELECT value,label FROM campaign_form_options WHERE field_id=?`, fieldID)
+	labels, err := q.campaignOptionLabels(ctx, submission.CampaignID)
 	if err != nil {
-		return nil, err
+		return submission, nil
 	}
-	defer rows.Close()
-	labels := map[string]string{}
-	for rows.Next() {
-		var value, label string
-		if err := rows.Scan(&value, &label); err != nil {
-			return nil, err
-		}
-		labels[value] = label
-	}
-	return labels, rows.Err()
+	applyDisplayLabels(&submission, labels)
+	return submission, nil
 }

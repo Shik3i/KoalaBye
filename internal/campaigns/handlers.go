@@ -319,6 +319,11 @@ func (h *Handler) Detail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "load campaign submissions", http.StatusInternalServerError)
 		return
 	}
+	if submissionStats.Total > 0 {
+		if submissionStats.UnreadForUser, err = h.q.UnreadSubmissionCount(r.Context(), campaign.ID, user.ID); err != nil {
+			h.logError(r.Context(), "load unread responses", err)
+		}
+	}
 	fields, err := h.q.ListFormFields(r.Context(), campaign.ID, false)
 	if err != nil {
 		h.logError(r.Context(), "load campaign form", err)

@@ -178,7 +178,12 @@ templ CampaignDetail(instanceName string, user db.User, campaign db.Campaign, se
 				</article>
 			</section>
 			<section class="grid three">
-				<article class="panel"><h2>{ tr(ctx, "submissions.total") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.Total) }</strong></article>
+				<article class="panel">
+					<h2>{ tr(ctx, "submissions.total") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.Total) }</strong>
+					if submissionStats.UnreadForUser > 0 {
+						<p><a href={ templ.SafeURL(campaignPath(campaign) + "/responses?read=unread_me") }>{ tr(ctx, "responses.unread_for_you", submissionStats.UnreadForUser) }</a></p>
+					}
+				</article>
 				<article class="panel"><h2>{ tr(ctx, "submissions.current_month") }</h2><strong class="metric">{ fmt.Sprint(submissionStats.CurrentMonth) }</strong></article>
 				<article class="panel">
 					<h2>{ tr(ctx, "submissions.latest") }</h2>

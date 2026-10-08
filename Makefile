@@ -1,7 +1,7 @@
 .PHONY: dev build check test fmt fmt-check vet vulncheck templ templ-check sqlc sqlc-check migrate docker-build
 
 GOCACHE ?= /tmp/koalabye-go-cache
-TEMPL_VERSION := v0.3.1020
+TEMPL_VERSION := v0.3.1070
 SQLC_VERSION := v1.29.0
 GOOSE_VERSION := v3.26.0
 
