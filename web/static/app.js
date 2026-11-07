@@ -49,14 +49,14 @@ document.documentElement.classList.add("js");
         toggles.forEach(function(btn) {
             var updateThemeButton = function() {
                 var current = document.documentElement.getAttribute("data-theme");
-                var dark = current === "dark" || (!current && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+                var dark = current === "dark" || (!current && (document.documentElement.classList.contains("theme-dark") || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)));
                 btn.setAttribute("aria-pressed", dark ? "true" : "false");
             };
             btn.addEventListener("click", function() {
                 var current = document.documentElement.getAttribute("data-theme");
                 var isDark = current === "dark";
                 if (!current) {
-                    isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    isDark = document.documentElement.classList.contains("theme-dark") || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
                 }
                 var val = isDark ? "light" : "dark";
                 localStorage.setItem("theme", val);

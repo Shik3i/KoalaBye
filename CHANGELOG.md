@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.5.2 - 2026-11-07
+
+### Fixes
+- Fixed form input and textarea visibility in dark mode: resolved white-on-white text readability in free-text fields on public feedback forms and dark-themed pages
+- Added consistent dark mode theme classes (`.theme-dark`), custom properties, and placeholder contrast styling across themes
+- Updated theme toggle state sync for campaign branding dark mode and system color scheme
+
+### Security & Dependencies
+- Upgraded `toolchain` to `go1.26.10` in `go.mod`, resolving GO-2026-6809
+- Upgraded `modernc.org/sqlite` to `v1.62.0` and `modernc.org/libc` to `v1.80.1`
+- Verified all npm dependencies (0 vulnerabilities) and govulncheck clean
+
+## v0.5.1 - 2026-10-23
+
+### Maintenance
+- Bumped Go version to 1.26.10 in CI to fix govulncheck GO-2026-6809
+
 ## v0.5.0 - 2026-10-08
 
 ### Features
